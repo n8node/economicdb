@@ -1,0 +1,28 @@
+.calendar-page .tz-note{ font-size:12px; color:var(--text-tertiary); margin:-8px 0 16px; }
+.calendar-page .head-actions{ display:flex; gap:8px; }
+.calendar-page .toolbar-row{ display:flex; gap:12px; margin-bottom:12px; }
+.calendar-page .seg{ display:flex; border:1px solid var(--border-default); border-radius:var(--radius-md); overflow:hidden; }
+.calendar-page .seg button{ border:none; background:var(--bg-surface); padding:8px 12px; font-size:13px; }
+.calendar-page .seg button.active{ background:var(--primary-50); color:var(--primary-700); }
+.calendar-page .filter-bar{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.calendar-page .pill{ border:1px solid var(--border-default); background:var(--bg-surface); border-radius:999px; padding:6px 12px; font-size:12.5px; }
+.calendar-page .pill.active{ background:var(--primary-50); color:var(--primary-700); border-color:var(--primary-100); }
+.calendar-page .day-group h3{ margin:0 0 10px; font-size:14px; }
+.calendar-page .event-list{ display:flex; flex-direction:column; gap:12px; }
+.calendar-page .event-row{
+  width:100%; display:grid; grid-template-columns:8px 1fr auto auto; gap:12px; align-items:center;
+  border:none; background:transparent; text-align:left; padding:10px 0; border-top:1px solid var(--border-subtle); cursor:pointer;
+}
+.calendar-page .event-row:hover{ background:var(--bg-muted); }
+.calendar-page .importance{ width:8px; height:8px; border-radius:50%; }
+.calendar-page .importance.high{ background:#C0362C; }
+.calendar-page .importance.med{ background:#92701A; }
+.calendar-page .importance.low{ background:#8B92A0; }
+.calendar-page .country-flag{ font-size:11px; font-weight:600; padding:2px 7px; background:var(--bg-muted); border-radius:var(--radius-sm); }
+.calendar-page .event-values{ font-family:var(--font-mono); font-size:12px; color:var(--text-secondary); }
+.calendar-page .grid-view{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+.calendar-page .grid-event{ border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:10px; background:var(--bg-surface); text-align:left; cursor:pointer; }
+.calendar-page .drawer-overlay{ position:fixed; inset:0; background:rgba(20,24,31,.35); z-index:50; display:flex; justify-content:flex-end; }
+.calendar-page .event-drawer{ width:420px; max-width:100%; height:100%; background:var(--bg-surface); padding:20px; overflow:auto; box-shadow:-8px 0 24px rgba(0,0,0,.08); }
+.calendar-page .drawer-head{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+.calendar-page .drawer-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0; }
