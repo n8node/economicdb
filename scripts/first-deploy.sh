@@ -22,7 +22,13 @@ DOMAIN="${DOMAIN:-economicdb.com}"
 
 echo "=== Step 1: Docker & Certbot ==="
 if [ "$(id -u)" -eq 0 ]; then
-    bash "$SCRIPT_DIR/setup-server.sh"
+    bash "$SCRIPT_DIR/setup-server.sh" || {
+        echo "WARNING: setup-server failed (often apt lock). Retrying certbot only..."
+        if ! command -v certbot >/dev/null 2>&1; then
+            echo "Install certbot manually: apt-get install -y certbot"
+            exit 1
+        fi
+    }
 else
     echo "Запустите setup-server.sh от root, затем повторите first-deploy от deploy-пользователя:"
     echo "  sudo bash scripts/setup-server.sh"

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-SERVER="${DEPLOY_SERVER:-deploy@YOUR_SERVER_IP}"
+SERVER="${DEPLOY_SERVER:-root@194.67.120.118}"
 PROJECT_DIR="/opt/economicdb"
 BRANCH="${1:-main}"
 

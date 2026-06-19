@@ -6,7 +6,60 @@ B2B SaaS макроэкономической аналитики. Стек: Word
 
 https://github.com/n8node/economicdb
 
-## Первый деплой на сервер
+## Production server
+
+| Параметр | Значение |
+|----------|----------|
+| OS | Ubuntu 26 |
+| IP | `194.67.120.118` |
+| Домен | `economicdb.com` |
+| Путь | `/opt/economicdb` |
+| SSH | `ssh root@194.67.120.118` |
+
+**Предусловие:** DNS A-записи `economicdb.com` и `www.economicdb.com` → `194.67.120.118`.
+
+### Первый деплой (на сервере)
+
+```bash
+ssh root@194.67.120.118
+```
+
+```bash
+apt-get update && apt-get install -y git curl
+cd /opt
+git clone https://github.com/n8node/economicdb.git
+cd economicdb
+chmod +x scripts/*.sh
+./scripts/setup-server.sh
+export ADMIN_INITIAL_PASSWORD='YOUR_PASSWORD_HERE'
+./scripts/first-deploy.sh
+```
+
+Проверка:
+
+```bash
+curl -sf http://127.0.0.1/health
+curl -sfk https://127.0.0.1/health -H "Host: economicdb.com"
+```
+
+Открыть в браузере: https://economicdb.com/health , https://economicdb.com/adminus/
+
+### Firewall (если включён UFW)
+
+```bash
+ufw allow OpenSSH
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
+```
+
+### Обновление с локальной машины
+
+```bash
+DEPLOY_SERVER=root@194.67.120.118 ./scripts/deploy.sh main
+```
+
+## Первый деплой (общая инструкция)
 
 **Предусловие:** DNS `economicdb.com` → IP сервера.
 
