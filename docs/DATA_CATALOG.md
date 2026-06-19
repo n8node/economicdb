@@ -162,8 +162,8 @@
 | ecb_mlf_rate | ECB Marginal Lending | rates | M | ecb | FM/D.U2.EUR.4F.KR.MLFR.LEV | next | ✅ |
 | ecb_estr | €STR | rates | D | ecb | EST.B.EU000A2X2A25.WT | backlog | ✅ |
 | euribor_3m | Euribor 3M | rates | M | ecb | FM/M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA | backlog | ✅ |
-| eu_unemployment | Unemployment rate | labor | M | eurostat | ei_lmhr_m/EA20/UR | next | ✅ |
-| eu_gdp_q_yoy | GDP, г/г | gdp | Q | eurostat | namq_10_gdp/EA20/B1GQ | next | ✅ |
+| eu_unemployment | Unemployment rate | labor | M | eurostat | ei_lmhr_m/M.PC_ACT.SA.LM-UN-T-TOT.EA21 | next | ✅ |
+| eu_gdp_q_yoy | GDP, г/г | gdp | Q | eurostat | namq_10_gdp/Q.CLV_PCH_PRE.SCA.B1GQ.EA20 | next | ✅ |
 | eu_industrial_prod | Industrial production | industrial | M | eurostat | sts_inpr_m/EA20/PROD | backlog | ✅ |
 | eu_retail_trade | Retail trade | consumption | M | eurostat | sts_trtu_m/EA20/RT | backlog | ✅ |
 | eu_trade_balance | Trade balance | external | M | eurostat | teina010/EA20 | backlog | ✅ |
