@@ -42,6 +42,9 @@ else
     --database /database/filebrowser.db
 fi
 
+echo "Setting FileBrowser base URL to ${FILEBROWSER_BASE_PATH}..."
+fb_cli config set --baseurl "$FILEBROWSER_BASE_PATH" --database /database/filebrowser.db
+
 echo "=== Starting FileBrowser ==="
 $COMPOSE up -d filebrowser
 
