@@ -13,7 +13,10 @@ import structlog
 logger = structlog.get_logger()
 
 CBR_BASE_URL = "https://www.cbr.ru"
-CBR_XML_DYNAMIC_URL = f"{CBR_BASE_URL}/scripts/XML_dynamic.asp"
+CBR_XML_DYNAMIC_URLS = (
+    "http://www.cbr.ru/scripts/XML_dynamic.asp",
+    f"{CBR_BASE_URL}/scripts/XML_dynamic.asp",
+)
 CBR_KEY_RATE_URL = f"{CBR_BASE_URL}/hd_base/KeyRate/"
 CBR_SOAP_URLS = (
     "http://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx",
@@ -21,6 +24,7 @@ CBR_SOAP_URLS = (
 )
 CBR_NAMESPACE = "http://web.cbr.ru/"
 DEFAULT_FROM_DATE = date(2020, 1, 1)
+CBR_HTTP_TIMEOUT = 20.0
 CBR_HTTP_HEADERS = {
     "User-Agent": "economicdb/0.1 (+https://economicdb.com)",
     "Accept": "application/xml,text/xml,text/html,*/*",
@@ -72,7 +76,7 @@ async def _http_get(
     params: dict[str, str] | None = None,
     *,
     encoding: str = "windows-1251",
-    timeout: float = 45.0,
+    timeout: float = CBR_HTTP_TIMEOUT,
 ) -> str:
     try:
         async with httpx.AsyncClient(
@@ -82,7 +86,7 @@ async def _http_get(
         ) as client:
             response = await client.get(url, params=params)
     except httpx.TimeoutException as exc:
-        raise CbrError("ЦБ РФ не ответил за 45 секунд", code="cbr_timeout") from exc
+        raise CbrError(f"ЦБ РФ не ответил за {int(timeout)} секунд ({url})", code="cbr_timeout") from exc
     except httpx.HTTPError as exc:
         raise CbrError(f"Не удалось подключиться к ЦБ РФ: {exc}", code="cbr_network_error") from exc
 
@@ -97,10 +101,31 @@ async def _http_get(
     return response.text
 
 
+async def _http_get_first(
+    urls: tuple[str, ...],
+    params: dict[str, str],
+    *,
+    encoding: str = "windows-1251",
+    timeout: float = CBR_HTTP_TIMEOUT,
+) -> str:
+    errors: list[str] = []
+    for url in urls:
+        try:
+            text = await _http_get(url, params, encoding=encoding, timeout=timeout)
+            logger.info("cbr_http_get_ok", url=url)
+            return text
+        except CbrError as exc:
+            errors.append(f"{url}: {exc.message}")
+            logger.warning("cbr_http_get_failed", url=url, error=exc.message)
+    if any("не ответил" in error for error in errors):
+        raise CbrError(f"ЦБ РФ не ответил ({'; '.join(errors)})", code="cbr_timeout")
+    raise CbrError(f"Не удалось загрузить данные ЦБ РФ ({'; '.join(errors)})", code="cbr_network_error")
+
+
 async def _soap_call(action: str, inner_body: str) -> str:
     envelope = _soap_envelope(inner_body)
     errors: list[str] = []
-    async with httpx.AsyncClient(timeout=45.0, follow_redirects=True, headers=CBR_HTTP_HEADERS) as client:
+    async with httpx.AsyncClient(timeout=CBR_HTTP_TIMEOUT, follow_redirects=True, headers=CBR_HTTP_HEADERS) as client:
         for url in CBR_SOAP_URLS:
             try:
                 response = await client.post(
@@ -304,6 +329,77 @@ async def fetch_key_rate_series(
     return series
 
 
+async def _fetch_usd_rub_soap(
+    from_date: date,
+    to_date: date,
+    *,
+    valuta_code: str,
+) -> list[tuple[date, Decimal]]:
+    inner = (
+        f'<GetCursDynamicXML xmlns="{CBR_NAMESPACE}">'
+        f"<FromDate>{_soap_datetime(from_date)}</FromDate>"
+        f"<ToDate>{_soap_datetime(to_date)}</ToDate>"
+        f"<ValutaCode>{valuta_code}</ValutaCode>"
+        f"</GetCursDynamicXML>"
+    )
+    response = await _soap_call("GetCursDynamicXML", inner)
+    xml_text = _extract_result_xml(response, "GetCursDynamicXMLResult")
+    series = _parse_dynamic_curs_xml(xml_text)
+    if not series:
+        raise CbrError("Не удалось разобрать курс USD/RUB (SOAP)", code="cbr_parse_error")
+    return series
+
+
+async def _fetch_usd_rub_xml(
+    from_date: date,
+    to_date: date,
+    *,
+    valuta_code: str,
+) -> list[tuple[date, Decimal]]:
+    params = {
+        "date_req1": _format_cbr_date_slash(from_date),
+        "date_req2": _format_cbr_date_slash(to_date),
+        "VAL_NM_RQ": valuta_code,
+    }
+    xml_text = await _http_get_first(CBR_XML_DYNAMIC_URLS, params)
+    series = _parse_dynamic_curs_xml(xml_text)
+    if not series:
+        raise CbrError("Не удалось разобрать курс USD/RUB (XML)", code="cbr_parse_error")
+    return series
+
+
+async def _fetch_usd_rub_chunk(
+    from_date: date,
+    to_date: date,
+    *,
+    valuta_code: str,
+) -> list[tuple[date, Decimal]]:
+    try:
+        series = await _fetch_usd_rub_soap(from_date, to_date, valuta_code=valuta_code)
+        logger.info(
+            "cbr_usd_rub_source",
+            source="soap",
+            from_date=from_date.isoformat(),
+            to_date=to_date.isoformat(),
+        )
+        return series
+    except CbrError as exc:
+        logger.warning(
+            "cbr_usd_rub_soap_fallback",
+            from_date=from_date.isoformat(),
+            to_date=to_date.isoformat(),
+            error=exc.message,
+        )
+        series = await _fetch_usd_rub_xml(from_date, to_date, valuta_code=valuta_code)
+        logger.info(
+            "cbr_usd_rub_source",
+            source="xml",
+            from_date=from_date.isoformat(),
+            to_date=to_date.isoformat(),
+        )
+        return series
+
+
 async def fetch_usd_rub_series(
     *,
     from_date: date = DEFAULT_FROM_DATE,
@@ -313,15 +409,11 @@ async def fetch_usd_rub_series(
     end = to_date or datetime.now(timezone.utc).date()
     merged: dict[date, Decimal] = {}
     for chunk_from, chunk_to in _iter_year_chunks(from_date, end):
-        xml_text = await _http_get(
-            CBR_XML_DYNAMIC_URL,
-            {
-                "date_req1": _format_cbr_date_slash(chunk_from),
-                "date_req2": _format_cbr_date_slash(chunk_to),
-                "VAL_NM_RQ": valuta_code,
-            },
-        )
-        for observed, value in _parse_dynamic_curs_xml(xml_text):
+        for observed, value in await _fetch_usd_rub_chunk(
+            chunk_from,
+            chunk_to,
+            valuta_code=valuta_code,
+        ):
             merged[observed] = value
     series = sorted(merged.items(), key=lambda item: item[0])
     if not series:
