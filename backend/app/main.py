@@ -9,6 +9,7 @@ from alembic.config import Config
 
 from app.api.v1.router import api_router
 from app.bootstrap.admin_seed import seed_super_admin
+from app.bootstrap.indicator_seed import seed_demo_indicators
 from app.config.settings import settings
 from app.db import SessionLocal, engine
 
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
         run_migrations()
         async with SessionLocal() as session:
             await seed_super_admin(session)
+            await seed_demo_indicators(session)
         logger.info("startup_complete", environment=settings.environment)
 
     @app.get("/health")
