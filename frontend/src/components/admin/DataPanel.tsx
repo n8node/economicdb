@@ -16,6 +16,8 @@ type Indicator = {
   source: string;
   external_id: string | null;
   has_data: boolean;
+  data_points: number;
+  sync_ready: boolean;
 };
 
 type Template = Indicator & { wave: string; in_catalog: boolean; unit: string };
@@ -43,6 +45,7 @@ type SyncResult = {
   error?: string;
   records?: number;
   job_id?: number;
+  skipped?: Array<{ indicator_id: string; reason: string }>;
   preview?: Array<{
     indicator_id: string;
     points: number;
@@ -169,7 +172,13 @@ export function DataPanel() {
             (item.last_date ? ` · до ${item.last_date}` : ""),
         )
         .join(" · ");
-      setMessage(`${result.message || "OK"}${lines ? ` · ${lines}` : ""}`);
+      const skipped = (result.skipped || [])
+        .slice(0, 5)
+        .map((item) => `${item.indicator_id}: ${item.reason}`)
+        .join(" · ");
+      setMessage(
+        `${result.message || "OK"}${lines ? ` · ${lines}` : ""}${skipped ? ` · пропущено: ${skipped}` : ""}`,
+      );
     } catch {
       setMessage("Ошибка предпросмотра");
     } finally {
@@ -189,7 +198,9 @@ export function DataPanel() {
         setMessage(result.message || result.error || "Ошибка загрузки");
         return;
       }
-      setMessage(result.message || `Загружено ${result.records ?? 0} записей · job #${result.job_id ?? "—"}`);
+      setMessage(
+        `${result.message || `Загружено ${result.records ?? 0} записей`}${result.skipped?.length ? ` · пропущено: ${result.skipped.length}` : ""} · job #${result.job_id ?? "—"}`,
+      );
       await loadIndicators();
       await loadJobs();
     } catch {
@@ -307,8 +318,8 @@ export function DataPanel() {
               </label>
             </div>
             <p className="muted">
-              По умолчанию — 5 лет ({defaults.date_from} … {defaults.date_to}). Пустой список показателей = все
-              доступные для провайдера.
+              По умолчанию — 5 лет ({defaults.date_from} … {defaults.date_to}). Пустой список = все показатели
+              провайдера. Колонка «ETL» = парсер настроен; «—» в данных = ещё не загружено или ошибка sync.
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" className="admin-btn" disabled={busy} onClick={runPreview}>
@@ -339,6 +350,7 @@ export function DataPanel() {
                   <th>ID</th>
                   <th>Название</th>
                   <th>Страна</th>
+                  <th>ETL</th>
                   <th>Данные</th>
                 </tr>
               </thead>
@@ -355,7 +367,8 @@ export function DataPanel() {
                     <td>{item.id}</td>
                     <td>{item.name_ru}</td>
                     <td>{item.country}</td>
-                    <td>{item.has_data ? "есть" : "—"}</td>
+                    <td>{item.sync_ready ? "готов" : "нет парсера"}</td>
+                    <td>{item.data_points > 0 ? item.data_points : "—"}</td>
                   </tr>
                 ))}
               </tbody>

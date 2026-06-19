@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.catalog_templates import CatalogTemplate, templates_for_wave
 from app.etl.helpers import sources_for_provider
+from app.etl.sync_ready import is_sync_ready
 from app.models.indicators import Indicator, IndicatorValue
 from app.schemas.etl import AdminIndicatorCreate, AdminIndicatorUpdate
 
@@ -51,6 +52,8 @@ async def list_admin_indicators(
             "last_value": str(item.last_value) if item.last_value is not None else None,
             "updated_at": item.updated_at.isoformat() if item.updated_at else None,
             "has_data": counts.get(item.id, 0) > 0,
+            "data_points": counts.get(item.id, 0),
+            "sync_ready": is_sync_ready(item),
         }
         for item in indicators
     ]

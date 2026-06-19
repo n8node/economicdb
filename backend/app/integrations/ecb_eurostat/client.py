@@ -163,6 +163,61 @@ def _parse_ecb_csv(text: str) -> list[tuple[date, Decimal]]:
     return points
 
 
+async def fetch_ecb_series_by_key(
+    series_key: str,
+    *,
+    from_date: date = DEFAULT_FROM_DATE,
+    to_date: date | None = None,
+) -> list[tuple[date, Decimal]]:
+    end = to_date or datetime.now(timezone.utc).date()
+    merged: dict[date, Decimal] = {}
+    for chunk_from, chunk_to in _iter_year_chunks(from_date, end):
+        url = (
+            f"{ECB_DATA_API_BASE}/{series_key.lstrip('/')}"
+            f"?startPeriod={chunk_from.isoformat()}&endPeriod={chunk_to.isoformat()}&format=csvdata"
+        )
+        csv_text = await _http_get(url)
+        if csv_text is None:
+            continue
+        for observed, value in _aggregate_daily_to_monthly(_parse_ecb_csv(csv_text)):
+            if observed < from_date.replace(day=1) or observed > end:
+                continue
+            merged[observed] = value
+    series = sorted(merged.items(), key=lambda item: item[0])
+    if not series:
+        raise EcbEurostatError(f"Не удалось получить ряд ECB {series_key}", code="ecb_eurostat_parse_error")
+    return series
+
+
+async def fetch_eurostat_series_by_key(
+    dataset_key: str,
+    *,
+    from_date: date = DEFAULT_FROM_DATE,
+    to_date: date | None = None,
+) -> list[tuple[date, Decimal]]:
+    end = _latest_eurostat_month_end(to_date or datetime.now(timezone.utc).date())
+    if from_date > end:
+        from_date = date(end.year - 1, end.month, 1)
+    merged: dict[date, Decimal] = {}
+    for chunk_from, chunk_to in _iter_year_chunks(from_date, end):
+        chunk_end = _latest_eurostat_month_end(chunk_to)
+        if chunk_from > chunk_end:
+            continue
+        url = (
+            f"{EUROSTAT_SDMX_BASE}/{dataset_key.lstrip('/')}"
+            f"?format=SDMX-CSV&startPeriod={_format_period(chunk_from)}&endPeriod={_format_period(chunk_end)}"
+        )
+        csv_text = await _http_get(url, allow_client_error=True)
+        if csv_text is None:
+            continue
+        for observed, value in _parse_eurostat_csv(csv_text):
+            merged[observed] = value
+    series = sorted(merged.items(), key=lambda item: item[0])
+    if not series:
+        raise EcbEurostatError(f"Не удалось получить ряд Eurostat {dataset_key}", code="ecb_eurostat_parse_error")
+    return series
+
+
 async def fetch_ecb_deposit_rate_series(
     *,
     from_date: date = DEFAULT_FROM_DATE,

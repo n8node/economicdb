@@ -26,6 +26,7 @@ class RealIndicatorSeed:
 REAL_INDICATORS: list[RealIndicatorSeed] = [
     RealIndicatorSeed("cbr_key_rate", "Ключевая ставка ЦБ", "ru", "rates", "monthly", "cbr", "KeyRate", "%"),
     RealIndicatorSeed("usd_rub", "USD / RUB", "ru", "fx", "daily", "cbr", "R01235", "RUB"),
+    RealIndicatorSeed("eur_rub", "EUR / RUB", "ru", "fx", "daily", "cbr", "R01239", "RUB"),
     RealIndicatorSeed("ru_cpi_yoy", "ИПЦ России, г/г", "ru", "inflation", "monthly", "rosstat", "fedstat:31074", "%"),
     RealIndicatorSeed(
         "ru_industrial_yoy",

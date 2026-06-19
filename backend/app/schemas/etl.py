@@ -44,6 +44,7 @@ class EtlSyncResult(BaseModel):
     records: int | None = None
     indicators: list[str] | None = None
     preview: list[dict] | None = None
+    skipped: list[dict] | None = None
     error: str | None = None
 
 
@@ -59,6 +60,8 @@ class AdminIndicatorItem(BaseModel):
     last_value: str | None = None
     updated_at: str | None = None
     has_data: bool = False
+    data_points: int = 0
+    sync_ready: bool = False
 
 
 class AdminIndicatorCreate(BaseModel):

@@ -61,6 +61,7 @@ async def trigger_etl_sync(
             job_id=result.get("job_id"),
             error=error,
             message=result.get("message"),
+            skipped=result.get("skipped"),
         )
     return EtlSyncResult(
         ok=True,
@@ -70,6 +71,7 @@ async def trigger_etl_sync(
         records=result.get("records"),
         indicators=result.get("indicators"),
         preview=result.get("preview"),
+        skipped=result.get("skipped"),
     )
 
 
