@@ -149,3 +149,16 @@
   border-color: #1b7561;
   color: #fff;
 }
+
+.admin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-input {
+  width: 100%;
+  border: 1px solid #d7dbe2;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
