@@ -21,7 +21,10 @@ ENV PORT=3000
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static /opt/static-staging
 COPY docker-entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+    && STATIC_COUNT="$(find /opt/static-staging -type f | wc -l | tr -d ' ')" \
+    && echo "static-staging files: ${STATIC_COUNT}" \
+    && test "${STATIC_COUNT}" -gt 0
 EXPOSE 3000
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["node", "server.js"]

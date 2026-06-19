@@ -40,6 +40,9 @@ chunk=$(echo "$html" | grep -oE '/_next/static/[^"]+\.js' | head -1 || true)
 if [ -n "$chunk" ]; then
   code=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${chunk}")
   echo "${chunk} -> ${code}"
+  if [ "$code" = "404" ]; then
+    echo "FIX: bash scripts/fix-static-volume.sh"
+  fi
 else
   echo "no chunk in HTML"
 fi
@@ -52,6 +55,10 @@ echo ""
 echo "=== Recent logs ==="
 $COMPOSE logs nginx --tail=8 2>/dev/null || true
 $COMPOSE logs frontend --tail=8 2>/dev/null || true
+
+echo ""
+echo "=== Static staging in image ==="
+$COMPOSE exec -T frontend sh -c 'find /opt/static-staging -type f 2>/dev/null | wc -l' 2>/dev/null || echo "staging check failed"
 
 echo ""
 echo "=== Static volume (chunk count) ==="

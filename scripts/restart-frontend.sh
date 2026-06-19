@@ -46,5 +46,8 @@ echo "=== Reload nginx (refresh Docker DNS) ==="
 $COMPOSE exec nginx nginx -t
 $COMPOSE exec nginx nginx -s reload
 
+echo "=== Ensure static volume populated ==="
+bash scripts/fix-static-volume.sh
+
 echo "=== Test /app ==="
 curl -s -o /dev/null -w "https /app -> %{http_code}\n" "https://${DOMAIN}/app"
