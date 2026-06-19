@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { DeployCacheGuard } from "@/components/DeployCacheGuard";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin", "cyrillic"], variable: "--font-mono" });
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Макроаналитика",
@@ -11,15 +15,21 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const deployId = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
+
   return (
     <html lang="ru" className={`${inter.variable} ${jetbrains.variable}`}>
       <head>
+        <meta name="deploy-id" content={deployId} />
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <DeployCacheGuard />
+        {children}
+      </body>
     </html>
   );
 }
