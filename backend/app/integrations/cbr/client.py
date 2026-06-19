@@ -16,8 +16,8 @@ CBR_BASE_URL = "https://www.cbr.ru"
 CBR_XML_DYNAMIC_URL = f"{CBR_BASE_URL}/scripts/XML_dynamic.asp"
 CBR_KEY_RATE_URL = f"{CBR_BASE_URL}/hd_base/KeyRate/"
 CBR_SOAP_URLS = (
-    f"{CBR_BASE_URL}/DailyInfoWebServ/DailyInfo.asmx",
     "http://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx",
+    f"{CBR_BASE_URL}/DailyInfoWebServ/DailyInfo.asmx",
 )
 CBR_NAMESPACE = "http://web.cbr.ru/"
 DEFAULT_FROM_DATE = date(2020, 1, 1)
@@ -206,6 +206,16 @@ def _parse_key_rate_html(html: str) -> list[tuple[date, Decimal]]:
     return sorted(points, key=lambda item: item[0])
 
 
+def _record_field(node: ET.Element, name: str) -> str | None:
+    value = node.attrib.get(name)
+    if value:
+        return value
+    for child in node:
+        if child.tag.split("}")[-1] == name and child.text:
+            return child.text.strip()
+    return None
+
+
 def _parse_dynamic_curs_xml(xml_text: str) -> list[tuple[date, Decimal]]:
     try:
         root = ET.fromstring(xml_text)
@@ -216,15 +226,13 @@ def _parse_dynamic_curs_xml(xml_text: str) -> list[tuple[date, Decimal]]:
         tag = node.tag.split("}")[-1]
         if tag != "Record":
             continue
-        observed = _parse_observed(node.attrib.get("Date", ""))
+        observed = _parse_observed(_record_field(node, "Date") or node.attrib.get("Date", ""))
         if observed is None:
             continue
-        rate = _parse_decimal(node.attrib.get("VunitRate") or node.attrib.get("Value") or "")
+        rate = _parse_decimal(_record_field(node, "VunitRate") or _record_field(node, "Value") or "")
         if rate is None:
-            nominal_text = node.attrib.get("Nominal", "1")
-            value_text = node.attrib.get("Value")
-            nominal = _parse_decimal(nominal_text) or Decimal("1")
-            total = _parse_decimal(value_text or "")
+            nominal = _parse_decimal(_record_field(node, "Nominal") or "1") or Decimal("1")
+            total = _parse_decimal(_record_field(node, "Value") or "")
             if total is None or nominal == 0:
                 continue
             rate = total / nominal
