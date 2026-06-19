@@ -27,9 +27,18 @@ type TestDetails = {
   gdp_yoy_latest?: { date: string; value: string };
   industrial_yoy_latest?: { date: string; value: string };
   hicp_yoy_latest?: { date: string; value: string };
+  index_latest?: { date: string; value: string; security?: string };
 };
 
-const PUBLIC_API_PROVIDERS = new Set(["cbr", "rosstat", "oecd", "imf", "ecb_eurostat"]);
+const PUBLIC_API_PROVIDERS = new Set([
+  "cbr",
+  "rosstat",
+  "oecd",
+  "imf",
+  "ecb_eurostat",
+  "world_bank",
+  "moex",
+]);
 
 function providerStatus(provider: Provider) {
   if (provider.last_test_status === "error" || provider.last_sync_status === "error") {
@@ -118,6 +127,7 @@ export function ProvidersPanel() {
       const gdpYoy = result.details?.gdp_yoy_latest;
       const industrialYoy = result.details?.industrial_yoy_latest;
       const hicpYoy = result.details?.hicp_yoy_latest;
+      const indexLatest = result.details?.index_latest;
       const extra = latest
         ? ` · ${latest.date}: ${latest.value}`
         : keyRate && usdRub
@@ -126,13 +136,15 @@ export function ProvidersPanel() {
             ? ` · ECB ${keyRate.value}% (${keyRate.date}), HICP ${hicpYoy.value}% (${hicpYoy.date})`
             : cpiYoy && industrialYoy
               ? ` · ИПЦ ${cpiYoy.value}% (${cpiYoy.date}), пром. ${industrialYoy.value}% (${industrialYoy.date})`
-              : cpiYoy
-                ? ` · ИПЦ ${cpiYoy.value}% (${cpiYoy.date})`
-                : gdpYoy
-                  ? ` · ВВП ${gdpYoy.value}% (${gdpYoy.date})`
-                  : hicpYoy
-                    ? ` · HICP ${hicpYoy.value}% (${hicpYoy.date})`
-                    : "";
+              : indexLatest
+                ? ` · ${indexLatest.security || "индекс"} ${indexLatest.value} (${indexLatest.date})`
+                : cpiYoy
+                  ? ` · ИПЦ ${cpiYoy.value}% (${cpiYoy.date})`
+                  : gdpYoy
+                    ? ` · ВВП ${gdpYoy.value}% (${gdpYoy.date})`
+                    : hicpYoy
+                      ? ` · HICP ${hicpYoy.value}% (${hicpYoy.date})`
+                      : "";
       setMessage(`${result.message || "OK"}${extra}`);
       await load();
     } catch {

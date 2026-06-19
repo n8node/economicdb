@@ -39,6 +39,7 @@ CATEGORY_LABELS = {
     "fx": "Валюты",
     "labor": "Рынок труда",
     "industry": "Промышленность",
+    "equities": "Фондовый рынок",
     "commodities": "Сырьё",
 }
 

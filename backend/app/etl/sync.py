@@ -10,10 +10,14 @@ from app.integrations.ecb_eurostat.client import EcbEurostatError, test_connecti
 from app.integrations.ecb_eurostat.sync import sync_ecb_eurostat
 from app.integrations.imf.client import ImfError, test_connection as imf_test_connection
 from app.integrations.imf.sync import sync_imf
+from app.integrations.moex.client import MoexError, test_connection as moex_test_connection
+from app.integrations.moex.sync import sync_moex
 from app.integrations.oecd.client import OecdError, test_connection as oecd_test_connection
 from app.integrations.oecd.sync import sync_oecd
 from app.integrations.rosstat.client import RosstatError, test_connection as rosstat_test_connection
 from app.integrations.rosstat.sync import sync_rosstat
+from app.integrations.world_bank.client import WorldBankError, test_connection as world_bank_test_connection
+from app.integrations.world_bank.sync import sync_world_bank
 from app.models.providers import DataProvider
 from app.services.credentials import get_api_key
 
@@ -47,6 +51,12 @@ async def sync_provider(session: AsyncSession, provider_id: str) -> dict:
 
     if provider_id == "ecb_eurostat":
         return await sync_ecb_eurostat(session, provider)
+
+    if provider_id == "world_bank":
+        return await sync_world_bank(session, provider)
+
+    if provider_id == "moex":
+        return await sync_moex(session, provider)
 
     logger.info("etl_sync_unimplemented", provider_id=provider_id)
     return {
@@ -154,6 +164,42 @@ async def test_provider_connection(
                 "ok": False,
                 "error": "ecb_eurostat_test_failed",
                 "message": "Ошибка проверки ECB / Eurostat, подробности в логах backend",
+            }
+
+    if provider_id == "world_bank":
+        try:
+            details = await world_bank_test_connection()
+            return {
+                "ok": True,
+                "message": "Подключение к World Bank успешно",
+                "details": details,
+            }
+        except WorldBankError as exc:
+            return {"ok": False, "error": exc.code, "message": exc.message}
+        except Exception:
+            logger.exception("world_bank_test_connection_failed")
+            return {
+                "ok": False,
+                "error": "world_bank_test_failed",
+                "message": "Ошибка проверки World Bank, подробности в логах backend",
+            }
+
+    if provider_id == "moex":
+        try:
+            details = await moex_test_connection()
+            return {
+                "ok": True,
+                "message": "Подключение к MOEX ISS успешно",
+                "details": details,
+            }
+        except MoexError as exc:
+            return {"ok": False, "error": exc.code, "message": exc.message}
+        except Exception:
+            logger.exception("moex_test_connection_failed")
+            return {
+                "ok": False,
+                "error": "moex_test_failed",
+                "message": "Ошибка проверки MOEX, подробности в логах backend",
             }
 
     if provider_id in PROVIDERS_WITH_API_KEY:

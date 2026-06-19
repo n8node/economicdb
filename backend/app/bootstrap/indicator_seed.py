@@ -81,6 +81,26 @@ REAL_INDICATORS: list[RealIndicatorSeed] = [
         "NGDP_RPCH/CHN",
         "%",
     ),
+    RealIndicatorSeed(
+        "ru_gdp_yoy_wb",
+        "ВВП России, рост",
+        "ru",
+        "gdp",
+        "annual",
+        "world_bank",
+        "NY.GDP.MKTP.KD.ZG/RU",
+        "%",
+    ),
+    RealIndicatorSeed(
+        "imoex",
+        "Индекс MOEX",
+        "ru",
+        "equities",
+        "daily",
+        "moex",
+        "stock/index/IMOEX/CLOSE",
+        "index",
+    ),
     RealIndicatorSeed("oil_brent", "Нефть Brent", "world", "commodities", "daily", "fred", "DCOILBRENTEU", "USD"),
 ]
 

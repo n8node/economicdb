@@ -82,6 +82,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   eurostat: "Eurostat",
   moex: "MOEX",
   imf: "IMF",
+  world_bank: "World Bank",
 };
 
 export const FREQ_LABELS: Record<string, string> = {

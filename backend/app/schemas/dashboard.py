@@ -26,7 +26,7 @@ class FavoriteItem(BaseModel):
     value: str
     delta: str
     delta_direction: str
-    source: str  # cbr | rosstat | fred | oecd | ecb | eurostat | imf
+    source: str  # cbr | rosstat | fred | oecd | ecb | eurostat | imf | world_bank | moex
 
 
 class ChangeItem(BaseModel):
