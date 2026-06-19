@@ -10,7 +10,8 @@ server {
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_session_cache shared:SSL:10m;
 
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # Temporary while HTTPS stability is being verified: clear browser HSTS so HTTP fallback can work.
+    add_header Strict-Transport-Security "max-age=0" always;
     add_header X-Frame-Options DENY always;
     add_header X-Content-Type-Options nosniff always;
 

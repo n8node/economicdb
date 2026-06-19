@@ -11,7 +11,8 @@ if [ -f .env ]; then
   DOMAIN="${DOMAIN:-economicdb.com}"
 fi
 
-BASE="https://${DOMAIN}"
+HTTPS_BASE="https://${DOMAIN}"
+HTTP_BASE="http://${DOMAIN}"
 COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
 echo "=== Containers ==="
@@ -23,16 +24,23 @@ free -h 2>/dev/null || true
 df -h / 2>/dev/null || true
 
 echo ""
-echo "=== HTTP ==="
+echo "=== HTTPS ==="
 for path in /health /app /adminus/; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${path}" || echo "000")
+  code=$(curl -s --connect-timeout 10 -o /dev/null -w "%{http_code}" "${HTTPS_BASE}${path}" || echo "000")
   echo "${path} -> ${code}"
 done
 
 echo ""
+echo "=== HTTP fallback ==="
+for path in /health /app /adminus/; do
+  code=$(curl -s --connect-timeout 10 -o /dev/null -w "%{http_code}" "${HTTP_BASE}${path}" || echo "000")
+  echo "http ${path} -> ${code}"
+done
+
+echo ""
 echo "=== HTTPS protocol checks ==="
-curl -sS --http1.1 --connect-timeout 10 -o /dev/null -w "https http/1.1 /health -> %{http_code}\n" "${BASE}/health" || true
-curl -sS --connect-timeout 10 -o /dev/null -w "https default /health -> %{http_code}\n" "${BASE}/health" || true
+curl -sS --http1.1 --connect-timeout 10 -o /dev/null -w "https http/1.1 /health -> %{http_code}\n" "${HTTPS_BASE}/health" || true
+curl -sS --connect-timeout 10 -o /dev/null -w "https default /health -> %{http_code}\n" "${HTTPS_BASE}/health" || true
 
 echo ""
 echo "=== Nginx listeners ==="
@@ -41,14 +49,14 @@ $COMPOSE exec -T nginx sh -c "nginx -T 2>/dev/null | grep -n 'listen 443\\|http2
 
 echo ""
 echo "=== /app HTML deploy-id ==="
-curl -s "${BASE}/app" | grep -o 'name="deploy-id" content="[^"]*"' || echo "deploy-id meta not found"
+curl -s --connect-timeout 10 "${HTTPS_BASE}/app" | grep -o 'name="deploy-id" content="[^"]*"' || echo "deploy-id meta not found"
 
 echo ""
 echo "=== JS chunk from HTML ==="
-html=$(curl -s "${BASE}/app")
+html=$(curl -s --connect-timeout 10 "${HTTPS_BASE}/app")
 chunk=$(echo "$html" | grep -oE '/_next/static/[^"]+\.js' | head -1 || true)
 if [ -n "$chunk" ]; then
-  code=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${chunk}")
+  code=$(curl -s --connect-timeout 10 -o /dev/null -w "%{http_code}" "${HTTPS_BASE}${chunk}")
   echo "${chunk} -> ${code}"
   if [ "$code" = "404" ]; then
     echo "FIX: bash scripts/fix-static-volume.sh"
@@ -59,7 +67,7 @@ fi
 
 echo ""
 echo "=== Cache-Control /app ==="
-curl -s -D - -o /dev/null "${BASE}/app" | grep -iE '^(HTTP/|cache-control|pragma)' || true
+curl -s --connect-timeout 10 -D - -o /dev/null "${HTTPS_BASE}/app" | grep -iE '^(HTTP/|cache-control|pragma|strict-transport-security)' || true
 
 echo ""
 echo "=== Recent logs ==="
