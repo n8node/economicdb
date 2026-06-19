@@ -1,19 +1,6 @@
-function PlaceholderPage({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="content">
-      <div className="page-head">
-        <div>
-          <h1>{title}</h1>
-          <p className="meta">{description}</p>
-        </div>
-      </div>
-      <div className="card card-pad">
-        <p>Экран в разработке — UI переносится из макетов `design/mockups/`.</p>
-      </div>
-    </div>
-  );
-}
+import "@/styles/compare.css";
+import { CompareView } from "@/components/compare/CompareView";
 
 export default function ComparePage() {
-  return <PlaceholderPage title="Сравнение" description="До 6 серий, presets, absolute / index(100) / change%" />;
+  return <CompareView />;
 }
