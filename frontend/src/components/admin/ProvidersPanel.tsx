@@ -26,7 +26,7 @@ type TestDetails = {
   cpi_yoy_latest?: { date: string; value: string };
 };
 
-const PUBLIC_API_PROVIDERS = new Set(["cbr", "rosstat"]);
+const PUBLIC_API_PROVIDERS = new Set(["cbr", "rosstat", "oecd"]);
 
 function providerStatus(provider: Provider) {
   if (provider.last_test_status === "error" || provider.last_sync_status === "error") {

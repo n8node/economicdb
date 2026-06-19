@@ -9,7 +9,7 @@ COMPARE_PRESETS: dict[str, dict] = {
     },
     "inflation": {
         "label": "Инфляция г/г",
-        "indicator_ids": ["ru_cpi_yoy", "us_cpi_yoy"],
+        "indicator_ids": ["ru_cpi_yoy", "us_cpi_yoy", "eu_hicp_yoy"],
     },
     "fx": {
         "label": "Валюты и сырьё",
