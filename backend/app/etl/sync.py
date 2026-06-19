@@ -2,6 +2,8 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.etl.jobs_service import create_etl_job, finish_etl_job
+from app.etl.options import SyncOptions
 from app.integrations.cbr.client import CbrError, test_connection as cbr_test_connection
 from app.integrations.cbr.sync import sync_cbr
 from app.integrations.fred.client import FredError, test_connection as fred_test_connection
@@ -18,6 +20,7 @@ from app.integrations.rosstat.client import RosstatError, test_connection as ros
 from app.integrations.rosstat.sync import sync_rosstat
 from app.integrations.world_bank.client import WorldBankError, test_connection as world_bank_test_connection
 from app.integrations.world_bank.sync import sync_world_bank
+from app.models.etl_jobs import EtlJob
 from app.models.providers import DataProvider
 from app.services.credentials import get_api_key
 
@@ -26,37 +29,41 @@ logger = structlog.get_logger()
 PROVIDERS_WITH_API_KEY = {"fred"}
 
 
-async def sync_provider(session: AsyncSession, provider_id: str) -> dict:
+async def sync_provider(
+    session: AsyncSession,
+    provider_id: str,
+    options: SyncOptions | None = None,
+) -> dict:
     provider = await session.get(DataProvider, provider_id)
     if provider is None:
         return {"ok": False, "error": "provider_not_found"}
 
-    if not provider.enabled:
+    if not provider.enabled and (not options or options.trigger == "scheduled"):
         return {"ok": False, "error": "provider_disabled"}
 
     if provider_id == "fred":
-        return await sync_fred(session, provider)
+        return await sync_fred(session, provider, options)
 
     if provider_id == "cbr":
-        return await sync_cbr(session, provider)
+        return await sync_cbr(session, provider, options)
 
     if provider_id == "rosstat":
-        return await sync_rosstat(session, provider)
+        return await sync_rosstat(session, provider, options)
 
     if provider_id == "oecd":
-        return await sync_oecd(session, provider)
+        return await sync_oecd(session, provider, options)
 
     if provider_id == "imf":
-        return await sync_imf(session, provider)
+        return await sync_imf(session, provider, options)
 
     if provider_id == "ecb_eurostat":
-        return await sync_ecb_eurostat(session, provider)
+        return await sync_ecb_eurostat(session, provider, options)
 
     if provider_id == "world_bank":
-        return await sync_world_bank(session, provider)
+        return await sync_world_bank(session, provider, options)
 
     if provider_id == "moex":
-        return await sync_moex(session, provider)
+        return await sync_moex(session, provider, options)
 
     logger.info("etl_sync_unimplemented", provider_id=provider_id)
     return {
@@ -64,6 +71,39 @@ async def sync_provider(session: AsyncSession, provider_id: str) -> dict:
         "error": "provider_not_implemented",
         "message": "Синхронизация для этого провайдера ещё не реализована",
     }
+
+
+async def run_sync_with_job(
+    session: AsyncSession,
+    provider_id: str,
+    options: SyncOptions | None = None,
+) -> dict:
+    opts = options or SyncOptions()
+    if opts.dry_run:
+        return await sync_provider(session, provider_id, opts)
+
+    job = await create_etl_job(session, provider_id, opts)
+    await session.commit()
+    job_id = job.id
+    try:
+        result = await sync_provider(session, provider_id, opts)
+        job = await session.get(EtlJob, job_id)
+        if job is not None:
+            await finish_etl_job(session, job, result)
+        await session.commit()
+        return {**result, "job_id": job_id}
+    except Exception as exc:
+        await session.rollback()
+        job = await session.get(EtlJob, job_id)
+        if job is not None:
+            await finish_etl_job(
+                session,
+                job,
+                {"ok": False, "error": "sync_failed", "message": str(exc)},
+            )
+            await session.commit()
+        logger.exception("etl_sync_job_failed", provider_id=provider_id)
+        return {"ok": False, "error": "sync_failed", "message": str(exc), "job_id": job_id}
 
 
 async def test_provider_connection(
@@ -239,8 +279,9 @@ async def sync_all_enabled_providers(session: AsyncSession) -> dict:
 
     results: list[dict] = []
     total_records = 0
+    scheduled_options = SyncOptions(trigger="scheduled")
     for provider_id in enabled_ids:
-        result = await sync_provider(session, provider_id)
+        result = await run_sync_with_job(session, provider_id, scheduled_options)
         result["provider_id"] = provider_id
         results.append(result)
         if result.get("ok"):

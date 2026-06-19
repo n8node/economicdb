@@ -40,6 +40,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const nav = [
     { href: "/adminus/dashboard", label: "Обзор" },
+    { href: "/adminus/data", label: "Данные и ETL" },
     { href: "/adminus/providers", label: "Провайдеры данных" },
     { href: "/adminus/settings", label: "Настройки" },
   ];
@@ -53,7 +54,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              className={pathname === item.href ? "active" : ""}
+              className={pathname === item.href || pathname.startsWith(`${item.href}/`) ? "active" : ""}
             >
               {item.label}
             </Link>

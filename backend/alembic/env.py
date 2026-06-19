@@ -7,6 +7,7 @@ from app.config.settings import settings
 from app.models.admin import Base
 import app.models.indicators  # noqa: F401
 import app.models.providers  # noqa: F401
+import app.models.etl_jobs  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

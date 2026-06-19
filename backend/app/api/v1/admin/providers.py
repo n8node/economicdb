@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_admin, get_session
-from app.etl.sync import PROVIDERS_WITH_API_KEY, list_providers, sync_provider, test_provider_connection
+from app.etl.options import SyncOptions
+from app.etl.sync import PROVIDERS_WITH_API_KEY, list_providers, run_sync_with_job, test_provider_connection
 from app.models.admin import AdminUser
 from app.models.providers import DataProvider
 from app.schemas.providers import (
@@ -138,10 +139,14 @@ async def test_provider(
 @router.post("/{provider_id}/sync", response_model=SyncResult)
 async def trigger_sync(
     provider_id: str,
-    _: AdminUser = Depends(get_current_admin),
+    admin: AdminUser = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> SyncResult:
-    result = await sync_provider(session, provider_id)
+    result = await run_sync_with_job(
+        session,
+        provider_id,
+        SyncOptions(trigger="manual", admin_id=admin.id),
+    )
     if not result["ok"]:
         error = result.get("error", "sync_failed")
         if error == "provider_not_found":

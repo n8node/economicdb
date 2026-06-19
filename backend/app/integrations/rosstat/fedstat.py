@@ -160,7 +160,24 @@ def parse_fedstat_sdmx_series(
     return series
 
 
-async def fetch_fedstat_sdmx(indicator_id: str) -> str:
+async def fetch_fedstat_sdmx(
+    indicator_id: str,
+    *,
+    year: int | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
+) -> str:
+    params: dict[str, str] = {"format": "sdmx", "id": indicator_id}
+    post_data: dict[str, str] = {"id": indicator_id}
+    if year is not None:
+        post_data["Year"] = str(year)
+        params["Year"] = str(year)
+    elif from_date is not None and to_date is not None:
+        params["startPeriod"] = str(from_date.year)
+        params["endPeriod"] = str(to_date.year)
+        post_data["startPeriod"] = str(from_date.year)
+        post_data["endPeriod"] = str(to_date.year)
+
     errors: list[str] = []
     for attempt in range(1, HTTP_RETRIES + 1):
         try:
@@ -172,7 +189,8 @@ async def fetch_fedstat_sdmx(indicator_id: str) -> str:
             ) as client:
                 response = await client.post(
                     FEDSTAT_DATA_URL,
-                    data={"id": indicator_id},
+                    params=params,
+                    data=post_data,
                 )
             if response.status_code >= 400:
                 errors.append(f"HTTP {response.status_code}")
@@ -184,6 +202,7 @@ async def fetch_fedstat_sdmx(indicator_id: str) -> str:
             logger.info(
                 "fedstat_http_post_ok",
                 indicator_id=indicator_id,
+                year=year,
                 attempt=attempt,
                 bytes=len(response.content),
             )
@@ -206,14 +225,48 @@ async def fetch_fedstat_series(
     from_date: date = DEFAULT_FROM_DATE,
     to_date: date,
 ) -> list[tuple[date, Decimal]]:
-    xml_text = await fetch_fedstat_sdmx(indicator_id)
-    return parse_fedstat_sdmx_series(
-        xml_text,
-        series_key=series_key,
-        transform=transform,
-        from_date=from_date,
-        to_date=to_date,
-    )
+    if from_date.year == to_date.year:
+        xml_text = await fetch_fedstat_sdmx(
+            indicator_id,
+            year=from_date.year,
+            from_date=from_date,
+            to_date=to_date,
+        )
+        return parse_fedstat_sdmx_series(
+            xml_text,
+            series_key=series_key,
+            transform=transform,
+            from_date=from_date,
+            to_date=to_date,
+        )
+
+    chunks: list[list[tuple[date, Decimal]]] = []
+    for year in range(from_date.year, to_date.year + 1):
+        year_from = max(from_date, date(year, 1, 1))
+        year_to = min(to_date, date(year, 12, 31))
+        try:
+            xml_text = await fetch_fedstat_sdmx(indicator_id, year=year)
+            chunk = parse_fedstat_sdmx_series(
+                xml_text,
+                series_key=series_key,
+                transform=transform,
+                from_date=year_from,
+                to_date=year_to,
+            )
+            if chunk:
+                chunks.append(chunk)
+        except RosstatError as exc:
+            logger.warning(
+                "fedstat_year_fetch_failed",
+                indicator_id=indicator_id,
+                year=year,
+                error=exc.message,
+            )
+
+    series = merge_series(chunks)
+    if not series:
+        raise RosstatError("Не удалось извлечь ряд из fedstat SDMX", code="rosstat_parse_error")
+    return series
 
 
 def merge_series(chunks: Iterable[list[tuple[date, Decimal]]]) -> list[tuple[date, Decimal]]:
