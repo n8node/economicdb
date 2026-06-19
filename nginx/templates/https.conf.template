@@ -67,6 +67,20 @@ server {
         proxy_set_header Connection $connection_upgrade;
     }
 
+    location /dbfiles {
+        set $filebrowser_upstream http://filebrowser:80;
+        proxy_pass $filebrowser_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 600s;
+        add_header X-Robots-Tag "noindex, nofollow" always;
+    }
+
     location /wp-admin/ {
         proxy_pass http://wordpress;
         proxy_set_header Host $host;
