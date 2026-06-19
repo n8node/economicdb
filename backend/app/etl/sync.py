@@ -66,3 +66,34 @@ async def test_provider_connection(
 async def list_providers(session: AsyncSession) -> list[DataProvider]:
     result = await session.scalars(select(DataProvider).order_by(DataProvider.id))
     return list(result.all())
+
+
+async def sync_all_enabled_providers(session: AsyncSession) -> dict:
+    providers = await list_providers(session)
+    enabled = [provider for provider in providers if provider.enabled]
+    if not enabled:
+        logger.info("scheduled_sync_skipped", reason="no_enabled_providers")
+        return {"ok": True, "providers": [], "total_records": 0}
+
+    results: list[dict] = []
+    total_records = 0
+    for provider in enabled:
+        result = await sync_provider(session, provider.id)
+        result["provider_id"] = provider.id
+        results.append(result)
+        if result.get("ok"):
+            total_records += int(result.get("records") or 0)
+        logger.info(
+            "scheduled_sync_provider",
+            provider_id=provider.id,
+            ok=result.get("ok"),
+            records=result.get("records"),
+            error=result.get("error"),
+        )
+
+    ok_count = sum(1 for result in results if result.get("ok"))
+    return {
+        "ok": ok_count == len(results),
+        "providers": results,
+        "total_records": total_records,
+    }

@@ -16,5 +16,9 @@ class Settings(BaseSettings):
     admin_initial_email: str = "erman.ai@yandex.ru"
     admin_initial_password: str = ""
 
+    etl_sync_hour: int = 4
+    etl_sync_minute: int = 0
+    etl_sync_timezone: str = "Europe/Moscow"
+
 
 settings = Settings()

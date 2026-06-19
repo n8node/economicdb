@@ -120,6 +120,7 @@ export function ProvidersPanel() {
           fred.stlouisfed.org
         </a>
         . После сохранения ключа — «Проверить», включите провайдер и нажмите «Синхронизация».
+        Включённые провайдеры синхронизируются автоматически каждый день в 04:00 МСК (worker).
       </p>
       {message ? <p className="muted">{message}</p> : null}
       <table className="admin-table">
