@@ -12,15 +12,15 @@ import structlog
 logger = structlog.get_logger()
 
 CBR_INFLATION_URLS = (
-    "http://www.cbr.ru/hd_base/infl/",
     "https://www.cbr.ru/hd_base/infl/",
+    "http://www.cbr.ru/hd_base/infl/",
 )
 DEFAULT_FROM_DATE = date(2020, 1, 1)
 HTTP_HEADERS = {
     "User-Agent": "economicdb/0.1 (+https://economicdb.com)",
     "Accept": "text/html,application/xhtml+xml,*/*",
     "Accept-Language": "ru-RU,ru;q=0.9",
-    "Referer": "http://www.cbr.ru/hd_base/infl/",
+    "Referer": "https://www.cbr.ru/hd_base/infl/",
 }
 HTTP_TIMEOUT = httpx.Timeout(connect=8.0, read=30.0, write=10.0, pool=10.0)
 HTTP_RETRIES = 3
