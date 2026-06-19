@@ -1,5 +1,5 @@
 #!/bin/bash
-# Деплой на сервере: git pull + rebuild (make не нужен)
+# Деплой на сервере: последовательная сборка, без простоя nginx дольше нужного
 set -euo pipefail
 
 cd /opt/economicdb
@@ -13,19 +13,27 @@ SERVICES="${1:-}"
 COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
 if [ -n "$SERVICES" ]; then
-  $COMPOSE up -d --build $SERVICES
+  $COMPOSE build $SERVICES
+  $COMPOSE up -d $SERVICES
 else
-  $COMPOSE up -d --build backend frontend worker
+  echo "=== Build backend + worker + frontend (sequential) ==="
+  $COMPOSE build backend
+  $COMPOSE build worker
+  $COMPOSE build frontend
+  $COMPOSE build nginx
+  $COMPOSE up -d backend worker
+  $COMPOSE up -d --no-deps frontend
+  SKIP_BUILD=1 bash scripts/restart-frontend.sh
+  $COMPOSE up -d nginx
 fi
 
 if [ -f scripts/apply-nginx-https.sh ]; then
   ./scripts/apply-nginx-https.sh
 fi
 
-bash scripts/restart-frontend.sh
+$COMPOSE exec nginx nginx -s reload 2>/dev/null || true
 
-sleep 5
+sleep 3
 curl -sf https://economicdb.com/health && echo " health OK" || echo "WARNING: health failed"
-curl -sf https://economicdb.com/app -o /dev/null && echo "/app OK" || echo "WARNING: /app failed — run bash scripts/verify-site.sh"
+curl -s -o /dev/null -w "/app -> %{http_code}\n" https://economicdb.com/app || true
 echo "=== Done ==="
-echo "Browser: Ctrl+Shift+R if old UI; or clear site data for economicdb.com once."

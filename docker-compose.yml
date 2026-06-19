@@ -15,6 +15,7 @@ services:
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - next_static:/var/www/next-static:ro
     restart: unless-stopped
 
   backend:
@@ -58,6 +59,8 @@ services:
       INTERNAL_API_URL: http://backend:8080
     expose:
       - "3000"
+    volumes:
+      - next_static:/app/.next/static
     healthcheck:
       test:
         [
@@ -173,3 +176,4 @@ volumes:
   mysql_data:
   wordpress_data:
   filebrowser_data:
+  next_static:

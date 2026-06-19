@@ -13,8 +13,14 @@ fi
 
 COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
-echo "=== Rebuild frontend ==="
-$COMPOSE up -d --build frontend
+if [ "${SKIP_BUILD:-0}" != "1" ]; then
+  echo "=== Rebuild frontend ==="
+  export BUILD_ID="${BUILD_ID:-$(git rev-parse --short HEAD 2>/dev/null || echo local)}"
+  $COMPOSE build frontend
+  $COMPOSE up -d --no-deps frontend
+else
+  echo "=== Skip frontend build (SKIP_BUILD=1) ==="
+fi
 
 echo "=== Wait for frontend (healthcheck or /app HTTP 200) ==="
 for i in $(seq 1 60); do

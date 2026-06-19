@@ -1,0 +1,15 @@
+---
+description: Always commit and push completed work to main without asking
+alwaysApply: true
+---
+
+# Git push policy
+
+After completing implementation changes in this repo:
+
+1. **Always** commit with a conventional commit message (English).
+2. **Always** push to `origin main` immediately — do **not** ask «нужен push?».
+3. Only skip push if the user explicitly says not to push, or there are no file changes to commit.
+4. Do not push secrets (`.env`, credentials).
+
+Briefly report the commit hash and deploy command after push.
