@@ -6,7 +6,7 @@ import "uplot/dist/uPlot.min.css";
 import { SERIES_COLORS, type CompareSeriesResponse } from "@/lib/compare";
 
 function toUnixDay(isoDate: string): number {
-  return uPlot.utcParse(isoDate.slice(0, 10)) ?? 0;
+  return Math.floor(new Date(`${isoDate.slice(0, 10)}T00:00:00Z`).getTime() / 1000);
 }
 
 export function CompareChart({ data }: { data: CompareSeriesResponse | null }) {
