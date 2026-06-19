@@ -26,7 +26,12 @@ async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryB
     updated_label = now.astimezone(timezone.utc).strftime("%d.%m.%Y, %H:%M МСК")
 
     indicators = (
-        await session.scalars(select(Indicator).where(Indicator.id.in_(KPI_IDS + FAVORITE_IDS)))
+        await session.scalars(
+            select(Indicator).where(
+                Indicator.id.in_(KPI_IDS + FAVORITE_IDS),
+                Indicator.enabled.is_(True),
+            )
+        )
     ).all()
     indicator_map = {i.id: i for i in indicators}
 

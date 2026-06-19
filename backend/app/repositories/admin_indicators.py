@@ -54,6 +54,7 @@ async def list_admin_indicators(
             "has_data": counts.get(item.id, 0) > 0,
             "data_points": counts.get(item.id, 0),
             "sync_ready": is_sync_ready(item),
+            "enabled": item.enabled,
         }
         for item in indicators
     ]
@@ -95,6 +96,8 @@ async def update_indicator(
         row.external_id = payload.external_id
     if payload.unit is not None:
         row.unit = payload.unit
+    if payload.enabled is not None:
+        row.enabled = payload.enabled
     await session.commit()
     await session.refresh(row)
     return row

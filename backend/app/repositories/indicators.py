@@ -68,7 +68,7 @@ def _apply_filters(
     if updated_within_days:
         cutoff = datetime.now(timezone.utc) - timedelta(days=updated_within_days)
         query = query.where(Indicator.updated_at >= cutoff)
-    return query
+    return query.where(Indicator.enabled.is_(True))
 
 
 async def _load_sparklines(session: AsyncSession, indicator_ids: list[str]) -> dict[str, list[float]]:
@@ -150,9 +150,11 @@ async def list_indicators(
 
 
 async def get_facets(session: AsyncSession) -> IndicatorFacets:
+    enabled = Indicator.enabled.is_(True)
+
     async def counts(column):
         rows = await session.execute(
-            select(column, func.count()).group_by(column).order_by(func.count().desc())
+            select(column, func.count()).where(enabled).group_by(column).order_by(func.count().desc())
         )
         return {str(key): int(count) for key, count in rows.all()}
 
@@ -166,7 +168,7 @@ async def get_facets(session: AsyncSession) -> IndicatorFacets:
 
 async def get_indicator(session: AsyncSession, indicator_id: str) -> IndicatorDetail | None:
     row = await session.get(Indicator, indicator_id)
-    if row is None:
+    if row is None or not row.enabled:
         return None
     sparklines = await _load_sparklines(session, [row.id])
     item = _to_list_item(row, sparklines.get(row.id, []))
@@ -180,7 +182,7 @@ async def get_series(
     date_to: date | None = None,
 ) -> IndicatorSeriesResponse | None:
     indicator = await session.get(Indicator, indicator_id)
-    if indicator is None:
+    if indicator is None or not indicator.enabled:
         return None
 
     query = (
@@ -204,6 +206,7 @@ async def search_indicators(session: AsyncSession, q: str, limit: int = 10) -> l
     like = f"%{q.strip()}%"
     rows = await session.scalars(
         select(Indicator)
+        .where(Indicator.enabled.is_(True))
         .where(or_(Indicator.name_ru.ilike(like), Indicator.id.ilike(like)))
         .order_by(Indicator.name_ru)
         .limit(min(limit, 20))

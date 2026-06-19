@@ -18,6 +18,7 @@ type Indicator = {
   has_data: boolean;
   data_points: number;
   sync_ready: boolean;
+  enabled: boolean;
 };
 
 type Template = Indicator & { wave: string; in_catalog: boolean; unit: string };
@@ -234,6 +235,23 @@ export function DataPanel() {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   }
 
+  async function toggleProductEnabled(id: string, enabled: boolean) {
+    setBusy(true);
+    setMessage("");
+    try {
+      await adminAuthFetch(`/admin/indicators/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ enabled }),
+      });
+      await loadIndicators();
+      setMessage(enabled ? "Показатель снова виден в продукте" : "Показатель скрыт из продукта");
+    } catch {
+      setMessage("Не удалось изменить видимость показателя");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
       <h1 style={{ marginTop: 0 }}>Данные и ETL</h1>
@@ -352,6 +370,7 @@ export function DataPanel() {
                   <th>Страна</th>
                   <th>ETL</th>
                   <th>Данные</th>
+                  <th>В продукте</th>
                 </tr>
               </thead>
               <tbody>
@@ -369,6 +388,16 @@ export function DataPanel() {
                     <td>{item.country}</td>
                     <td>{item.sync_ready ? "готов" : "нет парсера"}</td>
                     <td>{item.data_points > 0 ? item.data_points : "—"}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="admin-btn"
+                        disabled={busy}
+                        onClick={() => toggleProductEnabled(item.id, !item.enabled)}
+                      >
+                        {item.enabled ? "Включён" : "Скрыт"}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

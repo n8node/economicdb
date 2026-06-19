@@ -78,7 +78,12 @@ async def build_compare_series(session: AsyncSession, req: CompareSeriesRequest)
     labels = [d.strftime("%Y-%m") for d in grid]
 
     indicators = (
-        await session.scalars(select(Indicator).where(Indicator.id.in_(req.indicator_ids)))
+        await session.scalars(
+            select(Indicator).where(
+                Indicator.id.in_(req.indicator_ids),
+                Indicator.enabled.is_(True),
+            )
+        )
     ).all()
     indicator_map = {i.id: i for i in indicators}
 

@@ -61,6 +61,7 @@ async def post_admin_indicator(
         external_id=row.external_id,
         unit=row.unit,
         has_data=False,
+        enabled=True,
     )
 
 

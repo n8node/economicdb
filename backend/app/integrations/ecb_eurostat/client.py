@@ -23,6 +23,7 @@ HTTP_HEADERS = {
 HTTP_TIMEOUT = httpx.Timeout(connect=8.0, read=60.0, write=10.0, pool=10.0)
 HTTP_RETRIES = 3
 MONTH_PERIOD_RE = re.compile(r"^(\d{4})-(\d{2})$")
+QUARTER_PERIOD_RE = re.compile(r"^(\d{4})-Q([1-4])$")
 
 
 class EcbEurostatError(Exception):
@@ -55,6 +56,20 @@ def _parse_month_period(raw: str) -> date | None:
     if month < 1 or month > 12:
         return None
     return date(year, month, 1)
+
+
+def _parse_quarter_period(raw: str) -> date | None:
+    match = QUARTER_PERIOD_RE.match(raw.strip())
+    if not match:
+        return None
+    year = int(match.group(1))
+    quarter = int(match.group(2))
+    month = (quarter - 1) * 3 + 1
+    return date(year, month, 1)
+
+
+def _parse_eurostat_period(raw: str) -> date | None:
+    return _parse_quarter_period(raw) or _parse_month_period(raw)
 
 
 def _parse_decimal(raw: str) -> Decimal | None:
@@ -143,12 +158,30 @@ def _parse_eurostat_csv(text: str) -> list[tuple[date, Decimal]]:
     reader = csv.DictReader(io.StringIO(text))
     points: list[tuple[date, Decimal]] = []
     for row in reader:
-        observed = _parse_month_period(row.get("TIME_PERIOD", ""))
+        observed = _parse_eurostat_period(row.get("TIME_PERIOD", ""))
         value = _parse_decimal(row.get("OBS_VALUE", ""))
         if observed is None or value is None:
             continue
         points.append((observed, value))
     return sorted(points, key=lambda item: item[0])
+
+
+def _split_eurostat_external_id(external_id: str) -> tuple[str, str]:
+    cleaned = external_id.strip().lstrip("/")
+    if "/" not in cleaned:
+        raise EcbEurostatError(
+            f"Неверный Eurostat external_id: {external_id}",
+            code="ecb_eurostat_bad_external_id",
+        )
+    dataset, key = cleaned.split("/", 1)
+    return dataset.strip(), key.strip()
+
+
+def _format_eurostat_end_period(end: date, *, quarterly: bool) -> str:
+    if quarterly:
+        quarter = (end.month - 1) // 3 + 1
+        return f"{end.year}-Q{quarter}"
+    return _format_period(end)
 
 
 def _parse_ecb_csv(text: str) -> list[tuple[date, Decimal]]:
@@ -195,6 +228,8 @@ async def fetch_eurostat_series_by_key(
     from_date: date = DEFAULT_FROM_DATE,
     to_date: date | None = None,
 ) -> list[tuple[date, Decimal]]:
+    dataset, key = _split_eurostat_external_id(dataset_key)
+    quarterly = key.startswith("Q.") or ".Q." in key or dataset.lower().startswith("namq")
     end = _latest_eurostat_month_end(to_date or datetime.now(timezone.utc).date())
     if from_date > end:
         from_date = date(end.year - 1, end.month, 1)
@@ -203,9 +238,11 @@ async def fetch_eurostat_series_by_key(
         chunk_end = _latest_eurostat_month_end(chunk_to)
         if chunk_from > chunk_end:
             continue
+        start_period = _format_eurostat_end_period(chunk_from, quarterly=quarterly) if quarterly else _format_period(chunk_from)
+        end_period = _format_eurostat_end_period(chunk_end, quarterly=quarterly)
         url = (
-            f"{EUROSTAT_SDMX_BASE}/{dataset_key.lstrip('/')}"
-            f"?format=SDMX-CSV&startPeriod={_format_period(chunk_from)}&endPeriod={_format_period(chunk_end)}"
+            f"{EUROSTAT_SDMX_BASE}/{dataset}/{key}"
+            f"?format=SDMX-CSV&startPeriod={start_period}&endPeriod={end_period}"
         )
         csv_text = await _http_get(url, allow_client_error=True)
         if csv_text is None:

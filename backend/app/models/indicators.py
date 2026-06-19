@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, Numeric, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.admin import Base
@@ -17,6 +17,7 @@ class Indicator(Base):
     frequency: Mapped[str] = mapped_column(String(16), nullable=False)
     source: Mapped[str] = mapped_column(String(32), nullable=False)
     external_id: Mapped[str | None] = mapped_column(String(128))
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     unit: Mapped[str | None] = mapped_column(String(32))
     last_value: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
     last_change: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))

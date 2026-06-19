@@ -62,6 +62,7 @@ class AdminIndicatorItem(BaseModel):
     has_data: bool = False
     data_points: int = 0
     sync_ready: bool = False
+    enabled: bool = True
 
 
 class AdminIndicatorCreate(BaseModel):
@@ -80,6 +81,7 @@ class AdminIndicatorUpdate(BaseModel):
     category: str | None = Field(default=None, min_length=2, max_length=64)
     external_id: str | None = Field(default=None, max_length=128)
     unit: str | None = Field(default=None, max_length=32)
+    enabled: bool | None = None
 
 
 class CatalogTemplateItem(BaseModel):
