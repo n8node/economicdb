@@ -23,9 +23,10 @@ type TestDetails = {
   latest_observation?: { date: string; value: string };
   key_rate_latest?: { date: string; value: string };
   usd_rub_latest?: { date: string; value: string };
+  cpi_yoy_latest?: { date: string; value: string };
 };
 
-const PUBLIC_API_PROVIDERS = new Set(["cbr"]);
+const PUBLIC_API_PROVIDERS = new Set(["cbr", "rosstat"]);
 
 function providerStatus(provider: Provider) {
   if (provider.last_test_status === "ok") {
@@ -110,11 +111,14 @@ export function ProvidersPanel() {
       const latest = result.details?.latest_observation;
       const keyRate = result.details?.key_rate_latest;
       const usdRub = result.details?.usd_rub_latest;
+      const cpiYoy = result.details?.cpi_yoy_latest;
       const extra = latest
         ? ` · ${latest.date}: ${latest.value}`
         : keyRate && usdRub
           ? ` · ставка ${keyRate.value}% (${keyRate.date}), USD/RUB ${usdRub.value} (${usdRub.date})`
-          : "";
+          : cpiYoy
+            ? ` · ИПЦ ${cpiYoy.value}% (${cpiYoy.date})`
+            : "";
       setMessage(`${result.message || "OK"}${extra}`);
       await load();
     } catch {

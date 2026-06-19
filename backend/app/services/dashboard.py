@@ -18,7 +18,7 @@ from app.schemas.dashboard import (
 )
 
 KPI_IDS = ["cbr_key_rate", "usd_rub", "us_cpi_yoy", "fed_funds", "oil_brent"]
-FAVORITE_IDS = ["cbr_key_rate", "usd_rub", "us_cpi_yoy", "fed_funds"]
+FAVORITE_IDS = ["cbr_key_rate", "usd_rub", "ru_cpi_yoy", "us_cpi_yoy", "fed_funds"]
 
 
 async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryBlock | None = None) -> DashboardOverview:

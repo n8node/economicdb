@@ -6,6 +6,8 @@ from app.integrations.cbr.client import CbrError, test_connection as cbr_test_co
 from app.integrations.cbr.sync import sync_cbr
 from app.integrations.fred.client import FredError, test_connection as fred_test_connection
 from app.integrations.fred.sync import sync_fred
+from app.integrations.rosstat.client import RosstatError, test_connection as rosstat_test_connection
+from app.integrations.rosstat.sync import sync_rosstat
 from app.models.providers import DataProvider
 from app.services.credentials import get_api_key
 
@@ -27,6 +29,9 @@ async def sync_provider(session: AsyncSession, provider_id: str) -> dict:
 
     if provider_id == "cbr":
         return await sync_cbr(session, provider)
+
+    if provider_id == "rosstat":
+        return await sync_rosstat(session, provider)
 
     logger.info("etl_sync_unimplemented", provider_id=provider_id)
     return {
@@ -62,6 +67,24 @@ async def test_provider_connection(
                 "ok": False,
                 "error": "cbr_test_failed",
                 "message": "Ошибка проверки ЦБ РФ, подробности в логах backend",
+            }
+
+    if provider_id == "rosstat":
+        try:
+            details = await rosstat_test_connection()
+            return {
+                "ok": True,
+                "message": "Подключение к Росстату успешно",
+                "details": details,
+            }
+        except RosstatError as exc:
+            return {"ok": False, "error": exc.code, "message": exc.message}
+        except Exception:
+            logger.exception("rosstat_test_connection_failed")
+            return {
+                "ok": False,
+                "error": "rosstat_test_failed",
+                "message": "Ошибка проверки Росстата, подробности в логах backend",
             }
 
     if provider_id in PROVIDERS_WITH_API_KEY:
