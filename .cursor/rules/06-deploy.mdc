@@ -1,0 +1,244 @@
+---
+description: Git, деплой, SSL, бэкапы — только полные копируемые команды
+globs: ["**/scripts/**", "**/.gitignore", "**/Makefile"]
+alwaysApply: true
+---
+
+# Git и деплой
+
+## Репозиторий
+
+- Ветки: `main` (production), `develop` (staging), `feat/*`, `fix/*`
+- Путь на сервере: `/opt/economicdb`
+- `.env` и секреты **никогда** не в git
+- Внешние API keys — **в админке**, не в `.env`
+
+## Коммиты
+
+Conventional commits на английском:
+```
+feat: add FRED provider sync worker
+fix: digest validator number normalization
+refactor: extract settings service
+chore: update dependencies
+deploy: production release v0.1.0
+```
+
+## Деплой на сервере (SSH)
+
+**Обновление (уже есть клон):**
+```bash
+cd /opt/economicdb && git fetch origin && git checkout main && git pull origin main && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+**Проверка после деплоя:**
+```bash
+curl -sf http://127.0.0.1/health
+```
+
+**Логи backend (миграции Alembic):**
+```bash
+cd /opt/economicdb && docker compose -f docker-compose.yml -f docker-compose.prod.yml logs backend --tail=30
+```
+
+**Проверка миграций:**
+```bash
+cd /opt/economicdb && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U macro -d macro -c "SELECT version_num FROM alembic_version;"
+```
+
+## Первый деплой на чистом сервере
+
+**Предусловие:** DNS A-запись `economicdb.com` и `www.economicdb.com` → IP сервера.
+
+```bash
+cd /opt && git clone https://github.com/n8node/economicdb.git && cd economicdb
+chmod +x scripts/*.sh
+sudo ./scripts/setup-server.sh
+export ADMIN_INITIAL_PASSWORD='your-secure-password'
+./scripts/first-deploy.sh
+```
+
+`first-deploy.sh` автоматически:
+1. Генерирует `.env` (POSTGRES, JWT, encryption key) если его нет
+2. Подставляет `ADMIN_INITIAL_EMAIL=erman.ai@yandex.ru` из `.env.example`
+3. Подставляет `ADMIN_INITIAL_PASSWORD` из env
+4. `docker compose up --build`
+5. Backend создаёт `super_admin` если `admin_users` пуста
+6. `ssl-init.sh` — Let's Encrypt + `nginx/conf.d/https.conf`
+
+**Вход в админку:** `https://economicdb.com/adminus/`  
+Email по умолчанию: `erman.ai@yandex.ru` (из `.env`). Пароль — из `ADMIN_INITIAL_PASSWORD`.
+
+**Cron SSL (хост, 3:00):**
+```bash
+0 3 * * * certbot renew --quiet --deploy-hook "/opt/economicdb/scripts/ssl-deploy-hook.sh" >> /var/log/certbot-renew.log 2>&1
+```
+
+После первого деплоя — OpenRouter, Robokassa, SMTP, провайдеры **через `/adminus`**.
+
+## scripts/first-deploy.sh
+
+Оркестратор первого деплоя: `.env` → compose → health → SSL → verify.
+Требует `ADMIN_INITIAL_PASSWORD` в environment или в `.env` до старта backend.
+
+## scripts/setup-server.sh
+
+Устанавливает на Ubuntu/Debian: Docker (get.docker.com), docker-compose-plugin, certbot.
+
+## scripts/deploy.sh
+
+```bash
+#!/bin/bash
+set -e
+
+SERVER="deploy@{SERVER_IP}"
+PROJECT_DIR="/opt/economicdb"
+BRANCH="${1:-main}"
+
+echo "=== Deploying branch: $BRANCH ==="
+
+git push origin "$BRANCH"
+
+ssh "$SERVER" << EOF
+set -e
+cd $PROJECT_DIR
+git fetch origin
+git checkout $BRANCH
+git pull origin $BRANCH
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+docker image prune -f
+sleep 5
+curl -sf http://127.0.0.1/health || echo "WARNING: Health check failed!"
+echo "=== Deploy done ==="
+EOF
+```
+
+## scripts/ssl-init.sh
+
+```bash
+#!/bin/bash
+set -e
+
+source .env
+DOMAIN="${DOMAIN:-economicdb.com}"
+EMAIL="${CERTBOT_EMAIL}"
+
+docker compose -f docker-compose.yml -f docker-compose.prod.yml stop nginx
+
+certbot certonly --standalone \
+    --non-interactive \
+    --agree-tos \
+    --email "$EMAIL" \
+    -d "$DOMAIN" \
+    -d "www.$DOMAIN"
+
+mkdir -p nginx/ssl
+cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem nginx/ssl/
+cp /etc/letsencrypt/live/$DOMAIN/privkey.pem nginx/ssl/
+
+docker compose -f docker-compose.yml -f docker-compose.prod.yml start nginx
+
+echo "Done! Enable HTTPS in nginx/conf.d/default.conf and reload nginx."
+```
+
+## scripts/ssl-deploy-hook.sh
+
+```bash
+#!/bin/bash
+set -e
+
+PROJECT_DIR="/opt/economicdb"
+source "$PROJECT_DIR/.env"
+DOMAIN="${DOMAIN:-economicdb.com}"
+
+cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem "$PROJECT_DIR/nginx/ssl/"
+cp /etc/letsencrypt/live/$DOMAIN/privkey.pem "$PROJECT_DIR/nginx/ssl/"
+
+docker compose -f "$PROJECT_DIR/docker-compose.yml" \
+    -f "$PROJECT_DIR/docker-compose.prod.yml" \
+    exec nginx nginx -s reload
+```
+
+## scripts/backup.sh
+
+```bash
+#!/bin/bash
+set -e
+
+BACKUP_DIR="/opt/economicdb/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+RETENTION_DAYS=30
+
+mkdir -p "$BACKUP_DIR"
+
+docker compose -f /opt/economicdb/docker-compose.yml \
+    -f /opt/economicdb/docker-compose.prod.yml \
+    exec -T postgres pg_dump -U macro macro \
+    | gzip > "$BACKUP_DIR/pg_$DATE.sql.gz"
+
+docker compose -f /opt/economicdb/docker-compose.yml \
+    -f /opt/economicdb/docker-compose.prod.yml \
+    exec -T mysql mysqldump -u wordpress -p"$WP_DB_PASSWORD" wordpress \
+    | gzip > "$BACKUP_DIR/wp_$DATE.sql.gz"
+
+find "$BACKUP_DIR" -type f -mtime +$RETENTION_DAYS -delete
+
+echo "Backup completed: $DATE"
+```
+
+Cron (4:00):
+```bash
+0 4 * * * /opt/economicdb/scripts/backup.sh >> /var/log/macro-backup.log 2>&1
+```
+
+## .gitignore
+
+```gitignore
+.env
+.env.local
+.env.production
+/backend/__pycache__/
+/backend/.pytest_cache/
+/backend/.mypy_cache/
+/frontend/node_modules/
+/frontend/.next/
+/docker-compose.override.yml
+.idea/
+.vscode/
+nginx/ssl/*.pem
+nginx/ssl/*.key
+wordpress/uploads/
+backups/
+*.log
+```
+
+## Правила деплоя
+
+1. **Первый деплой:** `setup-server.sh` (root) → `ADMIN_INITIAL_PASSWORD=... first-deploy.sh`.
+2. **Деплой обновлений только из `main`.** Develop — staging.
+3. **`git pull` на сервере**, не копирование файлов.
+4. **`.env` — bootstrap only**; OpenRouter/Robokassa/SMTP/providers — в админке.
+5. **`ADMIN_INITIAL_PASSWORD` — только в `.env` на сервере**, никогда в git.
+6. **super_admin seed** — один раз при пустой `admin_users`; не перезаписывает существующих.
+7. **Alembic migrations** при старте backend.
+8. **SSL** — автоматически в `first-deploy.sh`; продление — certbot + hook.
+9. **Бэкапы** — ежедневно 4:00, 30 дней.
+10. **После деплоя** — `curl -sf http://127.0.0.1/health`.
+11. **Админка:** `https://economicdb.com/adminus/` (не `/admin`).
+
+## Troubleshooting
+
+**Перезапуск сервиса:**
+```bash
+cd /opt/economicdb && docker compose -f docker-compose.yml -f docker-compose.prod.yml restart backend
+```
+
+**Пересборка:**
+```bash
+cd /opt/economicdb && docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d worker
+```
+
+**Логи worker (ETL/digest):**
+```bash
+cd /opt/economicdb && docker compose -f docker-compose.yml -f docker-compose.prod.yml logs worker --tail=50
+```

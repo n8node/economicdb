@@ -1,0 +1,154 @@
+---
+description: Robokassa — тарифы, подписки, биллинг
+globs: ["**/backend/app/**/billing*", "**/backend/app/api/**/billing*", "**/frontend/**/subscription*", "**/frontend/**/billing*"]
+alwaysApply: false
+---
+
+# Монетизация — Robokassa
+
+## Провайдер
+
+- **Robokassa** — единственный платёжный провайдер.
+- Credentials хранятся в **`system_settings`** (админка), не в `.env`:
+  - `robokassa.merchant_login`
+  - `robokassa.password1`
+  - `robokassa.password2`
+  - `robokassa.test_mode` (boolean)
+
+## Планы подписки
+
+```python
+# backend/app/models/plans.py — editable через admin, defaults:
+PLANS = {
+    "free": Plan(
+        id="free",
+        price_kopecks=0,
+        compare_series_limit=2,
+        ai_summaries_archive=False,
+        alerts_limit=0,
+        export_enabled=False,
+    ),
+    "pro": Plan(
+        id="pro",
+        price_kopecks=99000,          # 990 ₽/мес
+        compare_series_limit=6,
+        ai_summaries_archive=True,
+        alerts_limit=20,
+        export_enabled=True,
+    ),
+    "business": Plan(
+        id="business",
+        price_kopecks=299000,         # 2 990 ₽/мес
+        compare_series_limit=6,
+        ai_summaries_archive=True,
+        alerts_limit=100,
+        export_enabled=True,
+        api_access=True,
+        team_seats=5,
+    ),
+}
+```
+
+Тарифы редактируются в админке (`/adminus/billing/plans`); код содержит defaults для seed.
+
+## Правила Robokassa
+
+- Все суммы внутри приложения — **копейки** (int). `OutSum` для Robokassa — строка рублей с 2 знаками.
+- `SignatureValue` проверять строго для ResultURL. Подписка не активируется без валидной подписи.
+- `InvId` уникален, связан с `payment_events.id`.
+- ResultURL webhook: ответ `OK{InvId}` **только после** сохранения события.
+- SuccessURL — redirect пользователя в `/app/subscription/success`.
+- FailURL — `/app/subscription/fail`.
+- `payment_events` — иммутабельная таблица, только INSERT + UPDATE `processed_at`.
+- Никогда не хранить данные карт.
+
+## Клиент
+
+```python
+# backend/app/billing/robokassa.py
+class RobokassaClient:
+    def __init__(self, settings: SettingsService):
+        self.merchant_login = settings.get_secret_sync("robokassa.merchant_login")
+        self.password1 = settings.get_secret_sync("robokassa.password1")
+        self.password2 = settings.get_secret_sync("robokassa.password2")
+        self.test_mode = settings.get_bool("robokassa.test_mode")
+
+    def create_payment_url(self, req: CreatePaymentRequest) -> str:
+        out_sum = f"{req.amount_kopecks / 100:.2f}"
+        signature = self._sign_payment(out_sum, req.invoice_id, {
+            "shp_plan": req.plan_id,
+            "shp_user": req.user_id,
+        })
+        # https://auth.robokassa.ru/Merchant/Index.aspx?...
+```
+
+## Webhook handler
+
+```python
+# POST /api/v1/webhooks/robokassa
+@router.post("/webhooks/robokassa")
+async def robokassa_webhook(request: Request, billing: BillingService):
+    form = await request.form()
+    if not billing.robokassa.verify_result_signature(form):
+        raise HTTPException(status_code=403)
+
+    inv_id = form.get("InvId")
+    event_id = await billing.save_payment_event(form)
+    # Ответить быстро
+    background_tasks.add_task(billing.process_payment_event, event_id)
+    return PlainTextResponse(f"OK{inv_id}")
+```
+
+## Проверка плана
+
+```python
+# Кэш в Redis — не Postgres на каждый запрос
+async def get_user_plan(user_id: str) -> str:
+    cached = await redis.get(f"subscription:{user_id}")
+    if cached:
+        return cached.decode()
+    sub = await repo.get_active_subscription(user_id)
+    plan = sub.plan if sub else "free"
+    await redis.setex(f"subscription:{user_id}", 3600, plan)
+    return plan
+```
+
+## Feature gating (backend, не frontend)
+
+| Feature | Free | Pro | Business |
+|---------|------|-----|----------|
+| Dashboard KPI | ✅ | ✅ | ✅ |
+| Каталог показателей | ✅ | ✅ | ✅ |
+| Compare (серий) | 2 | 6 | 6 |
+| AI archive | teaser only | ✅ | ✅ |
+| Алерты | ❌ | 20 | 100 |
+| Export CSV/PDF | ❌ | ✅ | ✅ |
+| API access | ❌ | ❌ | ✅ |
+
+## WordPress → оплата
+
+- Pricing page в WordPress — CTA ведёт на `/app/subscription`.
+- Robokassa redirect инициирует backend после auth.
+- WordPress **не хранит** payment credentials.
+
+## Admin billing
+
+- CRUD тарифов (цена, лимиты, enabled)
+- Просмотр `payment_events`, `subscriptions`
+- Ручная активация/продление подписки (audit log)
+- Тестовый платёж (test_mode=true)
+
+## Рекуррентные платежи
+
+```python
+# worker: renewal daily tick
+async def process_renewals():
+    subs = await repo.find_expiring_soon(hours=24)
+    for sub in subs:
+        # Robokassa recurring или повторный redirect — по договорённости с Robokassa
+        await billing.renew_subscription(sub)
+```
+
+## Audit
+
+Каждое изменение plan override admin → `admin_audit_log`.

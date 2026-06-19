@@ -1,0 +1,347 @@
+---
+description: Docker Compose, Nginx, переменные окружения, Makefile
+globs: ["**/docker-compose*", "**/nginx/**", "**/Dockerfile*", "**/.env.example", "**/Makefile"]
+alwaysApply: false
+---
+
+# Инфраструктура Docker
+
+## Docker Compose — dev
+
+```yaml
+# docker-compose.yml
+services:
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on: [backend, frontend, wordpress]
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    command: ["python", "-m", "app.workers.main"]
+    volumes:
+      - ./backend:/app
+    env_file: .env
+    depends_on: [postgres, redis, backend]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    env_file: .env
+    restart: unless-stopped
+
+  wordpress:
+    build: ./wordpress
+    volumes:
+      - wp_uploads:/var/www/html/wp-content/uploads
+    environment:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_NAME: ${WP_DB_NAME}
+      WORDPRESS_DB_USER: ${WP_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ${WP_DB_NAME}
+      MYSQL_USER: ${WP_DB_USER}
+      MYSQL_PASSWORD: ${WP_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${WP_DB_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mysql_data:
+  wp_uploads:
+```
+
+## Docker Compose — prod
+
+```yaml
+# docker-compose.prod.yml (override)
+services:
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 2
+      resources:
+        limits: { cpus: "1", memory: "512M" }
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["python", "-m", "app.workers.main"]
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: "1G" }
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: "256M" }
+```
+
+## Nginx конфиг
+
+```nginx
+# nginx/conf.d/default.conf
+upstream backend  { server backend:8080; }
+upstream frontend { server frontend:3000; }
+upstream wordpress { server wordpress:80; }
+
+server {
+    listen 80;
+    server_name economicdb.com www.economicdb.com;
+
+    client_max_body_size 10M;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # FastAPI
+    location /api/ {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 120s;
+    }
+
+    location = /health {
+        proxy_pass http://backend;
+    }
+
+    # Next.js static
+    location /_next/static/ {
+        proxy_pass http://frontend;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Next.js — продукт (/app)
+    location /app {
+        proxy_pass http://frontend;
+        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    # Next.js — админка (/adminus)
+    location /adminus {
+        proxy_pass http://frontend;
+        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        # IP allowlist для /adminus — опционально в prod
+    }
+
+    # WordPress
+    location /wp-admin/    { proxy_pass http://wordpress; proxy_set_header Host $host; }
+    location /wp-content/  { proxy_pass http://wordpress; proxy_set_header Host $host; }
+    location /wp-includes/ { proxy_pass http://wordpress; proxy_set_header Host $host; }
+    location /wp-json/     { proxy_pass http://wordpress; proxy_set_header Host $host; }
+    location /wp-login.php { proxy_pass http://wordpress; proxy_set_header Host $host; }
+
+    # WordPress — лендинг
+    location / {
+        proxy_pass http://wordpress;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+## .env.example (только bootstrap)
+
+```bash
+# ============================================================
+# Макроаналитика — bootstrap env
+# Внешние API keys, SMTP, Robokassa, OpenRouter — ТОЛЬКО в админке!
+# Скопировать в .env. .env НИКОГДА не в git!
+# ============================================================
+
+# --- Домен ---
+DOMAIN=economicdb.com
+CERTBOT_EMAIL=erman.ai@yandex.ru
+
+# --- PostgreSQL ---
+POSTGRES_DB=macro
+POSTGRES_USER=macro
+POSTGRES_PASSWORD=CHANGE_ME_strong_password
+DATABASE_URL=postgres://macro:CHANGE_ME@postgres:5432/macro
+
+# --- MySQL (WordPress) ---
+WP_DB_NAME=wordpress
+WP_DB_USER=wordpress
+WP_DB_PASSWORD=CHANGE_ME_wp_password
+WP_DB_ROOT_PASSWORD=CHANGE_ME_root_password
+
+# --- Bootstrap auth & encryption ---
+JWT_SECRET=CHANGE_ME_min_64_chars_random_secret
+SETTINGS_ENCRYPTION_KEY=CHANGE_ME_min_32_bytes_for_aes256
+
+# --- Первый super_admin (только если admin_users пуста; пароль задать на сервере!) ---
+ADMIN_INITIAL_EMAIL=erman.ai@yandex.ru
+ADMIN_INITIAL_PASSWORD=CHANGE_ME_admin_password_on_server
+
+# --- App ---
+SERVER_PORT=8080
+ENVIRONMENT=development
+LOG_LEVEL=info
+APP_URL=https://economicdb.com
+REDIS_URL=redis://redis:6379/0
+
+# --- Frontend (public only) ---
+NEXT_PUBLIC_API_URL=/api/v1
+NEXT_PUBLIC_APP_NAME=Макроаналитика
+```
+
+## Makefile
+
+```makefile
+.PHONY: dev prod down migrate logs logs-prod status deploy backup-db backup-wp psql wp-cli lint test
+
+dev:
+	docker compose up --build -d
+
+down:
+	docker compose down
+
+logs:
+	docker compose logs -f
+
+prod:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+
+logs-prod:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
+
+status:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+
+migrate:
+	docker compose exec backend alembic upgrade head
+
+deploy:
+	./scripts/deploy.sh main
+
+first-deploy:
+	./scripts/first-deploy.sh
+
+setup-server:
+	sudo ./scripts/setup-server.sh
+
+deploy-dev:
+	./scripts/deploy.sh develop
+
+ssl-init:
+	chmod +x scripts/ssl-init.sh scripts/ssl-deploy-hook.sh && ./scripts/ssl-init.sh
+
+backup-db:
+	docker compose exec -T postgres pg_dump -U $(POSTGRES_USER) $(POSTGRES_DB) \
+		| gzip > backups/pg_$(shell date +%Y%m%d_%H%M%S).sql.gz
+
+backup-wp:
+	docker compose exec -T mysql mysqldump -u $(WP_DB_USER) -p$(WP_DB_PASSWORD) $(WP_DB_NAME) \
+		| gzip > backups/wp_$(shell date +%Y%m%d_%H%M%S).sql.gz
+
+psql:
+	docker compose exec postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
+
+wp-cli:
+	docker compose exec wordpress wp --allow-root $(filter-out $@,$(MAKECMDGOALS))
+
+lint:
+	cd backend && ruff check . && mypy app
+
+test:
+	cd backend && pytest -v
+```
+
+## Правила инфраструктуры
+
+1. **Nginx всегда в Docker** — не на хосте.
+2. **PostgreSQL, MySQL, Redis не торчат наружу** — только через Docker network.
+3. **Поддомены запрещены** — всё на `economicdb.com` в подпапках.
+4. **Секреты интеграций — в админке**, не добавлять их в `.env.example`.
+5. **WordPress** — только лендинг; продукт и API — отдельные сервисы.

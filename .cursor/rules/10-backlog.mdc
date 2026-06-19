@@ -1,0 +1,60 @@
+---
+description: Backlog — mock и не реализованные фичи Макроаналитики
+alwaysApply: true
+---
+
+# Backlog (source of truth)
+
+Полный список нефункциональных / mock / local-only элементов: **`BACKLOG.md`** в корне репозитория.
+
+Перед новой фичей проверяй BACKLOG — не дублируй заглушки и не считай mock реализованным.
+
+## Ключевые gaps (из PROJECT_CONTEXT)
+
+**Design (не макетировано):**
+- Карточка показателя
+- Избранное
+- Алерты
+- Настройки
+
+**Prototype gaps (mockups demo):**
+- Compare presets FX/ВВП не переключают данные в JS demo
+- Calendar drawer статичен
+- AI-summaries фильтры не скрывают карточки
+- AI archive — все карточки → одна деталь
+- PDF / Email / Share — placeholders
+
+**Data gaps (expected):**
+- Forecast/consensus часто «—»
+- Tier C editorial forecast — manual admin only
+
+**Engineering (to build):**
+- Scaffold: FastAPI + Next.js + Docker + WordPress
+- `data_providers` CRUD + test connection + ETL sync
+- `system_settings`: OpenRouter, Robokassa, SMTP Яндекс
+- ETL: ЦБ + FRED + OECD (первые провайдеры)
+- Schema: indicators, economic_events, weekly_summaries
+- OpenRouter digest + facts validator
+- Robokassa billing + plan gating
+- HTML mockups → React + design tokens
+- Admin panel все разделы на `/adminus`
+
+**Legal:**
+- OpenBB AGPL — decision pending
+- FRED ToS redistribution policy
+
+## Уже согласовано (design baseline — не ломать без задачи)
+
+Mockups approved: `dashboard.html`, `indicators.html`, `compare.html`, `calendar.html`, `ai-summaries.html`.
+
+Design tokens: Inter + JetBrains Mono, teal primary, sidebar 248px, русский UI only.
+
+## Не делать
+
+- Mobile app, Telegram Mini App, Expo
+- Поддомены (всё на economicdb.com в подпапках)
+- Scraping Trading Economics
+- Chat-bot AI на весь экран
+- API keys в `.env` (только bootstrap + encryption key)
+
+Обновляй `BACKLOG.md` при закрытии или добавлении пунктов.

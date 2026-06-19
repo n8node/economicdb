@@ -1,0 +1,132 @@
+---
+description: Макроаналитика — стек, архитектура, принципы
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Макроаналитика — B2B SaaS макроэкономической аналитики
+
+Единый контекст продукта: `docs/PROJECT_CONTEXT.md`. Design baseline: `design/mockups/`.
+
+## Домен и роутинг (только подпапки, без поддоменов)
+
+| Путь | Сервис |
+|------|--------|
+| `economicdb.com/` | WordPress (лендинг, блог, pricing, legal) |
+| `economicdb.com/wp-admin/` | WordPress admin |
+| `economicdb.com/app/` | Next.js — продукт «Макроаналитика» |
+| `economicdb.com/adminus/` | Next.js — административная панель (скрытый URL) |
+| `economicdb.com/api/v1/...` | Python FastAPI backend |
+| `economicdb.com/health` | FastAPI health |
+
+**Запрещено:** поддомены (`api.`, `app.`, `media.` и т.д.). Всё на одном домене `economicdb.com`.
+
+## Стек
+
+### Backend
+- **Python 3.12+**, **FastAPI**, **SQLAlchemy 2.0** (async), **Alembic** migrations
+- **pandas** — analytics engine (WoW/MoM, min/max, surprise vs forecast)
+- **httpx** — HTTP-клиенты к провайдерам данных
+- **ARQ** или **APScheduler** + **Redis** — ETL cron, weekly digest, email
+- Параметризованные запросы, индексы по `country`, `category`, `scheduled_at_msk`
+
+### Frontend (только web)
+- **Next.js 15+**, App Router, TypeScript strict, Tailwind CSS
+- `shadcn/ui`, Tabler Icons, `react-hook-form` + `zod`, `nuqs`, `@tanstack/react-query`
+- `next.config.ts`: продукт с `basePath: '/app'`; админка — `/adminus` (не `/admin`)
+- Server Components по умолчанию — `"use client"` только для графиков, календаря, drawer, scroll-spy
+- **Desktop-first**, light + dark mode. Язык UI: **только русский**
+- Графики: **uPlot** или **Lightweight Charts** (не Chart.js в production)
+
+### База данных
+- **PostgreSQL 16**, расширение **pg_trgm** (поиск по каталогу)
+- Миграции **Alembic** — автоматически при старте backend (или `make migrate`)
+- TimescaleDB — только при росте объёма рядов
+
+### AI
+- **Все LLM — только через OpenRouter**
+- Модели и API key — **из админки** (`system_settings`), не из `.env`
+- Принцип **facts-first**: LLM не считает и не достаёт данные — только narrative по Facts JSON
+- Structured output (JSON schema) + **validator** (цифры в тексте ⊆ facts)
+
+### Платежи
+- **Robokassa** — единственный провайдер оплаты тарифов
+- Credentials — **из админки**, не из `.env`
+
+### Email
+- **SMTP Яндекс** — host, port, login, password настраиваются **в админке**
+- Digest-подписка, уведомления об алертах, transactional mail
+
+### Интеграции данных
+- Провайдеры: ЦБ, Росстат, FRED, IMF, OECD, ECB/Eurostat, EconDB и др.
+- API keys и endpoints — **в админке** (`data_providers`), не в `.env`
+- Запрещён scraping Trading Economics и других aggregators с bot protection
+
+### Инфраструктура
+- **Nginx** — reverse proxy, всегда внутри Docker
+- **Docker + Docker Compose** — единственный способ запуска
+- **Dev:** nginx + backend + worker + frontend + wordpress + postgres + mysql + redis
+- **Prod:** + replicas, resource limits
+- **Порты наружу** — только Nginx (80, 443). PostgreSQL и MySQL **не торчат** наружу
+
+## Структура проекта
+
+```
+macro/
+├── docker-compose.yml
+├── docker-compose.prod.yml
+├── .env.example              ← только bootstrap инфраструктуры!
+├── Makefile
+├── docs/
+│   └── PROJECT_CONTEXT.md
+├── design/mockups/
+├── nginx/
+├── backend/                  ← Python FastAPI
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── config/           ← bootstrap only (DB URL, JWT, encryption key)
+│   │   ├── api/v1/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   ├── models/
+│   │   ├── workers/          ← ETL, digest, email
+│   │   ├── analytics/        ← pandas
+│   │   ├── ai/               ← OpenRouter, validator
+│   │   └── integrations/     ← CBR, FRED, OECD…
+│   ├── alembic/
+│   └── Dockerfile
+├── frontend/                 ← Next.js (app + admin)
+│   ├── src/app/(product)/    ← basePath /app
+│   ├── src/app/adminus/      ← URL /adminus
+│   └── Dockerfile
+├── wordpress/
+└── scripts/
+    ├── setup-server.sh       ← Docker + Certbot на чистом сервере
+    ├── first-deploy.sh       ← первый деплой: compose + SSL + super_admin
+    ├── deploy.sh
+    ├── backup.sh
+    ├── ssl-init.sh
+    └── ssl-deploy-hook.sh
+```
+
+## Критические правила (никогда не нарушать)
+
+1. **Nginx всегда внутри Docker.** Никакого Nginx на хосте.
+2. **PostgreSQL и MySQL не торчат наружу** в production.
+3. **Все LLM — только через OpenRouter.** Прямые вызовы Anthropic/OpenAI API запрещены.
+4. **Weekly digest и ETL — только через workers/cron.** Handler не вызывает LLM синхронно при page view.
+5. **Каждый LLM-вызов → `ai_usage_log`** (модель, токены, стоимость, feature).
+6. **Facts-first:** числа в AI-тексте только из Facts JSON; validator обязателен.
+7. **Внешние ключи (OpenRouter, FRED, Robokassa, SMTP, провайдеры) — в админке**, зашифрованы at rest. Не в `.env`, не в коде.
+8. **`.env` — только bootstrap:** DATABASE_URL, POSTGRES_*, WP_*, DOMAIN, JWT_SECRET, SETTINGS_ENCRYPTION_KEY, ADMIN_INITIAL_EMAIL, ADMIN_INITIAL_PASSWORD (только первый запуск), ENVIRONMENT.
+9. **Роутинг:** `/` → WordPress, `/app` → продукт, `/adminus` → админка, `/api` → FastAPI.
+10. **Первый деплой:** `setup-server.sh` → `first-deploy.sh` — Docker, SSL, seed `super_admin` (если таблица пуста).
+11. **UI только на русском.** Английские labels запрещены.
+12. **Не делать:** TradingView overload, chat-bot на весь экран, scraping TE.
+13. **На каждом виджете данных** — источник + дата обновления.
+14. **AI disclaimer** на каждом AI-блоке.
+15. **ФЗ-152:** PII граждан РФ — PostgreSQL на сервере в РФ.
+16. **Conventional commits на английском.** Ветки: `main`, `develop`, `feat/*`, `fix/*`.
+17. **Деплой только из `main`.**
+18. **Только web.** Никаких mobile, Telegram Mini App, Expo.
+19. **Пароли и API keys — не в git.** ADMIN_INITIAL_PASSWORD только в `.env` на сервере.

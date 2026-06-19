@@ -1,0 +1,284 @@
+---
+description: Python FastAPI backend — структура, БД, ETL, AI pipeline
+globs: ["**/backend/**", "**/*.py", "**/alembic/**"]
+alwaysApply: false
+---
+
+# Backend — FastAPI
+
+## Точка входа
+
+```python
+# backend/app/main.py
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await run_migrations()          # Alembic при старте
+    await settings_service.load_cache()  # system_settings + data_providers
+    scheduler.start()               # ETL cron, digest, renewal
+    yield
+    scheduler.shutdown()
+
+app = FastAPI(lifespan=lifespan)
+```
+
+## Конфигурация (bootstrap only)
+
+```python
+# backend/app/config/settings.py
+class Settings(BaseSettings):
+    database_url: str               # DATABASE_URL
+    jwt_secret: str                 # bootstrap auth
+    settings_encryption_key: str    # AES-256-GCM для system_settings / data_providers
+    environment: str = "development"
+    server_port: int = 8080
+    app_url: str = "https://economicdb.com"
+    redis_url: str = "redis://redis:6379/0"
+    log_level: str = "info"
+
+    # Первый super_admin (только если admin_users пуста; пароль НЕ коммитить в git)
+    admin_initial_email: str = "erman.ai@yandex.ru"
+    admin_initial_password: str = ""  # ADMIN_INITIAL_PASSWORD — задать на сервере в .env
+
+    # НЕТ в env: openrouter_key, fred_key, robokassa_*, smtp_* — всё из system_settings
+```
+
+## Загрузка секретов из БД
+
+```python
+# backend/app/services/settings_service.py
+class SettingsService:
+    async def get_secret(self, key: str) -> str:
+        """openrouter.api_key, robokassa.password1, smtp.password, etc."""
+        row = await self.repo.get_system_setting(key)
+        return self.cipher.decrypt(row.value_encrypted)
+
+    async def get_provider_config(self, provider_id: str) -> ProviderConfig:
+        """enabled, base_url, api_key, rate_limit, last_sync_at"""
+        row = await self.repo.get_data_provider(provider_id)
+        creds = json.loads(self.cipher.decrypt(row.credentials_encrypted))
+        return ProviderConfig(id=provider_id, **creds, enabled=row.enabled)
+```
+
+## Роутер
+
+```python
+# backend/app/api/v1/router.py
+api = APIRouter(prefix="/api/v1")
+
+# Public
+api.include_router(health_router)           # GET /health
+api.include_router(auth_router)             # POST /auth/register, /auth/login
+api.include_router(webhooks_router)         # POST /webhooks/robokassa
+
+# App (user JWT)
+app_router = APIRouter(dependencies=[Depends(get_current_user)])
+app_router.include_router(indicators_router)    # каталог, карточка, time series
+app_router.include_router(compare_router)       # до 6 серий
+app_router.include_router(calendar_router)      # events, ICS
+app_router.include_router(summaries_router)     # AI-сводки archive + detail
+app_router.include_router(favorites_router)
+app_router.include_router(alerts_router)
+app_router.include_router(billing_router)       # subscription, Robokassa redirect
+app_router.include_router(settings_router)      # user_settings, digest sub
+
+# Admin (admin JWT + RBAC)
+admin_router = APIRouter(prefix="/admin", dependencies=[Depends(get_admin_user)])
+admin_router.include_router(admin_providers_router)   # data_providers CRUD
+admin_router.include_router(admin_settings_router)    # system_settings
+admin_router.include_router(admin_ai_router)          # prompts, usage, manual digest
+admin_router.include_router(admin_data_router)        # indicators override, ETL jobs
+admin_router.include_router(admin_billing_router)     # plans, payments
+admin_router.include_router(admin_users_router)
+```
+
+## Схема БД (ключевые таблицы)
+
+```sql
+-- indicators, indicator_values (time series)
+CREATE TABLE indicators (
+    id TEXT PRIMARY KEY,
+    name_ru TEXT NOT NULL,
+    country TEXT NOT NULL,
+    category TEXT NOT NULL,
+    frequency TEXT NOT NULL,
+    source TEXT NOT NULL,
+    external_id TEXT,
+    unit TEXT,
+    last_value NUMERIC,
+    last_change NUMERIC,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE indicator_values (
+    indicator_id TEXT NOT NULL REFERENCES indicators(id),
+    observed_at DATE NOT NULL,
+    value NUMERIC NOT NULL,
+    PRIMARY KEY (indicator_id, observed_at)
+);
+
+-- economic_events (calendar, tier A/B/C)
+CREATE TABLE economic_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title_ru TEXT NOT NULL,
+    country TEXT NOT NULL,
+    category TEXT NOT NULL,
+    importance TEXT NOT NULL,           -- high / med / low
+    scheduled_at_msk TIMESTAMPTZ NOT NULL,
+    actual NUMERIC,
+    forecast NUMERIC,
+    previous NUMERIC,
+    surprise NUMERIC,
+    linked_indicator_id TEXT REFERENCES indicators(id),
+    source TEXT NOT NULL,
+    tier TEXT NOT NULL                  -- A / B / C
+);
+
+-- weekly_summaries (AI digest)
+CREATE TABLE weekly_summaries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    headline TEXT NOT NULL,
+    sections JSONB NOT NULL,
+    citations JSONB NOT NULL,
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    word_count INT,
+    source_count INT,
+    tags TEXT[] NOT NULL DEFAULT '{}'
+);
+
+-- users, subscriptions, billing
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    plan TEXT NOT NULL DEFAULT 'free',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) UNIQUE,
+    plan TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    robokassa_invoice_id TEXT,
+    current_period_start TIMESTAMPTZ,
+    current_period_end TIMESTAMPTZ,
+    cancel_at_period_end BOOLEAN NOT NULL DEFAULT false,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE payment_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    robokassa_invoice_id TEXT UNIQUE,
+    event_type TEXT NOT NULL,
+    amount_kopecks INT NOT NULL,
+    plan TEXT NOT NULL,
+    raw_payload JSONB NOT NULL,
+    processed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- system_settings — секреты и конфиг (зашифровано)
+CREATE TABLE system_settings (
+    key TEXT PRIMARY KEY,
+    value_encrypted BYTEA NOT NULL,
+    updated_by UUID REFERENCES admin_users(id),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- data_providers — провайдеры макро-данных
+CREATE TABLE data_providers (
+    id TEXT PRIMARY KEY,              -- 'cbr', 'fred', 'oecd'
+    name_ru TEXT NOT NULL,
+    provider_type TEXT NOT NULL,      -- 'rest', 'sdmx'
+    base_url TEXT,
+    credentials_encrypted BYTEA,
+    enabled BOOLEAN NOT NULL DEFAULT false,
+    sync_cron TEXT,
+    last_sync_at TIMESTAMPTZ,
+    last_error TEXT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ai_usage_log — каждый LLM-вызов
+CREATE TABLE ai_usage_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    feature TEXT NOT NULL,
+    model TEXT NOT NULL,
+    prompt_tokens INT NOT NULL,
+    completion_tokens INT NOT NULL,
+    cost_kopecks INT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+## ETL workers
+
+```python
+# backend/app/workers/etl.py
+async def sync_provider(ctx, provider_id: str):
+    cfg = await settings_service.get_provider_config(provider_id)
+    if not cfg.enabled:
+        return
+    adapter = get_adapter(provider_id)  # integrations/cbr.py, fred.py, ...
+    await adapter.sync(cfg)
+    await analytics.recompute_kpi_cache()
+    await repo.update_provider_sync(provider_id, synced_at=now())
+
+# Cron: sync всех enabled providers по sync_cron
+# После sync → pandas analytics → Redis cache / materialized views для Dashboard KPI
+```
+
+## Weekly digest worker
+
+```python
+# backend/app/workers/digest.py
+async def generate_weekly_digest(ctx):
+    facts = await analytics.build_facts_json(period)   # pandas, не LLM
+    openrouter = OpenRouterClient(settings_service)      # key/model из admin
+    draft = await openrouter.generate_digest(facts)
+    if not validator.validate(draft, facts):
+        draft = await openrouter.generate_digest(facts, retry=True)
+        if not validator.validate(draft, facts):
+            raise DigestValidationError()
+    await repo.save_weekly_summary(draft)
+    await email_service.send_digest_subscribers(draft)   # SMTP из admin
+```
+
+## Bootstrap super_admin (первый деплой)
+
+```python
+# backend/app/bootstrap/admin_seed.py
+async def seed_super_admin(session: AsyncSession, settings: Settings) -> None:
+    count = await admin_repo.count(session)
+    if count > 0:
+        return
+
+    password = settings.admin_initial_password
+    if not password:
+        logger.warning("admin_users empty but ADMIN_INITIAL_PASSWORD not set — skip seed")
+        return
+
+    await admin_repo.create(
+        session,
+        email=settings.admin_initial_email,
+        password_hash=hash_password(password),  # bcrypt cost 12
+        role=AdminRole.SUPER_ADMIN,
+    )
+    logger.info("super_admin created", email=settings.admin_initial_email)
+```
+
+Вызывается из `lifespan` после Alembic migrations. **Пароль только из `.env` на сервере**, никогда в git.
+
+Вход: `https://economicdb.com/adminus/` → `POST /api/v1/admin/auth/login`.
+
+## Правила Python-кода
+
+- SQLAlchemy 2.0 async, параметризованные запросы — никакой конкатенации SQL
+- Ошибки с контекстом, **structlog** JSON в production
+- OpenRouter, Robokassa, SMTP clients читают credentials из **SettingsService**, не из env
+- FRED ToS: не redistributing raw API responses без policy; кеширование по tier
+- Health endpoint: `GET /health` → postgres + redis status
+- Тесты: pytest + pytest-asyncio; integration — testcontainers PostgreSQL

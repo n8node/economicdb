@@ -1,0 +1,17 @@
+.env
+.env.local
+.env.production
+/backend/__pycache__/
+/backend/.pytest_cache/
+/backend/.mypy_cache/
+/frontend/node_modules/
+/frontend/.next/
+/docker-compose.override.yml
+.idea/
+.vscode/
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/conf.d/https.conf
+wordpress/uploads/
+backups/
+*.log

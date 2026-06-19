@@ -1,0 +1,166 @@
+---
+description: Next.js web — продукт и админка, design system из макетов
+globs: ["**/frontend/**", "**/*.tsx", "**/*.ts", "**/tailwind.config.*"]
+alwaysApply: false
+---
+
+# Frontend — Web only
+
+## Платформы
+
+- Только `frontend/` — Next.js.
+- Продукт: `basePath: '/app'`, экраны из `design/mockups/`.
+- Админка: `/adminus`, отдельный layout + RBAC guard, не смешивать с user session.
+
+## Конфигурация
+
+```typescript
+// frontend/next.config.ts
+const nextConfig: NextConfig = {
+    basePath: '/app',
+    output: 'standalone',
+    // Admin routes монтируются через rewrite или отдельный build — см. (admin) route group
+}
+```
+
+```typescript
+// NEXT_PUBLIC_* — только безопасное
+NEXT_PUBLIC_API_URL=/api/v1
+NEXT_PUBLIC_APP_NAME=Макроаналитика
+```
+
+## Design system (из approved mockups)
+
+| Token | Значение |
+|-------|----------|
+| UI font | Inter |
+| Numbers | JetBrains Mono |
+| Primary | teal `#1B7561` / `#2F9C84` |
+| Page bg | `#F7F8FA` |
+| Cards | white, border `#E4E7EC`, radius 14px |
+| Sidebar | 248px |
+
+```css
+/* globals.css — design tokens из design/mockups/ */
+:root {
+    --bg-page: #F7F8FA;
+    --bg-surface: #FFFFFF;
+    --border-subtle: #E4E7EC;
+    --text-primary: #14181F;
+    --text-secondary: #5B6271;
+    --primary-50: #E7F4F1;
+    --primary-600: #1B7561;
+    --primary-400: #2F9C84;
+    --radius-lg: 14px;
+    --font-sans: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}
+```
+
+### Badges источников (muted)
+
+| Источник | bg / text |
+|----------|-----------|
+| Банк России | `#EAF1FB` / `#2B5A98` |
+| Росстат | `#F3EEF9` / `#6B4A9E` |
+| FRED | `#FBEFE7` / `#9A5B26` |
+| IMF | `#E9F6F2` / `#1E7E63` |
+| OECD | `#FCEEF0` / `#A33C53` |
+| ECB/Eurostat | `#E9EEFB` / `#3A4FA8` |
+
+## Layout продукта
+
+```
+Sidebar: фиксированный 248px
+Topbar: поиск, light/dark toggle, уведомления, аватар
+Контент: padding 24px, фон --bg-page
+```
+
+**Навигация:** Обзор, Показатели, Сравнение, Календарь, AI-сводки, Избранное, Алерты, Настройки.
+
+## Экраны (baseline из mockups)
+
+| Экран | Макет | Статус |
+|-------|-------|--------|
+| Обзор | `dashboard.html` | ✅ baseline |
+| Показатели | `indicators.html` | ✅ baseline |
+| Сравнение | `compare.html` | ✅ baseline |
+| Календарь | `calendar.html` | ✅ baseline |
+| AI-сводки | `ai-summaries.html` | ✅ baseline |
+
+### UX-правила (обязательны)
+
+1. На каждом виджете — badge источника + дата обновления.
+2. AI-блоки: tinted `--primary-50`, badge «AI-сводка».
+3. Citations в AI → popover (value, delta, source, date, «Открыть показатель»).
+4. Disclaimer: «Сгенерировано AI · не инвестиционная рекомендация».
+5. Calendar forecast «—» где нет данных — не ломать layout.
+6. Compare: до 6 серий, presets, режимы absolute / index(100) / change%.
+
+## Server vs Client Components
+
+```tsx
+// ✅ Server Component — dashboard KPI, summaries archive
+export default async function DashboardPage() {
+    const kpis = await fetchDashboardKpis()
+    return <KpiStrip data={kpis} />
+}
+
+// ✅ Client — графики, календарь, drawer, scroll-spy
+'use client'
+export function CompareChart({ series }: Props) {
+    // uPlot или Lightweight Charts
+}
+```
+
+## Структура папок
+
+```
+frontend/src/
+├── app/
+│   ├── layout.tsx
+│   └── (product)/              # basePath /app
+│       ├── layout.tsx          # Sidebar + Topbar + Auth guard
+│       ├── page.tsx            # Обзор
+│       ├── indicators/
+│       ├── compare/
+│       ├── calendar/
+│       ├── summaries/
+│       ├── favorites/
+│       ├── alerts/
+│       └── settings/
+│   └── adminus/                # URL /adminus (скрытый путь админки)
+│       ├── layout.tsx          # Admin sidebar + RBAC
+│       ├── providers/
+│       ├── settings/           # OpenRouter, Robokassa, SMTP
+│       ├── ai/
+│       ├── data/
+│       ├── billing/
+│       └── users/
+├── components/
+│   ├── layout/
+│   ├── indicators/
+│   ├── charts/
+│   ├── calendar/
+│   ├── summaries/
+│   └── ui/                     # shadcn/ui
+└── lib/
+    ├── api.ts
+    └── auth.ts
+```
+
+## WordPress integration
+
+- Лендинг и pricing — WordPress на `/`.
+- CTA «Начать» / «Тарифы» → `/app/register` или `/app/subscription`.
+- Оплата: redirect в Robokassa через backend, return URL → `/app/subscription/success`.
+
+## Правила фронта
+
+- Server Components по умолчанию — `"use client"` только при реальной необходимости
+- Каждый компонент с данными — отдельный `.skeleton.tsx` для Suspense
+- TanStack Query для client cache (compare, calendar filters)
+- Не упоминать OpenRouter в user-facing текстах — только «AI-сводка»
+- **Только русский** — i18n не нужен
+- Desktop-first; mobile — secondary, без отдельного mobile app
+- Графики production: uPlot / Lightweight Charts, не Chart.js

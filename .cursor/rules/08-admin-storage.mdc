@@ -1,0 +1,215 @@
+---
+description: Административная панель, секреты, провайдеры данных, SMTP
+globs: ["**/frontend/**/admin*", "**/backend/app/api/**/admin*", "**/backend/app/services/settings*", "**/backend/app/services/admin*"]
+alwaysApply: false
+---
+
+# Административная панель
+
+URL: `economicdb.com/adminus/`. Auth отдельный от user JWT (`admin_users`).
+
+## Роли
+
+```python
+class AdminRole(str, Enum):
+    SUPER_ADMIN = "super_admin"    # *
+    DATA_ADMIN = "data_admin"      # providers.*, etl.*, indicators.*
+    AI_ADMIN = "ai_admin"          # ai.*, summaries.*, openrouter.*
+    BILLING_ADMIN = "billing_admin"  # billing.*, robokassa.*, plans.*
+    SUPPORT = "support"            # users.view, users.notes, subscriptions.view
+
+ROLE_PERMISSIONS = {
+    AdminRole.SUPER_ADMIN: ["*"],
+    AdminRole.DATA_ADMIN: ["providers.*", "etl.*", "indicators.*", "data.*"],
+    AdminRole.AI_ADMIN: ["ai.*", "summaries.*"],
+    AdminRole.BILLING_ADMIN: ["billing.*", "plans.*"],
+    AdminRole.SUPPORT: ["users.view", "users.notes", "subscriptions.view"],
+}
+```
+
+## Разделы админки
+
+### `/adminus/providers` — провайдеры данных
+
+CRUD записей `data_providers`:
+
+| Поле | Описание |
+|------|----------|
+| id | `cbr`, `fred`, `oecd`, `imf`, `ecb`, `rosstat`, `econdb` |
+| name_ru | Отображаемое имя |
+| provider_type | `rest` / `sdmx` |
+| base_url | Endpoint (если настраивается) |
+| api_key | Masked input, encrypted at rest |
+| enabled | Вкл/выкл sync |
+| sync_cron | Cron expression |
+| last_sync_at | Read-only |
+| last_error | Read-only |
+
+Действия:
+- **Проверить подключение** — `POST /api/v1/admin/providers/{id}/test`
+- **Sync сейчас** — `POST /api/v1/admin/providers/{id}/sync`
+- Каждое изменение credentials → `admin_audit_log`
+
+### `/adminus/settings` — системные настройки
+
+Таблица `system_settings`, значения **AES-256-GCM** encrypted.
+
+| Группа | Ключи |
+|--------|-------|
+| OpenRouter | `openrouter.api_key`, `openrouter.base_url`, `openrouter.model_digest`, `openrouter.model_fallback` |
+| Robokassa | `robokassa.merchant_login`, `robokassa.password1`, `robokassa.password2`, `robokassa.test_mode` |
+| SMTP Яндекс | `smtp.host` (smtp.yandex.ru), `smtp.port` (465/587), `smtp.login`, `smtp.password`, `smtp.from_email`, `smtp.from_name`, `smtp.use_tls` |
+| Общие | `app.default_timezone` (Europe/Moscow), `digest.cron`, `digest.enabled` |
+
+UI: секреты показывать как `••••••••`; сохранение только при вводе нового значения.
+
+### `/adminus/ai`
+
+- Промпт-шаблоны digest (versioned, JSONB в `system_settings`)
+- Validator config (max retries)
+- `ai_usage_log` — dashboard costs/tokens по периоду
+- **Перегенерировать сводку** за период (manual trigger)
+
+### `/adminus/data`
+
+- Indicators catalog override (`name_ru`, category, enabled)
+- Economic events — ручное редактирование tier C (editorial forecast)
+- ETL job history (status, duration, errors)
+
+### `/adminus/billing`
+
+- Plans CRUD
+- Subscriptions list, manual override
+- Payment events (Robokassa)
+- Test payment
+
+### `/adminus/users`
+
+- Search by email
+- Plan override, ban, admin notes
+- Digest subscription status
+
+## Схема БД (admin)
+
+```sql
+CREATE TYPE admin_role AS ENUM (
+    'super_admin', 'data_admin', 'ai_admin', 'billing_admin', 'support'
+);
+
+CREATE TABLE admin_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role admin_role NOT NULL DEFAULT 'support',
+    totp_secret TEXT,
+    last_login_at TIMESTAMPTZ,
+    last_login_ip TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
+);
+
+CREATE TABLE admin_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id UUID NOT NULL REFERENCES admin_users(id),
+    action TEXT NOT NULL,
+    target_type TEXT,
+    target_id TEXT,
+    before_state JSONB,
+    after_state JSONB,
+    reason TEXT,
+    ip_address TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE feature_flags (
+    key TEXT PRIMARY KEY,
+    enabled BOOLEAN NOT NULL DEFAULT false,
+    rollout_pct INT NOT NULL DEFAULT 0 CHECK (rollout_pct BETWEEN 0 AND 100),
+    conditions JSONB,
+    description TEXT,
+    updated_by UUID REFERENCES admin_users(id),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE user_admin_notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    admin_id UUID NOT NULL REFERENCES admin_users(id),
+    note TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+## Хранение секретов
+
+```python
+# backend/app/services/encryption.py
+class SecretCipher:
+    """AES-256-GCM. Master key = SETTINGS_ENCRYPTION_KEY из bootstrap env."""
+
+    def encrypt(self, plaintext: str) -> bytes: ...
+    def decrypt(self, ciphertext: bytes) -> str: ...
+```
+
+**Политика:**
+- В `.env` — только `SETTINGS_ENCRYPTION_KEY` (bootstrap).
+- OpenRouter, FRED, Robokassa, SMTP — **только** `system_settings` / `data_providers`.
+- API admin **никогда** не возвращает plaintext secrets — masked + «изменить».
+- SettingsService кэширует расшифрованные значения in-memory с TTL 5 мин; invalidate при update.
+
+## Email service (SMTP Яндекс)
+
+```python
+# backend/app/services/email_service.py
+class EmailService:
+    async def _get_smtp_config(self) -> SMTPConfig:
+        return SMTPConfig(
+            host=await settings.get_secret("smtp.host"),
+            port=int(await settings.get_secret("smtp.port")),
+            login=await settings.get_secret("smtp.login"),
+            password=await settings.get_secret("smtp.password"),
+            from_email=await settings.get_secret("smtp.from_email"),
+            use_tls=await settings.get_bool("smtp.use_tls"),
+        )
+
+    async def send_digest(self, user: User, summary: WeeklySummary): ...
+    async def send_alert(self, user: User, alert: AlertEvent): ...
+    async def send_test_email(self, to: str): ...  # admin test button
+```
+
+## Безопасность админки
+
+- 2FA (TOTP) обязательна для `super_admin` и `data_admin`
+- IP-allowlist для `/adminus` в Nginx (опционально, prod)
+- Повторная авторизация для деструктивных действий (>30 мин)
+- Никогда не отдавать `password_hash`, `totp_secret`, plaintext secrets
+- **Каждая мутация → `admin_audit_log`** — без исключений
+
+```python
+async def ban_user(admin_id: str, user_id: str, reason: str, ip: str):
+    await user_repo.ban(user_id, reason)
+    await audit_log.write(
+        admin_id=admin_id,
+        action="users.ban",
+        target_type="user",
+        target_id=user_id,
+        after_state={"banned": True, "reason": reason},
+        ip_address=ip,
+    )
+```
+
+## Feature flags
+
+```python
+async def is_enabled(key: str, user_id: str | None = None) -> bool:
+    # Redis cache TTL 5 min
+    # Deterministic rollout by hash(user_id + key) if rollout_pct < 100
+```
+
+Примеры ключей: `ai_digest`, `compare_export`, `alerts_beta`.
+
+## WordPress
+
+- Лендинг/pricing — контент в WP на `/`.
+- WP **не хранит** API keys, Robokassa, OpenRouter, SMTP продукта.
+- После оплаты — redirect в `/app/subscription/success`.

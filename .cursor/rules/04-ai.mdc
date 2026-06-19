@@ -1,0 +1,152 @@
+---
+description: AI weekly digest — facts-first, OpenRouter, validator
+globs: ["**/backend/app/ai/**", "**/backend/app/workers/digest*", "**/backend/app/analytics/**"]
+alwaysApply: false
+---
+
+# AI — еженедельные сводки
+
+## Pipeline (обязательный порядок)
+
+```
+Cron (пн ~08:00 МСК)
+  → Analytics engine (pandas) → Facts JSON
+  → OpenRouter (structured JSON, русский narrative)
+  → Validator (цифры в тексте ⊆ facts)
+  → Save weekly_summaries
+  → Dashboard pinned card + email digest (optional)
+```
+
+**Facts-first:** модель **не достаёт и не считает** данные — только интерпретирует подготовленный fact-пакет.
+
+## Модели и ключи (из админки)
+
+| Ключ `system_settings` | Назначение |
+|------------------------|------------|
+| `openrouter.api_key` | API key |
+| `openrouter.base_url` | default `https://openrouter.ai/api/v1` |
+| `openrouter.model_digest` | weekly narrative (primary) |
+| `openrouter.model_fallback` | retry при invalid JSON / failed validation |
+| `ai.digest.system_prompt` | versioned prompt template (JSONB) |
+| `ai.digest.max_retries` | default 2 |
+
+```python
+# backend/app/ai/openrouter.py
+class OpenRouterClient:
+    def __init__(self, settings: SettingsService):
+        self.api_key = settings.get_secret_sync("openrouter.api_key")
+        self.base_url = settings.get_secret_sync("openrouter.base_url")
+        self.model_digest = settings.get_secret_sync("openrouter.model_digest")
+
+    async def generate_digest(self, facts: FactsJSON, retry: bool = False) -> DigestDraft:
+        model = self.model_fallback if retry else self.model_digest
+        response = await self._chat(
+            model=model,
+            messages=self._build_messages(facts),
+            response_format=DigestJSONSchema,
+        )
+        await self._log_usage(response, feature="weekly_digest")
+        return DigestDraft.parse(response)
+```
+
+## Facts JSON (пример структуры)
+
+```python
+@dataclass
+class FactsJSON:
+    period_start: date
+    period_end: date
+    kpis: list[KPIFact]           # id, value, delta, source, updated_at
+    calendar_surprises: list[SurpriseFact]
+    next_week_events: list[EventFact]
+    citation_keys: dict[str, CitationFact]  # key → indicator_id, value, source
+```
+
+Facts собирает **pandas analytics**, не LLM:
+- WoW/MoM изменения KPI
+- Surprise vs forecast из `economic_events`
+- Ключевые события следующей недели (tier A/B)
+
+## Structured output schema
+
+Фиксированные секции (JSON schema, `additionalProperties: false`):
+
+| Section key | Заголовок |
+|-------------|-----------|
+| `russia` | Россия |
+| `usa` | США |
+| `eurozone` | Еврозона |
+| `markets_fx` | Рынки и FX |
+| `next_week` | На следующей неделе |
+| `risks` | Риски |
+
+Каждая секция: `headline`, `bullets[]`, `citation_keys[]`.
+Top-level: `headline`, `executive_summary`, `sections`, `citation_keys`.
+
+Статические метки показателей/стран — словарь в БД (`indicators.name_ru`), **не через LLM**.
+
+## Validator
+
+```python
+# backend/app/ai/validator.py
+class DigestValidator:
+    NUMBER_PATTERN = re.compile(r"\d+[,.]?\d*")
+
+    def validate(self, draft: DigestDraft, facts: FactsJSON) -> ValidationResult:
+        allowed = facts.all_numeric_values()  # set of normalized numbers
+        found = self._extract_numbers(draft.all_text())
+        invalid = found - allowed
+        if invalid:
+            return ValidationResult(ok=False, invalid_numbers=invalid)
+        # citation_keys must exist in facts.citation_keys
+        missing_keys = draft.citation_keys - facts.citation_keys.keys()
+        if missing_keys:
+            return ValidationResult(ok=False, missing_citations=missing_keys)
+        return ValidationResult(ok=True)
+```
+
+Правила:
+- Каждое число в narrative должно быть в facts (с допуском на форматирование).
+- Каждый `citation_key` в тексте должен существовать в facts.
+- При fail → retry с `model_fallback` (max 2 попытки).
+- После 2 fails → job failed, alert в admin, **не публиковать** черновик.
+
+## Usage logging
+
+```python
+# ОБЯЗАТЕЛЬНО для каждого вызова — без исключений
+await repo.insert_ai_usage_log(
+    feature="weekly_digest",
+    model=response.model,
+    prompt_tokens=response.usage.prompt_tokens,
+    completion_tokens=response.usage.completion_tokens,
+    cost_kopecks=estimate_cost(response),
+)
+```
+
+## Admin: ручной перезапуск
+
+- `POST /api/v1/admin/ai/digest/regenerate` — super_admin / ai_admin
+- Audit log обязателен
+- Параметры: `period_start`, `period_end`, `force=true`
+
+## User-facing правила
+
+- Не упоминать OpenRouter, Anthropic, OpenAI — только «AI-сводка»
+- Disclaimer на каждом AI-блоке: «Сгенерировано AI · не инвестиционная рекомендация»
+- AI-текст визуально отделён от сырых данных (`--primary-50`, badge)
+
+## Не в MVP
+
+- Произвольный chat «спроси AI»
+- Confidence score
+- EN → RU перевод (генерировать сразу на русском, 1 вызов)
+- Streaming digest (batch job only)
+
+## Критические правила AI-модуля
+
+1. **Handler не вызывает LLM** при page view — только workers/cron.
+2. **JSON Schema как response_format** — не просить модель «вернуть JSON» текстом.
+3. **Дешёвая модель для digest** — дорогая только если явно выбрана в admin.
+4. **Validator перед publish** — без исключений.
+5. **Каждый вызов → `ai_usage_log`.**

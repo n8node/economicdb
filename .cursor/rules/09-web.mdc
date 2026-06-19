@@ -1,0 +1,63 @@
+---
+description: Web-only клиент — продукт и админка
+globs: ["**/frontend/**", "**/backend/app/api/**"]
+alwaysApply: false
+---
+
+# Web only
+
+Макроаналитика — **только web**. Mobile app, Telegram Mini App, Expo — **не разрабатывать**.
+
+## Клиент
+
+- Единственный UI — **Next.js** в `frontend/`.
+- Продукт: `economicdb.com/app/*` — authenticated SaaS.
+- Админка: `economicdb.com/adminus/*` — отдельный auth (`admin_users`), RBAC.
+- Лендинг: `economicdb.com/` — **WordPress** (pricing, blog, legal).
+
+## Backend API
+
+- Единый REST API: `/api/v1`.
+- User endpoints — user JWT.
+- Admin endpoints — `/api/v1/admin/*`, admin JWT + permissions.
+- Webhooks — `/api/v1/webhooks/robokassa` (no auth, signature verify).
+
+## Разделение ответственности
+
+| Слой | Ответственность |
+|------|-----------------|
+| WordPress | Маркетинг, SEO, pricing page, blog |
+| Next.js `/app` | Продукт: indicators, compare, calendar, AI summaries |
+| Next.js `/adminus` | Провайдеры, секреты, SMTP, billing, users |
+| FastAPI | Бизнес-логика, ETL, digest, billing, auth |
+| Worker | ETL cron, weekly digest, email, renewals |
+
+## Правила
+
+- Бизнес-правила (тарифы, лимиты compare, доступ к AI archive, alerts) — **только backend**.
+- Frontend не дублирует gating — UI может скрывать, но enforcement на API.
+- Desktop-first из макетов; responsive — secondary.
+- `NEXT_PUBLIC_*` — только безопасные значения (API URL, app name).
+- Не проектировать API «под mobile» — только web clients.
+- CTA с WordPress → `/app/register` или `/app/subscription`, не внешние поддомены.
+
+## Auth flows
+
+```
+User:  POST /api/v1/auth/register → JWT → /app
+Admin: POST /api/v1/admin/auth/login → admin JWT → /adminus
+       (2FA challenge if enabled)
+```
+
+## Shared packages
+
+При росте monorepo допустимо:
+
+```
+packages/
+├── api-client/     # typed fetch для /api/v1
+├── types/          # DTO
+└── design-tokens/  # из design/mockups/
+```
+
+Shared packages **не импортируют** Next.js напрямую.

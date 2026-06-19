@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Макроаналитика — AI-сводки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css">
+<style>
+
+  /* ============================================================
+     ДИЗАЙН-ТОКЕНЫ (идентичны другим экранам продукта)
+     ============================================================ */
+  :root{
+    --bg-page: #F7F8FA;
+    --bg-surface: #FFFFFF;
+    --bg-muted: #F1F3F6;
+    --border-subtle: #E4E7EC;
+    --border-default: #D7DBE2;
+
+    --text-primary: #14181F;
+    --text-secondary: #5B6271;
+    --text-tertiary: #8B92A0;
+
+    --primary-50:  #E7F4F1;
+    --primary-100: #C5E5DD;
+    --primary-400: #2F9C84;
+    --primary-600: #1B7561;
+    --primary-700: #145A4A;
+
+    --positive-bg: #E7F5EC;
+    --positive-text: #15803D;
+    --negative-bg: #FDECEC;
+    --negative-text: #C0362C;
+    --neutral-bg: #F1F3F6;
+    --neutral-text: #5B6271;
+
+    --src-cbr-bg: #EAF1FB;     --src-cbr-text: #2B5A98;
+    --src-rosstat-bg: #F3EEF9; --src-rosstat-text: #6B4A9E;
+    --src-fred-bg: #FBEFE7;    --src-fred-text: #9A5B26;
+    --src-imf-bg: #E9F6F2;     --src-imf-text: #1E7E63;
+    --src-oecd-bg: #FCEEF0;    --src-oecd-text: #A33C53;
+    --src-ecb-bg: #E9EEFB;     --src-ecb-text: #3A4FA8;
+
+    --country-ru-bg: #EAF1FB; --country-ru-text: #2B5A98;
+    --country-us-bg: #FBEFE7; --country-us-text: #9A5B26;
+    --country-eu-bg: #E9EEFB; --country-eu-text: #3A4FA8;
+    --country-uk-bg: #F3EEF9; --country-uk-text: #6B4A9E;
+    --country-cn-bg: #FCEEF0; --country-cn-text: #A33C53;
+    --country-world-bg: #F1F3F6; --country-world-text: #5B6271;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+
+    --shadow-card: 0 1px 2px rgba(20,24,31,0.04);
+
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  [data-theme="dark"]{
+    --bg-page: #0F1115;
+    --bg-surface: #181B21;
+    --bg-muted: #1F2329;
+    --border-subtle: #272B33;
+    --border-default: #343943;
+
+    --text-primary: #EDEFF2;
+    --text-secondary: #9AA1AD;
+    --text-tertiary: #6B7280;
+
+    --primary-50:  #16312C;
+    --primary-100: #1D4138;
+    --primary-400: #3DB89D;
+    --primary-600: #57CCB1;
+    --primary-700: #7BDAC3;
+
+    --positive-bg: #15301F;
+    --positive-text: #4ADE80;
+    --negative-bg: #3A1818;
+    --negative-text: #F87171;
+    --neutral-bg: #1F2329;
+    --neutral-text: #9AA1AD;
+
+    --src-cbr-bg: #16263B;     --src-cbr-text: #7FB0E8;
+    --src-rosstat-bg: #271F38; --src-rosstat-text: #B79BE0;
+    --src-fred-bg: #34241A;    --src-fred-text: #E0A26B;
+    --src-imf-bg: #15302A;     --src-imf-text: #5FCBAB;
+    --src-oecd-bg: #341B22;    --src-oecd-text: #E18CA1;
+    --src-ecb-bg: #1A2038;     --src-ecb-text: #8FA3E0;
+
+    --country-ru-bg: #16263B; --country-ru-text: #7FB0E8;
+    --country-us-bg: #34241A; --country-us-text: #E0A26B;
+    --country-eu-bg: #1A2038; --country-eu-text: #8FA3E0;
+    --country-uk-bg: #271F38; --country-uk-text: #B79BE0;
+    --country-cn-bg: #341B22; --country-cn-text: #E18CA1;
+    --country-world-bg: #1F2329; --country-world-text: #9AA1AD;
+
+    --shadow-card: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family: var(--font-sans);
+    background: var(--bg-page);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  ::selection{ background: var(--primary-100); }
+  a{ color: inherit; text-decoration: none; }
+  button{ font-family: inherit; cursor: pointer; }
+  input, select{ font-family: inherit; }
+
+  /* ============================================================
+     LAYOUT
+     ============================================================ */
+  .app{ display:grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar{
+    background: var(--bg-surface); border-right: 1px solid var(--border-subtle);
+    padding: 20px 14px; display:flex; flex-direction:column;
+    position: sticky; top:0; height: 100vh;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; padding: 6px 10px 22px; }
+  .brand-mark{
+    width:28px; height:28px; border-radius: var(--radius-sm); background: var(--primary-600);
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; font-size:13px; flex-shrink:0;
+  }
+  .brand-name{ font-weight:600; font-size:15px; letter-spacing:-0.01em; }
+  .nav-item{
+    display:flex; align-items:center; gap:10px; padding: 9px 10px; border-radius: var(--radius-md);
+    color: var(--text-secondary); font-size: 13.5px; font-weight:500; margin-bottom:2px; transition: background .12s, color .12s;
+  }
+  .nav-item i{ font-size:18px; flex-shrink:0; }
+  .nav-item:hover{ background: var(--bg-muted); color: var(--text-primary); }
+  .nav-item.active{ background: var(--primary-50); color: var(--primary-700); }
+  [data-theme="dark"] .nav-item.active{ color: var(--primary-600); }
+  .sidebar-footer{ margin-top:auto; padding-top:14px; border-top: 1px solid var(--border-subtle); }
+  .user-row{ display:flex; align-items:center; gap:10px; padding: 8px 10px; border-radius: var(--radius-md); }
+  .user-row:hover{ background: var(--bg-muted); }
+  .avatar{
+    width:32px; height:32px; border-radius:50%; background: var(--primary-100); color: var(--primary-700);
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;
+  }
+  .user-name{ margin:0; font-size:13px; font-weight:500; }
+  .user-plan{ margin:0; font-size:11.5px; color: var(--text-tertiary); }
+
+  /* ---------- TOPBAR ---------- */
+  .main{ min-width:0; }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding: 14px 28px; border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface); position: sticky; top:0; z-index: 50;
+  }
+  .search-box{
+    display:flex; align-items:center; gap:8px; background: var(--bg-muted); border: 1px solid transparent;
+    border-radius: var(--radius-md); padding: 8px 12px; width: 380px; color: var(--text-tertiary); font-size: 13.5px;
+  }
+  .search-box input{ border:none; background:transparent; outline:none; color: var(--text-primary); font-size:13.5px; width:100%; font-family: inherit; }
+  .search-box input::placeholder{ color: var(--text-tertiary); }
+  .topbar-actions{ display:flex; align-items:center; gap:10px; }
+  .icon-btn{
+    width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+    border-radius: var(--radius-md); border:1px solid var(--border-subtle);
+    background: var(--bg-surface); color: var(--text-secondary); font-size:17px; position:relative;
+  }
+  .icon-btn:hover{ background: var(--bg-muted); }
+  .icon-btn .dot{ position:absolute; top:6px; right:6px; width:7px; height:7px; border-radius:50%; background: var(--negative-text); border: 1.5px solid var(--bg-surface); }
+  .theme-toggle{ display:flex; align-items:center; gap:6px; border:1px solid var(--border-subtle); border-radius: var(--radius-md); padding:4px; background: var(--bg-surface); }
+  .theme-toggle button{
+    border:none; background:transparent; width:30px; height:28px; display:flex; align-items:center; justify-content:center;
+    border-radius:7px; color: var(--text-tertiary); font-size:15px;
+  }
+  .theme-toggle button.active{ background: var(--bg-muted); color: var(--text-primary); }
+
+  .content{ padding: 24px 28px 60px; max-width: 1320px; }
+
+  .btn{
+    display:inline-flex; align-items:center; gap:6px; border: 1px solid var(--border-default); background: var(--bg-surface);
+    color: var(--text-primary); border-radius: var(--radius-md); padding: 8px 14px; font-size:13px; font-weight:500; white-space: nowrap;
+  }
+  .btn:hover{ background: var(--bg-muted); }
+  .btn.primary{ background: var(--primary-600); border-color: var(--primary-600); color:#fff; }
+  .btn.primary:hover{ background: var(--primary-700); }
+  .btn.ghost{ border-color: transparent; background: transparent; color: var(--text-secondary); padding: 6px 4px; }
+  .btn.ghost:hover{ background: transparent; color: var(--text-primary); }
+  .btn:focus-visible, .icon-btn:focus-visible, input:focus-visible, .toc-item:focus-visible, .summary-card:focus-visible{
+    outline: 2px solid var(--primary-400); outline-offset: 1px;
+  }
+  .icon-only-btn{
+    width:34px; height:34px; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--border-default); border-radius: var(--radius-md); background: var(--bg-surface);
+    color: var(--text-secondary); font-size:16px;
+  }
+  .icon-only-btn:hover{ background: var(--bg-muted); }
+
+  /* ---------- TOAST ---------- */
+  .toast{
+    position: fixed; top: 20px; right: 28px; z-index: 120; background: var(--text-primary); color: var(--bg-surface);
+    border-radius: var(--radius-md); padding: 12px 16px; display:flex; align-items:center; gap:10px; font-size:13px; font-weight:500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18); transform: translateY(-12px); opacity:0; transition: all .25s ease; pointer-events:none;
+  }
+  [data-theme="dark"] .toast{ background: var(--bg-surface); color: var(--text-primary); border:1px solid var(--border-default); }
+  .toast.visible{ transform: translateY(0); opacity:1; }
+  .toast i{ color: var(--primary-400); font-size:18px; }
+
+  /* ---------- DEMO SWITCHER ---------- */
+  .demo-switcher{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding: 10px 28px; background: var(--bg-muted);
+    border-bottom: 1px solid var(--border-subtle); font-size:12.5px; color: var(--text-secondary);
+  }
+  .demo-switcher b{ color: var(--text-primary); font-weight:600; margin-right:4px; }
+  .demo-btn{ border:1px solid var(--border-default); background: var(--bg-surface); padding: 5px 11px; border-radius: var(--radius-sm); font-size:12px; color: var(--text-primary); }
+  .demo-btn.active{ background: var(--primary-600); border-color: var(--primary-600); color:#fff; }
+
+  .state-block{ display:none; }
+  .state-block.visible{ display:block; }
+
+  /* ============================================================
+     VIEW A: АРХИВ
+     ============================================================ */
+  .page-head{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
+  .page-head h1{ margin: 0 0 4px; font-size:22px; font-weight:600; letter-spacing:-0.01em; }
+  .page-head .meta{ margin:0; color: var(--text-tertiary); font-size:13px; }
+  .head-actions{ display:flex; align-items:center; gap:10px; }
+
+  .filter-bar{ display:flex; align-items:center; gap:14px 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .filter-group{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .filter-group-label{ font-size:12.5px; color: var(--text-tertiary); margin-right:2px; }
+  .pill{
+    border:1px solid var(--border-default); background: var(--bg-surface); color: var(--text-secondary);
+    border-radius: 99px; padding: 5px 12px; font-size:12.5px; font-weight:500;
+  }
+  .pill:hover{ background: var(--bg-muted); }
+  .pill.active{ background: var(--primary-600); border-color: var(--primary-600); color:#fff; }
+  .select-sort{
+    border:1px solid var(--border-default); border-radius: var(--radius-md); background: var(--bg-surface);
+    color: var(--text-primary); font-size:12.5px; padding: 6px 26px 6px 11px; appearance:none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235B6271' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat:no-repeat; background-position: right 8px center; margin-left:auto;
+  }
+
+  .chips-bar{ display:flex; align-items:center; gap:8px; flex-wrap: wrap; margin-bottom: 18px; display:none; }
+  .chips-bar.visible{ display:flex; }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; background: var(--primary-50); color: var(--primary-700);
+    border: 1px solid var(--primary-100); border-radius: 99px; padding: 5px 8px 5px 12px; font-size:12.5px; font-weight:500;
+  }
+  [data-theme="dark"] .chip{ color: var(--primary-600); }
+  .chip button{ border:none; background:transparent; color:inherit; display:flex; align-items:center; font-size:14px; padding:2px; border-radius:50%; }
+  .chip button:hover{ background: var(--primary-100); }
+  .chip-reset{ font-size:12.5px; color: var(--text-tertiary); border:none; background:transparent; text-decoration: underline; padding: 5px 4px; }
+
+  .archive-grid{ display:grid; grid-template-columns: 1fr 280px; gap: 20px; align-items:start; }
+  .card{ background: var(--bg-surface); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+
+  .region-tag{ display:inline-flex; align-items:center; font-size:11px; font-weight:600; padding: 2px 8px; border-radius: var(--radius-sm); }
+  .region-tag.ru{ background: var(--country-ru-bg); color: var(--country-ru-text); }
+  .region-tag.us{ background: var(--country-us-bg); color: var(--country-us-text); }
+  .region-tag.eu{ background: var(--country-eu-bg); color: var(--country-eu-text); }
+  .region-tag.world{ background: var(--country-world-bg); color: var(--country-world-text); }
+  .topic-tag{ display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--bg-muted); color: var(--text-secondary); }
+
+  /* pinned card */
+  .pinned-card{
+    background: var(--primary-50); border: 1px solid var(--primary-100); border-radius: var(--radius-lg);
+    padding: 22px 26px; margin-bottom: 20px;
+  }
+  .pinned-top{ display:flex; align-items:center; gap:10px; margin-bottom: 14px; flex-wrap:wrap; }
+  .ai-badge{
+    display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600;
+    padding: 4px 10px; border-radius: 99px; background: var(--bg-surface); color: var(--primary-700);
+    border: 1px solid var(--primary-100);
+  }
+  [data-theme="dark"] .ai-badge{ color: var(--primary-600); }
+  .new-badge{
+    display:inline-flex; align-items:center; font-size:11px; font-weight:600; padding: 4px 9px;
+    border-radius: 99px; background: var(--primary-600); color:#fff;
+  }
+  .pinned-period{ font-size:12.5px; color: var(--text-secondary); margin-left: auto; }
+  .pinned-headline{ font-size:21px; font-weight:600; line-height:1.35; margin: 0 0 14px; }
+  .pinned-bullets{ margin: 0 0 16px; padding-left: 20px; font-size:14px; color: var(--text-secondary); line-height:1.8; }
+  .pinned-tags{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom: 16px; }
+  .pinned-bottom{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; }
+  .pinned-meta{ font-size:12px; color: var(--text-tertiary); }
+  .pinned-disclaimer{ font-size:11.5px; color: var(--text-tertiary); margin-top: 12px; padding-top:12px; border-top: 1px solid var(--primary-100); }
+
+  /* archive list */
+  .summary-grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .summary-card{
+    background: var(--bg-surface); border:1px solid var(--border-subtle); border-radius: var(--radius-lg);
+    padding: 16px 18px; box-shadow: var(--shadow-card); cursor:pointer; transition: border-color .12s;
+  }
+  .summary-card:hover{ border-color: var(--primary-400); }
+  .summary-card-period{ font-size:12px; color: var(--text-tertiary); margin: 0 0 8px; }
+  .summary-card-headline{
+    font-size:15px; font-weight:600; line-height:1.4; margin: 0 0 10px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow:hidden;
+  }
+  .summary-card-bullets{ margin: 0 0 12px; padding-left: 18px; font-size:12.5px; color: var(--text-secondary); line-height:1.7; }
+  .summary-card-tags{ display:flex; align-items:center; gap:6px; margin-bottom: 10px; }
+  .summary-card-foot{ display:flex; align-items:center; justify-content:space-between; }
+  .summary-card-meta{ font-size:11.5px; color: var(--text-tertiary); }
+  .summary-card-cta{ font-size:12px; font-weight:500; color: var(--text-tertiary); display:flex; align-items:center; gap:4px; opacity:0; transition: opacity .12s; }
+  .summary-card:hover .summary-card-cta{ opacity:1; color: var(--primary-600); }
+  [data-theme="dark"] .summary-card:hover .summary-card-cta{ color: var(--primary-600); }
+
+  /* sidebar widgets (archive) */
+  .mini-card{ padding: 16px 18px; margin-bottom: 14px; }
+  .mini-card-title{ font-size:13.5px; font-weight:600; margin: 0 0 14px; display:flex; align-items:center; gap:7px; }
+  .sub-row{ display:flex; align-items:center; justify-content:space-between; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); font-size:13px; }
+  .sub-row:last-of-type{ border-bottom:none; padding-bottom:0; }
+  .fd-switch{ position:relative; width:36px; height:20px; flex-shrink:0; }
+  .fd-switch input{ opacity:0; width:0; height:0; }
+  .fd-switch-track{ position:absolute; inset:0; background: var(--border-default); border-radius:99px; transition: background .15s; cursor:pointer; }
+  .fd-switch-track::before{ content:''; position:absolute; width:16px; height:16px; left:2px; top:2px; background:#fff; border-radius:50%; transition: transform .15s; }
+  .fd-switch input:checked + .fd-switch-track{ background: var(--primary-600); }
+  .fd-switch input:checked + .fd-switch-track::before{ transform: translateX(16px); }
+  .mini-select{
+    width:100%; border:1px solid var(--border-default); border-radius: var(--radius-sm); background: var(--bg-surface);
+    color: var(--text-primary); font-size:12.5px; padding: 6px 9px; margin-top:8px;
+  }
+  .mini-checkbox-row{ display:flex; align-items:center; gap:8px; padding: 6px 0; font-size:12.5px; }
+  .mini-checkbox-row input{ width:14px; height:14px; accent-color: var(--primary-600); }
+
+  .method-step{ display:flex; align-items:flex-start; gap:10px; padding: 8px 0; }
+  .method-step-icon{
+    width:28px; height:28px; border-radius:50%; background: var(--primary-50); color: var(--primary-700);
+    display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0;
+  }
+  [data-theme="dark"] .method-step-icon{ color: var(--primary-600); }
+  .method-step-text{ font-size:12.5px; font-weight:500; padding-top:4px; }
+  .method-link{ font-size:12px; color: var(--primary-600); font-weight:500; display:flex; align-items:center; gap:4px; margin-top:8px; }
+  .method-link:hover{ text-decoration: underline; }
+
+  /* generating banner */
+  .generating-banner{
+    display:flex; align-items:center; gap:14px; padding: 16px 20px; background: var(--primary-50);
+    border: 1px solid var(--primary-100); border-radius: var(--radius-lg); margin-bottom: 20px;
+  }
+  .generating-spinner{
+    width:22px; height:22px; border-radius:50%; border:2.5px solid var(--primary-100); border-top-color: var(--primary-600);
+    animation: spin 0.9s linear infinite; flex-shrink:0;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+  .generating-text p{ margin:0; }
+  .generating-text .gt-title{ font-size:13.5px; font-weight:600; }
+  .generating-text .gt-sub{ font-size:12px; color: var(--text-secondary); margin-top:2px; }
+
+  /* empty / loading */
+  .empty-state{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 70px 24px; }
+  .empty-icon{ width:56px; height:56px; border-radius:50%; background: var(--bg-muted); display:flex; align-items:center; justify-content:center; font-size:26px; color: var(--text-tertiary); margin-bottom: 18px; }
+  .empty-state h3{ margin: 0 0 6px; font-size:15px; font-weight:600; }
+  .empty-state p{ margin: 0 0 18px; font-size:13.5px; color: var(--text-secondary); max-width: 340px; }
+
+  .skeleton{ background: linear-gradient(90deg, var(--bg-muted) 25%, var(--border-subtle) 37%, var(--bg-muted) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; border-radius: var(--radius-sm); }
+  @keyframes shimmer{ 0%{ background-position: 100% 0; } 100%{ background-position: 0 0; } }
+  .skel-card{ padding: 16px 18px; }
+
+  /* ============================================================
+     VIEW B: ДЕТАЛЬНАЯ СВОДКА
+     ============================================================ */
+  .breadcrumb{ display:flex; align-items:center; gap:8px; font-size:13px; color: var(--text-secondary); margin-bottom: 18px; }
+  .breadcrumb a{ display:flex; align-items:center; gap:5px; color: var(--text-secondary); }
+  .breadcrumb a:hover{ color: var(--primary-600); }
+  .breadcrumb .sep{ color: var(--text-tertiary); }
+  .breadcrumb .current{ color: var(--text-primary); font-weight:500; }
+
+  .detail-header{
+    background: var(--primary-50); border: 1px solid var(--primary-100); border-radius: var(--radius-lg);
+    padding: 22px 26px; margin-bottom: 24px;
+  }
+  .detail-header h1{ font-size:24px; font-weight:600; margin: 12px 0 8px; letter-spacing:-0.01em; }
+  .detail-header .sub{ font-size:13px; color: var(--text-secondary); margin: 0 0 16px; }
+  .detail-tags{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom: 18px; }
+  .detail-actions-row{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding-top:16px; border-top: 1px solid var(--primary-100); }
+  .detail-actions-left{ display:flex; align-items:center; gap:8px; }
+  .reading-time{ font-size:12.5px; color: var(--text-tertiary); display:flex; align-items:center; gap:5px; }
+
+  .detail-layout{ display:grid; grid-template-columns: 1fr 240px; gap: 32px; align-items:start; }
+  .doc-content{ max-width: 720px; }
+
+  .lead-paragraph{ font-size:16.5px; line-height:1.7; color: var(--text-primary); font-weight:400; margin: 0 0 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border-subtle); }
+
+  .doc-section{ margin-bottom: 30px; scroll-margin-top: 90px; }
+  .doc-section h2{ display:flex; align-items:center; gap:9px; font-size:18px; font-weight:600; margin: 0 0 14px; }
+  .doc-section h2 .sec-flag{ font-size:11px; font-weight:600; padding: 3px 8px; border-radius: var(--radius-sm); }
+  .doc-section p{ font-size:14.5px; line-height:1.8; color: var(--text-primary); margin: 0 0 14px; }
+
+  .citation{
+    border-bottom: 1.5px dotted var(--primary-400); color: var(--primary-700); font-family: var(--font-mono); font-weight:500;
+    cursor:pointer; position:relative; padding-bottom:1px;
+  }
+  [data-theme="dark"] .citation{ color: var(--primary-600); }
+  .citation:hover, .citation.popover-open{ background: var(--primary-50); }
+  .citation i{ font-size:11px; vertical-align: 1px; margin-left:1px; }
+
+  .citation-popover{
+    position:absolute; z-index: 60; width: 260px; background: var(--bg-surface); border:1px solid var(--border-default);
+    border-radius: var(--radius-md); box-shadow: 0 10px 28px rgba(0,0,0,0.14); padding: 14px 16px;
+    display:none; top: calc(100% + 8px); left:0;
+  }
+  .citation-popover.visible{ display:block; }
+  .cp-name{ font-size:13px; font-weight:600; margin: 0 0 8px; }
+  .cp-value-row{ display:flex; align-items:baseline; gap:8px; margin-bottom:10px; }
+  .cp-value{ font-family: var(--font-mono); font-size:19px; font-weight:600; }
+  .cp-delta{ font-family: var(--font-mono); font-size:12px; font-weight:500; padding:2px 6px; border-radius: var(--radius-sm); }
+  .cp-delta.up{ background: var(--negative-bg); color: var(--negative-text); }
+  .cp-delta.down{ background: var(--positive-bg); color: var(--positive-text); }
+  .cp-delta.flat{ background: var(--neutral-bg); color: var(--neutral-text); }
+  .cp-meta-row{ display:flex; align-items:center; justify-content:space-between; font-size:11.5px; color: var(--text-tertiary); margin-bottom:12px; }
+  .cp-open-btn{ width:100%; justify-content:center; font-size:12.5px; padding:7px; }
+
+  .events-list{ list-style:none; margin:0 0 14px; padding:0; }
+  .events-list li{ display:flex; align-items:baseline; gap:8px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size:13.5px; }
+  .events-list li:last-of-type{ border-bottom:none; }
+  .events-list .ev-dt{ font-family: var(--font-mono); color: var(--text-secondary); white-space:nowrap; }
+  .events-list .ev-country{ font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:4px; }
+
+  .risks-list{ margin:0; padding-left: 20px; font-size:14.5px; line-height:1.9; color: var(--text-primary); }
+
+  .source-tag{ display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding: 3px 8px; border-radius: var(--radius-sm); white-space:nowrap; }
+  .source-tag.cbr{ background: var(--src-cbr-bg); color: var(--src-cbr-text); }
+  .source-tag.fred{ background: var(--src-fred-bg); color: var(--src-fred-text); }
+  .source-tag.rosstat{ background: var(--src-rosstat-bg); color: var(--src-rosstat-text); }
+  .source-tag.oecd{ background: var(--src-oecd-bg); color: var(--src-oecd-text); }
+  .source-tag.ecb{ background: var(--src-ecb-bg); color: var(--src-ecb-text); }
+
+  .disclaimer-block{
+    display:flex; gap:12px; background: var(--bg-muted); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); padding: 16px 18px; font-size:12.5px; color: var(--text-secondary); line-height:1.6; margin: 30px 0 20px;
+  }
+  .disclaimer-block i{ font-size:18px; color: var(--text-tertiary); flex-shrink:0; margin-top:1px; }
+
+  .sources-accordion{ border:1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow:hidden; }
+  .sources-accordion summary{
+    list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+    padding: 14px 18px; font-size:13.5px; font-weight:600; background: var(--bg-surface);
+  }
+  .sources-accordion summary::-webkit-details-marker{ display:none; }
+  .sources-accordion summary i{ font-size:16px; color: var(--text-tertiary); transition: transform .15s; }
+  .sources-accordion[open] summary i{ transform: rotate(180deg); }
+  .sources-list{ padding: 4px 18px 14px; }
+  .source-item{ display:flex; align-items:center; justify-content:space-between; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); font-size:13px; }
+  .source-item:last-of-type{ border-bottom:none; }
+  .source-item-name{ font-weight:500; }
+  .source-item-right{ display:flex; align-items:center; gap:8px; }
+  .source-item-date{ font-size:11.5px; color: var(--text-tertiary); }
+
+  /* TOC */
+  .toc{ position: sticky; top: 86px; }
+  .toc-title{ font-size:12px; font-weight:600; color: var(--text-tertiary); text-transform:uppercase; letter-spacing:0.04em; margin: 0 0 12px; }
+  .toc-item{
+    display:block; padding: 7px 10px; border-radius: var(--radius-sm); font-size:13px; color: var(--text-secondary);
+    border-left: 2px solid transparent; margin-bottom:2px;
+  }
+  .toc-item:hover{ background: var(--bg-muted); color: var(--text-primary); }
+  .toc-item.active{ color: var(--primary-700); border-left-color: var(--primary-600); background: var(--primary-50); font-weight:500; }
+  [data-theme="dark"] .toc-item.active{ color: var(--primary-600); }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 1180px){
+    .archive-grid{ grid-template-columns: 1fr; }
+    .detail-layout{ grid-template-columns: 1fr; }
+    .toc{ display:none; }
+    .summary-grid{ grid-template-columns: 1fr; }
+  }
+  @media (max-width: 1024px){
+    .app{ grid-template-columns: 72px 1fr; }
+    .brand-name, .nav-item span, .user-name, .user-plan{ display:none; }
+    .nav-item{ justify-content:center; }
+    .brand{ justify-content:center; }
+    .search-box{ width: 220px; }
+  }
+  @media (max-width: 768px){
+    .content{ padding: 16px 14px 48px; }
+    .topbar{ padding: 12px 14px; }
+    .search-box{ display:none; }
+    .select-sort{ margin-left:0; }
+    .pinned-bottom{ flex-direction:column; align-items:flex-start; }
+    .detail-actions-row{ flex-direction:column; align-items:flex-start; }
+  }
+
+  @media (prefers-reduced-motion: reduce){ .skeleton, .generating-spinner{ animation:none; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">М</div>
+      <span class="brand-name">Макроаналитика</span>
+    </div>
+    <nav>
+      <a class="nav-item" href="#"><i class="ti ti-layout-dashboard"></i><span>Обзор</span></a>
+      <a class="nav-item" href="#"><i class="ti ti-list-search"></i><span>Показатели</span></a>
+      <a class="nav-item" href="#"><i class="ti ti-chart-line"></i><span>Сравнение</span></a>
+      <a class="nav-item" href="#"><i class="ti ti-calendar-event"></i><span>Календарь</span></a>
+      <a class="nav-item active" href="#"><i class="ti ti-sparkles"></i><span>AI-сводки</span></a>
+      <a class="nav-item" href="#"><i class="ti ti-star"></i><span>Избранное</span></a>
+      <a class="nav-item" href="#"><i class="ti ti-bell"></i><span>Алерты</span></a>
+      <a class="nav-item" href="#"><i class="ti ti-settings"></i><span>Настройки</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="avatar">АС</div>
+        <div>
+          <p class="user-name">Анна Соколова</p>
+          <p class="user-plan">Тариф Pro</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div class="main">
+
+    <div class="topbar">
+      <div class="search-box">
+        <i class="ti ti-search"></i>
+        <input type="text" placeholder="Найти показатель: инфляция, ставка, ВВП…">
+      </div>
+      <div class="topbar-actions">
+        <div class="theme-toggle" id="themeToggle">
+          <button class="active" data-mode="light" aria-label="Светлая тема"><i class="ti ti-sun"></i></button>
+          <button data-mode="dark" aria-label="Тёмная тема"><i class="ti ti-moon"></i></button>
+        </div>
+        <button class="icon-btn" aria-label="Уведомления"><i class="ti ti-bell"></i><span class="dot"></span></button>
+        <div class="avatar" style="cursor:pointer;">АС</div>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast">
+      <i class="ti ti-check"></i>
+      <span id="toastText">Готово</span>
+    </div>
+
+    <!-- DEMO STATE SWITCHER -->
+    <div class="demo-switcher">
+      <span><b>Демо-состояния:</b></span>
+      <button class="demo-btn active" data-state="archive">Архив</button>
+      <button class="demo-btn" data-state="filtered">Архив — фильтр</button>
+      <button class="demo-btn" data-state="detail">Деталь</button>
+      <button class="demo-btn" data-state="citation">Citation open</button>
+      <button class="demo-btn" data-state="empty">Пусто</button>
+      <button class="demo-btn" data-state="loading">Загрузка</button>
+      <button class="demo-btn" data-state="generating">Генерация</button>
+    </div>
+
+    <div class="content">
+
+      <!-- ===================== VIEW A: АРХИВ ===================== -->
+      <div class="state-block visible" id="viewArchive">
+
+        <div class="page-head">
+          <div>
+            <h1>AI-сводки</h1>
+            <p class="meta">12 сводок · последняя: 19.06.2026, 08:00 МСК</p>
+          </div>
+          <div class="head-actions">
+            <button class="btn"><i class="ti ti-mail"></i>Подписаться на рассылку</button>
+            <button class="btn"><i class="ti ti-settings"></i>Настройки digest</button>
+          </div>
+        </div>
+
+        <!-- GENERATING BANNER (только в state "generating") -->
+        <div class="generating-banner state-block" id="generatingBanner">
+          <div class="generating-spinner"></div>
+          <div class="generating-text">
+            <p class="gt-title">Формируем сводку за 16–22 июня 2026</p>
+            <p class="gt-sub">Обычно занимает до 10 минут после закрытия недели · обновим страницу автоматически</p>
+          </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <span class="filter-group-label">Период:</span>
+            <button class="pill active" data-filter-group="period" data-filter-value="all">Все</button>
+            <button class="pill" data-filter-group="period" data-filter-value="2026">2026</button>
+            <button class="pill" data-filter-group="period" data-filter-value="q2">Q2 2026</button>
+            <button class="pill" data-filter-group="period" data-filter-value="may">Май</button>
+            <button class="pill" data-filter-group="period" data-filter-value="june">Июнь</button>
+          </div>
+          <div class="filter-group">
+            <span class="filter-group-label">Регион:</span>
+            <button class="pill active" data-filter-group="region" data-filter-value="all">Все</button>
+            <button class="pill" data-filter-group="region" data-filter-value="ru">RU</button>
+            <button class="pill" data-filter-group="region" data-filter-value="us">US</button>
+            <button class="pill" data-filter-group="region" data-filter-value="eu">EU</button>
+            <button class="pill" data-filter-group="region" data-filter-value="world">Мир</button>
+          </div>
+          <select class="select-sort">
+            <option>Сначала новые</option>
+            <option>Сначала старые</option>
+          </select>
+        </div>
+
+        <!-- ACTIVE CHIPS -->
+        <div class="chips-bar" id="chipsBar">
+          <span class="chip">Июнь <button aria-label="Убрать фильтр"><i class="ti ti-x"></i></button></span>
+          <span class="chip">RU <button aria-label="Убрать фильтр"><i class="ti ti-x"></i></button></span>
+          <button class="chip-reset" id="chipReset">Сбросить</button>
+        </div>
+
+        <div class="archive-grid">
+
+          <!-- MAIN COLUMN -->
+          <div id="archiveMain">
+
+            <!-- PINNED CARD -->
+            <div class="pinned-card" id="pinnedCard">
+              <div class="pinned-top">
+                <span class="ai-badge"><i class="ti ti-sparkles"></i>AI-сводка</span>
+                <span class="new-badge">Новая</span>
+                <span class="pinned-period">16–22 июня 2026</span>
+              </div>
+              <h2 class="pinned-headline">ЦБ удержал ставку, инфляция в США замедлилась сильнее ожиданий</h2>
+              <ul class="pinned-bullets">
+                <li>Банк России сохранил ключевую ставку на уровне 21% пятое заседание подряд</li>
+                <li>Инфляция в США замедлилась сильнее консенсус-прогноза рынка</li>
+                <li>На следующей неделе — заседание ECB и публикация промпроизводства РФ</li>
+              </ul>
+              <div class="pinned-tags">
+                <span class="region-tag ru">RU</span>
+                <span class="region-tag us">US</span>
+                <span class="region-tag eu">EU</span>
+                <span class="topic-tag">Ставки</span>
+                <span class="topic-tag">Инфляция</span>
+              </div>
+              <div class="pinned-bottom">
+                <span class="pinned-meta">Сгенерировано 19.06.2026, 08:00 · 847 слов · 14 источников</span>
+                <button class="btn primary" id="openPinnedBtn">Читать полностью</button>
+              </div>
+              <p class="pinned-disclaimer">Сгенерировано AI на основе официальных данных. Не является инвестиционной рекомендацией.</p>
+            </div>
+
+            <!-- ARCHIVE LIST -->
+            <div class="summary-grid" id="summaryGrid">
+
+              <div class="summary-card" data-summary="w2" tabindex="0">
+                <p class="summary-card-period">9–15 июня 2026</p>
+                <p class="summary-card-headline">FOMC сохранил ставку; ECB готовится к заседанию; рубль ослаб на фоне нефти</p>
+                <ul class="summary-card-bullets">
+                  <li>Федрезерв удержал ставку в диапазоне 5,25–5,50%</li>
+                  <li>USD/RUB вырос на фоне снижения цен на нефть</li>
+                </ul>
+                <div class="summary-card-tags"><span class="region-tag ru">RU</span><span class="region-tag us">US</span></div>
+                <div class="summary-card-foot">
+                  <span class="summary-card-meta">12.06.2026 · 6 мин чтения</span>
+                  <span class="summary-card-cta">Читать <i class="ti ti-arrow-right"></i></span>
+                </div>
+              </div>
+
+              <div class="summary-card" data-summary="w3" tabindex="0">
+                <p class="summary-card-period">2–8 июня 2026</p>
+                <p class="summary-card-headline">Росстат: инфляция ускорилась; US NFP выше прогноза</p>
+                <ul class="summary-card-bullets">
+                  <li>Годовая инфляция в РФ ускорилась до 8,9%</li>
+                  <li>Число новых рабочих мест в США превысило ожидания</li>
+                </ul>
+                <div class="summary-card-tags"><span class="region-tag ru">RU</span><span class="region-tag us">US</span></div>
+                <div class="summary-card-foot">
+                  <span class="summary-card-meta">05.06.2026 · 5 мин чтения</span>
+                  <span class="summary-card-cta">Читать <i class="ti ti-arrow-right"></i></span>
+                </div>
+              </div>
+
+              <div class="summary-card" data-summary="w4" tabindex="0">
+                <p class="summary-card-period">26 мая – 1 июня 2026</p>
+                <p class="summary-card-headline">Промпроизводство РФ выше ожиданий; EUR/USD стабилен</p>
+                <ul class="summary-card-bullets">
+                  <li>Промышленное производство в РФ выросло сильнее прогноза</li>
+                  <li>Пара EUR/USD торгуется в узком диапазоне</li>
+                </ul>
+                <div class="summary-card-tags"><span class="region-tag ru">RU</span><span class="region-tag eu">EU</span></div>
+                <div class="summary-card-foot">
+                  <span class="summary-card-meta">29.05.2026 · 5 мин чтения</span>
+                  <span class="summary-card-cta">Читать <i class="ti ti-arrow-right"></i></span>
+                </div>
+              </div>
+
+              <div class="summary-card" data-summary="w5" tabindex="0">
+                <p class="summary-card-period">19–25 мая 2026</p>
+                <p class="summary-card-headline">ЦБ намекнул на паузу; HICP еврозоны в цели ECB</p>
+                <ul class="summary-card-bullets">
+                  <li>Риторика ЦБ РФ стала менее жёсткой перед следующим заседанием</li>
+                  <li>Инфляция в еврозоне вернулась к целевому уровню</li>
+                </ul>
+                <div class="summary-card-tags"><span class="region-tag ru">RU</span><span class="region-tag eu">EU</span></div>
+                <div class="summary-card-foot">
+                  <span class="summary-card-meta">22.05.2026 · 6 мин чтения</span>
+                  <span class="summary-card-cta">Читать <i class="ti ti-arrow-right"></i></span>
+                </div>
+              </div>
+
+              <div class="summary-card" data-summary="w6" tabindex="0">
+                <p class="summary-card-period">12–18 мая 2026</p>
+                <p class="summary-card-headline">Глобальные рынки в ожидании летнего заседания G7 по тарифам</p>
+                <ul class="summary-card-bullets">
+                  <li>Волатильность на товарных рынках выросла</li>
+                  <li>Китай сохранил целевой показатель роста ВВП на 2026 год</li>
+                </ul>
+                <div class="summary-card-tags"><span class="region-tag world">Мир</span><span class="region-tag us">US</span></div>
+                <div class="summary-card-foot">
+                  <span class="summary-card-meta">15.05.2026 · 7 мин чтения</span>
+                  <span class="summary-card-cta">Читать <i class="ti ti-arrow-right"></i></span>
+                </div>
+              </div>
+
+              <div class="summary-card" data-summary="w7" tabindex="0">
+                <p class="summary-card-period">5–11 мая 2026</p>
+                <p class="summary-card-headline">Розничные продажи РФ ускорились; Fed сохраняет осторожный тон</p>
+                <ul class="summary-card-bullets">
+                  <li>Потребительский спрос в РФ показал ускорение второй месяц подряд</li>
+                  <li>Глава ФРС подчеркнул зависимость решений от новых данных</li>
+                </ul>
+                <div class="summary-card-tags"><span class="region-tag ru">RU</span><span class="region-tag us">US</span></div>
+                <div class="summary-card-foot">
+                  <span class="summary-card-meta">08.05.2026 · 5 мин чтения</span>
+                  <span class="summary-card-cta">Читать <i class="ti ti-arrow-right"></i></span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- SIDEBAR WIDGETS -->
+          <div>
+            <div class="card mini-card">
+              <p class="mini-card-title"><i class="ti ti-mail" style="font-size:15px; color:var(--text-tertiary);"></i>Подписка на digest</p>
+              <div class="sub-row">
+                <span>Еженедельная рассылка</span>
+                <div class="fd-switch"><input type="checkbox" id="digestToggle" checked><label class="fd-switch-track" for="digestToggle"></label></div>
+              </div>
+              <select class="mini-select">
+                <option>Понедельник, 09:00 МСК</option>
+                <option>Воскресенье, 20:00 МСК</option>
+              </select>
+              <div style="margin-top:10px;">
+                <label class="mini-checkbox-row"><input type="checkbox" checked> Фокус RU</label>
+                <label class="mini-checkbox-row"><input type="checkbox" checked> Фокус US</label>
+                <label class="mini-checkbox-row"><input type="checkbox"> Фокус EU</label>
+              </div>
+            </div>
+
+            <div class="card mini-card">
+              <p class="mini-card-title"><i class="ti ti-bulb" style="font-size:15px; color:var(--text-tertiary);"></i>Как формируется сводка</p>
+              <div class="method-step">
+                <div class="method-step-icon"><i class="ti ti-database"></i></div>
+                <span class="method-step-text">Сбор данных из официальных источников</span>
+              </div>
+              <div class="method-step">
+                <div class="method-step-icon"><i class="ti ti-chart-bar"></i></div>
+                <span class="method-step-text">Аналитика изменений и сравнение с прогнозом</span>
+              </div>
+              <div class="method-step">
+                <div class="method-step-icon"><i class="ti ti-sparkles"></i></div>
+                <span class="method-step-text">AI-интерпретация и структурирование текста</span>
+              </div>
+              <a class="method-link" href="#">Подробнее о методологии <i class="ti ti-arrow-right"></i></a>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ===================== STATE: EMPTY ===================== -->
+      <div class="state-block" id="viewEmpty">
+        <div class="card">
+          <div class="empty-state">
+            <div class="empty-icon"><i class="ti ti-sparkles"></i></div>
+            <h3>Сводок пока нет</h3>
+            <p>Первая сводка появится в понедельник после закрытия недели</p>
+            <button class="btn primary">Настроить рынки</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== STATE: LOADING ===================== -->
+      <div class="state-block" id="viewLoading">
+        <div class="card skel-card" style="margin-bottom:18px;">
+          <div class="skeleton" style="width:140px; height:22px; margin-bottom:14px;"></div>
+          <div class="skeleton" style="width:90%; height:22px; margin-bottom:14px;"></div>
+          <div class="skeleton" style="width:70%; height:14px; margin-bottom:8px;"></div>
+          <div class="skeleton" style="width:60%; height:14px;"></div>
+        </div>
+        <div class="summary-grid">
+          <div class="card skel-card">
+            <div class="skeleton" style="width:100px; height:12px; margin-bottom:10px;"></div>
+            <div class="skeleton" style="width:95%; height:18px; margin-bottom:8px;"></div>
+            <div class="skeleton" style="width:80%; height:18px; margin-bottom:14px;"></div>
+            <div class="skeleton" style="width:60%; height:12px;"></div>
+          </div>
+          <div class="card skel-card">
+            <div class="skeleton" style="width:100px; height:12px; margin-bottom:10px;"></div>
+            <div class="skeleton" style="width:90%; height:18px; margin-bottom:8px;"></div>
+            <div class="skeleton" style="width:75%; height:18px; margin-bottom:14px;"></div>
+            <div class="skeleton" style="width:55%; height:12px;"></div>
+          </div>
+          <div class="card skel-card">
+            <div class="skeleton" style="width:100px; height:12px; margin-bottom:10px;"></div>
+            <div class="skeleton" style="width:92%; height:18px; margin-bottom:8px;"></div>
+            <div class="skeleton" style="width:70%; height:18px; margin-bottom:14px;"></div>
+            <div class="skeleton" style="width:50%; height:12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== VIEW B: ДЕТАЛЬНАЯ СВОДКА ===================== -->
+      <div class="state-block" id="viewDetail">
+
+        <div class="breadcrumb">
+          <a href="#" id="backToArchive"><i class="ti ti-arrow-left"></i>Назад к архиву</a>
+          <span class="sep">/</span>
+          <span class="current">AI-сводки / 16–22 июня 2026</span>
+        </div>
+
+        <div class="detail-header">
+          <span class="ai-badge"><i class="ti ti-sparkles"></i>AI-сводка</span>
+          <h1>Сводка за 16–22 июня 2026</h1>
+          <p class="sub">Сгенерировано 19.06.2026, 08:00 МСК · данные на 18.06.2026, 23:59 МСК</p>
+          <div class="detail-tags">
+            <span class="region-tag ru">RU</span>
+            <span class="region-tag us">US</span>
+            <span class="region-tag eu">EU</span>
+            <span class="topic-tag">Ставки</span>
+            <span class="topic-tag">Инфляция</span>
+            <span class="topic-tag">FX</span>
+          </div>
+          <div class="detail-actions-row">
+            <div class="detail-actions-left">
+              <button class="icon-only-btn" id="pdfBtn" aria-label="Скачать PDF"><i class="ti ti-file-type-pdf"></i></button>
+              <button class="icon-only-btn" id="emailBtn" aria-label="Отправить на email"><i class="ti ti-mail"></i></button>
+              <button class="icon-only-btn" id="shareBtn" aria-label="Поделиться"><i class="ti ti-share-2"></i></button>
+              <button class="icon-only-btn" id="copyLinkBtn" aria-label="Копировать ссылку"><i class="ti ti-link"></i></button>
+            </div>
+            <span class="reading-time"><i class="ti ti-clock"></i>~6 мин чтения</span>
+          </div>
+        </div>
+
+        <div class="detail-layout">
+
+          <!-- DOC CONTENT -->
+          <article class="doc-content" id="docContent">
+
+            <p class="lead-paragraph" id="summary">
+              На прошедшей неделе Банк России в пятый раз подряд сохранил ключевую ставку на уровне
+              <span class="citation" data-cite="cbr-rate">21,00% <i class="ti ti-arrow-up-right"></i></span>.
+              В США индекс потребительских цен замедлился до
+              <span class="citation" data-cite="us-cpi">3,2% г/г <i class="ti ti-arrow-up-right"></i></span>
+              — на 0,2 п.п. ниже консенсус-прогноза. Курс USD/RUB ослаб до
+              <span class="citation" data-cite="usdrub">92,40 <i class="ti ti-arrow-up-right"></i></span>
+              (+1,2% за неделю). На следующей неделе внимание рынков — заседание ECB и публикация промышленного производства РФ.
+            </p>
+
+            <section class="doc-section" id="rossiya">
+              <h2><span class="sec-flag region-tag ru">RU</span>Россия</h2>
+              <p>
+                Банк России на заседании 17 июня оставил ключевую ставку на уровне
+                <span class="citation" data-cite="cbr-rate">21,00% <i class="ti ti-arrow-up-right"></i></span>
+                — пятое заседание без изменений. Годовая инфляция по данным Росстата составила
+                <span class="citation" data-cite="ru-cpi">9,52% <i class="ti ti-arrow-up-right"></i></span>
+                (+0,64 п.п. к предыдущему месяцу). Официальный курс USD/RUB —
+                <span class="citation" data-cite="usdrub">92,40 <i class="ti ti-arrow-up-right"></i></span>.
+              </p>
+              <p>
+                Промышленное производство пока остаётся устойчивым, но рынок ждёт публикации новых данных 24 июня —
+                любое отклонение от прогноза может скорректировать ожидания по дальнейшей траектории ставки.
+              </p>
+            </section>
+
+            <section class="doc-section" id="usa">
+              <h2><span class="sec-flag region-tag us">US</span>США</h2>
+              <p>
+                Индекс CPI замедлился до
+                <span class="citation" data-cite="us-cpi">3,2% г/г <i class="ti ti-arrow-up-right"></i></span>
+                (−0,1 п.п.), что ниже прогноза
+                <span class="citation" data-cite="us-cpi-forecast">3,4% <i class="ti ti-arrow-up-right"></i></span>.
+                Fed Funds Rate остаётся в диапазоне
+                <span class="citation" data-cite="fed-rate">5,25–5,50% <i class="ti ti-arrow-up-right"></i></span>.
+                Рынок ожидает первое снижение ставки не ранее сентября.
+              </p>
+            </section>
+
+            <section class="doc-section" id="evrozona">
+              <h2><span class="sec-flag region-tag eu">EU</span>Еврозона</h2>
+              <p>
+                HICP еврозоны —
+                <span class="citation" data-cite="eu-hicp">2,1% г/г <i class="ti ti-arrow-up-right"></i></span>.
+                На следующей неделе — заседание ECB (23 июня, 15:45 МСК); рынок ожидает сохранение ставки на уровне
+                <span class="citation" data-cite="ecb-rate">3,75% <i class="ti ti-arrow-up-right"></i></span>.
+              </p>
+            </section>
+
+            <section class="doc-section" id="rynki-i-fx">
+              <h2><i class="ti ti-currency-dollar" style="font-size:16px; color:var(--text-tertiary);"></i>Рынки и FX</h2>
+              <p>
+                Курс USD/RUB за неделю ослаб до
+                <span class="citation" data-cite="usdrub">92,40 <i class="ti ti-arrow-up-right"></i></span>,
+                отражая сезонное снижение экспортной выручки. Пара EUR/USD торгуется в узком диапазоне на фоне
+                ожидания решения ECB. Цены на нефть марки Brent остаются волатильными в преддверии заседания ОПЕК+.
+              </p>
+            </section>
+
+            <section class="doc-section" id="na-sleduyushchey-nedele">
+              <h2><i class="ti ti-calendar-event" style="font-size:16px; color:var(--text-tertiary);"></i>На следующей неделе</h2>
+              <ul class="events-list">
+                <li><span class="ev-dt">23 июня, 15:45 МСК</span><span>—</span><span>Заседание ECB по ставке</span><span class="ev-country region-tag eu">EU</span></li>
+                <li><span class="ev-dt">24 июня, 10:00 МСК</span><span>—</span><span>Промышленное производство РФ</span><span class="ev-country region-tag ru">RU</span></li>
+                <li><span class="ev-dt">26 июня, 15:30 МСК</span><span>—</span><span>Индекс расходов на личное потребление США (PCE)</span><span class="ev-country region-tag us">US</span></li>
+              </ul>
+            </section>
+
+            <section class="doc-section" id="riski-i-neopredelennosti">
+              <h2><i class="ti ti-alert-triangle" style="font-size:16px; color:var(--text-tertiary);"></i>Риски и неопределённости</h2>
+              <ul class="risks-list">
+                <li>Инфляция в РФ остаётся выше целевого коридора ЦБ</li>
+                <li>Геополитическая премия в курсе рубля</li>
+                <li>Риск пересмотра прогноза Fed при новых данных по занятости</li>
+              </ul>
+            </section>
+
+            <div class="disclaimer-block">
+              <i class="ti ti-info-circle"></i>
+              <span>Сводка сгенерирована AI на основе официальных макроэкономических данных (Банк России, Росстат, FRED, IMF, OECD, ECB/Eurostat). Цифры в тексте соответствуют данным на момент генерации. Материал носит информационный характер и не является инвестиционной рекомендацией.</span>
+            </div>
+
+            <details class="sources-accordion">
+              <summary>Использованные источники (14) <i class="ti ti-chevron-down"></i></summary>
+              <div class="sources-list">
+                <div class="source-item"><span class="source-item-name">Ключевая ставка Банка России</span><div class="source-item-right"><span class="source-tag cbr">Банк России</span><span class="source-item-date">17.06.2026</span></div></div>
+                <div class="source-item"><span class="source-item-name">ИПЦ России, г/г</span><div class="source-item-right"><span class="source-tag rosstat">Росстат</span><span class="source-item-date">12.06.2026</span></div></div>
+                <div class="source-item"><span class="source-item-name">USD/RUB, официальный курс</span><div class="source-item-right"><span class="source-tag cbr">Банк России</span><span class="source-item-date">18.06.2026</span></div></div>
+                <div class="source-item"><span class="source-item-name">US CPI, г/г</span><div class="source-item-right"><span class="source-tag fred">FRED</span><span class="source-item-date">18.06.2026</span></div></div>
+                <div class="source-item"><span class="source-item-name">Fed Funds Effective Rate</span><div class="source-item-right"><span class="source-tag fred">FRED</span><span class="source-item-date">18.06.2026</span></div></div>
+                <div class="source-item"><span class="source-item-name">HICP, г/г (еврозона)</span><div class="source-item-right"><span class="source-tag oecd">OECD</span><span class="source-item-date">17.06.2026</span></div></div>
+                <div class="source-item"><span class="source-item-name">ECB Deposit Facility Rate</span><div class="source-item-right"><span class="source-tag ecb">ECB</span><span class="source-item-date">18.06.2026</span></div></div>
+              </div>
+            </details>
+
+          </article>
+
+          <!-- TOC -->
+          <nav class="toc" aria-label="Содержание">
+            <p class="toc-title">Содержание</p>
+            <a class="toc-item active" href="#summary" data-toc="summary">Краткое резюме</a>
+            <a class="toc-item" href="#rossiya" data-toc="rossiya">Россия</a>
+            <a class="toc-item" href="#usa" data-toc="usa">США</a>
+            <a class="toc-item" href="#evrozona" data-toc="evrozona">Еврозона</a>
+            <a class="toc-item" href="#rynki-i-fx" data-toc="rynki-i-fx">Рынки и FX</a>
+            <a class="toc-item" href="#na-sleduyushchey-nedele" data-toc="na-sleduyushchey-nedele">На следующей неделе</a>
+            <a class="toc-item" href="#riski-i-neopredelennosti" data-toc="riski-i-neopredelennosti">Риски</a>
+          </nav>
+
+        </div>
+
+      </div>
+
+      <p style="margin-top: 28px; font-size:11.5px; color: var(--text-tertiary);">
+        Данные: Банк России, Росстат, FRED, IMF, OECD, ECB/Eurostat · Прототип интерфейса
+      </p>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CITATION POPOVER (mounted dynamically near clicked citation) ===================== -->
+<div class="citation-popover" id="citationPopover">
+  <p class="cp-name" id="cpName">—</p>
+  <div class="cp-value-row">
+    <span class="cp-value" id="cpValue">—</span>
+    <span class="cp-delta" id="cpDelta">—</span>
+  </div>
+  <div class="cp-meta-row">
+    <span class="source-tag" id="cpSource">—</span>
+    <span id="cpUpdated">—</span>
+  </div>
+  <button class="btn primary cp-open-btn" id="cpOpenBtn">Открыть показатель <i class="ti ti-arrow-right"></i></button>
+</div>
+
+<script>
+
+  /* ---------- тема ---------- */
+  document.getElementById('themeToggle').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    document.querySelectorAll('#themeToggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.documentElement.setAttribute('data-theme', btn.dataset.mode === 'dark' ? 'dark' : 'light');
+  });
+
+  /* ---------- toast helper ---------- */
+  function showToast(text){
+    const toast = document.getElementById('toast');
+    document.getElementById('toastText').textContent = text;
+    toast.classList.add('visible');
+    setTimeout(() => toast.classList.remove('visible'), 3000);
+  }
+
+  /* ---------- переключение View A / View B и доп. состояний ---------- */
+  const allViews = ['viewArchive', 'viewEmpty', 'viewLoading', 'viewDetail'];
+  function showView(id){
+    allViews.forEach(v => document.getElementById(v).classList.remove('visible'));
+    document.getElementById(id).classList.add('visible');
+    document.getElementById('generatingBanner').classList.remove('visible');
+  }
+
+  function openDetail(){
+    showView('viewDetail');
+    document.querySelectorAll('.toc-item').forEach(t => t.classList.remove('active'));
+    document.querySelector('.toc-item[data-toc="summary"]').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+  }
+
+  document.getElementById('openPinnedBtn').addEventListener('click', openDetail);
+  document.querySelectorAll('.summary-card').forEach(card => {
+    card.addEventListener('click', openDetail);
+    card.addEventListener('keydown', (e) => { if(e.key === 'Enter') openDetail(); });
+  });
+  document.getElementById('backToArchive').addEventListener('click', (e) => {
+    e.preventDefault();
+    showView('viewArchive');
+    document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.demo-btn[data-state="archive"]').classList.add('active');
+  });
+
+  /* ---------- demo state switcher ---------- */
+  document.querySelectorAll('.demo-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const key = btn.dataset.state;
+
+      document.getElementById('chipsBar').classList.remove('visible');
+      closeCitationPopover();
+
+      if(key === 'archive'){
+        showView('viewArchive');
+      } else if(key === 'filtered'){
+        showView('viewArchive');
+        document.getElementById('chipsBar').classList.add('visible');
+        document.querySelector('.pill[data-filter-value="june"]').click();
+        document.querySelector('.pill[data-filter-value="ru"]').click();
+      } else if(key === 'detail'){
+        openDetail();
+      } else if(key === 'citation'){
+        openDetail();
+        setTimeout(() => {
+          const target = document.querySelector('#rossiya .citation[data-cite="cbr-rate"]');
+          if(target) openCitationPopover(target, 'cbr-rate');
+        }, 50);
+      } else if(key === 'empty'){
+        showView('viewEmpty');
+      } else if(key === 'loading'){
+        showView('viewLoading');
+      } else if(key === 'generating'){
+        showView('viewArchive');
+        document.getElementById('generatingBanner').classList.add('visible');
+      }
+    });
+  });
+
+  /* ---------- filter pills ---------- */
+  document.querySelectorAll('.pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const group = pill.dataset.filterGroup;
+      document.querySelectorAll(`.pill[data-filter-group="${group}"]`).forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const anyNonAll = document.querySelector('.pill[data-filter-group="period"].active:not([data-filter-value="all"])')
+        || document.querySelector('.pill[data-filter-group="region"].active:not([data-filter-value="all"])');
+      document.getElementById('chipsBar').classList.toggle('visible', !!anyNonAll);
+    });
+  });
+  document.getElementById('chipReset')?.addEventListener('click', () => {
+    document.querySelectorAll('.pill[data-filter-value="all"]').forEach(p => p.click());
+    document.getElementById('chipsBar').classList.remove('visible');
+  });
+
+  /* ---------- citation popover ---------- */
+  const citationData = {
+    'cbr-rate': { name: 'Ключевая ставка Банка России', value: '21,00%', delta: '0 п.п.', deltaType: 'flat', source: 'cbr', sourceLabel: 'Банк России', updated: '17.06.2026' },
+    'ru-cpi': { name: 'ИПЦ России, г/г', value: '9,52%', delta: '+0,64 п.п.', deltaType: 'up', source: 'rosstat', sourceLabel: 'Росстат', updated: '12.06.2026' },
+    'usdrub': { name: 'USD/RUB, официальный курс', value: '92,40', delta: '+1,2%', deltaType: 'up', source: 'cbr', sourceLabel: 'Банк России', updated: '18.06.2026' },
+    'us-cpi': { name: 'ИПЦ США, г/г', value: '3,2%', delta: '−0,1 п.п.', deltaType: 'down', source: 'fred', sourceLabel: 'FRED', updated: '18.06.2026' },
+    'us-cpi-forecast': { name: 'ИПЦ США, г/г (консенсус-прогноз)', value: '3,4%', delta: '—', deltaType: 'flat', source: 'fred', sourceLabel: 'FRED', updated: '17.06.2026' },
+    'fed-rate': { name: 'Fed Funds Effective Rate', value: '5,25–5,50%', delta: '0 п.п.', deltaType: 'flat', source: 'fred', sourceLabel: 'FRED', updated: '18.06.2026' },
+    'eu-hicp': { name: 'HICP, г/г (еврозона)', value: '2,1%', delta: '−0,1 п.п.', deltaType: 'down', source: 'oecd', sourceLabel: 'OECD/Eurostat', updated: '17.06.2026' },
+    'ecb-rate': { name: 'ECB Deposit Facility Rate', value: '3,75%', delta: '0 п.п.', deltaType: 'flat', source: 'ecb', sourceLabel: 'ECB', updated: '18.06.2026' }
+  };
+
+  function openCitationPopover(target, key){
+    const d = citationData[key];
+    if(!d) return;
+    const pop = document.getElementById('citationPopover');
+
+    document.getElementById('cpName').textContent = d.name;
+    document.getElementById('cpValue').textContent = d.value;
+    const deltaEl = document.getElementById('cpDelta');
+    deltaEl.textContent = d.delta;
+    deltaEl.className = 'cp-delta ' + d.deltaType;
+    const sourceEl = document.getElementById('cpSource');
+    sourceEl.className = 'source-tag ' + d.source;
+    sourceEl.textContent = d.sourceLabel;
+    document.getElementById('cpUpdated').textContent = 'Обновлено: ' + d.updated;
+    document.getElementById('cpOpenBtn').dataset.indicator = d.name;
+
+    document.querySelectorAll('.citation').forEach(c => c.classList.remove('popover-open'));
+    target.classList.add('popover-open');
+
+    // позиционирование рядом с citation, с защитой от выхода за viewport
+    const rect = target.getBoundingClientRect();
+    const popWidth = 260;
+    let left = rect.left + window.scrollX;
+    if(left + popWidth > window.innerWidth - 16) left = window.innerWidth - popWidth - 16;
+    let top = rect.bottom + window.scrollY + 8;
+
+    pop.style.position = 'absolute';
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+    pop.classList.add('visible');
+  }
+
+  function closeCitationPopover(){
+    document.getElementById('citationPopover').classList.remove('visible');
+    document.querySelectorAll('.citation').forEach(c => c.classList.remove('popover-open'));
+  }
+
+  document.querySelectorAll('.citation').forEach(cit => {
+    cit.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = cit.classList.contains('popover-open');
+      if(isOpen){ closeCitationPopover(); return; }
+      openCitationPopover(cit, cit.dataset.cite);
+    });
+  });
+  document.addEventListener('click', (e) => {
+    if(!e.target.closest('.citation') && !e.target.closest('.citation-popover')) closeCitationPopover();
+  });
+  document.getElementById('cpOpenBtn').addEventListener('click', () => {
+    const name = document.getElementById('cpOpenBtn').dataset.indicator || '';
+    showToast(`Переход на карточку показателя «${name}»`);
+    closeCitationPopover();
+  });
+
+  /* ---------- TOC scroll spy + smooth scroll ---------- */
+  document.querySelectorAll('.toc-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.getElementById(item.dataset.toc);
+      if(target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  const sectionIds = ['summary','rossiya','usa','evrozona','rynki-i-fx','na-sleduyushchey-nedele','riski-i-neopredelennosti'];
+  function updateScrollSpy(){
+    if(!document.getElementById('viewDetail').classList.contains('visible')) return;
+    let activeId = sectionIds[0];
+    for(const id of sectionIds){
+      const el = document.getElementById(id);
+      if(!el) continue;
+      const rect = el.getBoundingClientRect();
+      if(rect.top <= 140) activeId = id;
+    }
+    document.querySelectorAll('.toc-item').forEach(t => t.classList.toggle('active', t.dataset.toc === activeId));
+  }
+  window.addEventListener('scroll', updateScrollSpy, { passive: true });
+
+  /* ---------- action buttons (PDF / email / share / copy / etc) ---------- */
+  document.getElementById('pdfBtn').addEventListener('click', () => showToast('PDF сформирован'));
+  document.getElementById('emailBtn').addEventListener('click', () => showToast('Сводка отправлена на email'));
+  document.getElementById('shareBtn').addEventListener('click', () => showToast('Ссылка для общего доступа создана'));
+  document.getElementById('copyLinkBtn').addEventListener('click', () => showToast('Ссылка скопирована'));
+
+</script>
+
+</body>
+</html>
