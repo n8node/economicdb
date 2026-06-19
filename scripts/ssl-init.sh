@@ -40,10 +40,14 @@ chmod 644 nginx/ssl/fullchain.pem
 chmod 600 nginx/ssl/privkey.pem
 
 echo "=== Enabling HTTPS in nginx ==="
-cp nginx/conf.d/https.conf.sample nginx/conf.d/https.conf
+# Удалить лишние *.conf из conf.d (иначе conflicting server name на :80)
+rm -f nginx/conf.d/default.http-bootstrap.conf
+rm -f nginx/conf.d/default.http-redirect.conf
+
+cp nginx/templates/https.conf.template nginx/conf.d/https.conf
 sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/https.conf
 
-cp nginx/conf.d/default.http-redirect.conf nginx/conf.d/default.conf
+cp nginx/templates/default.http-redirect.conf nginx/conf.d/default.conf
 
 echo "=== Starting nginx ==="
 $COMPOSE up -d nginx
