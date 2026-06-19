@@ -1,32 +1,19 @@
-import asyncio
-
 import redis.asyncio as redis
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from alembic import command
 from alembic.config import Config
 
+from app.api.v1.router import api_router
 from app.bootstrap.admin_seed import seed_super_admin
 from app.config.settings import settings
+from app.db import SessionLocal, engine
 
 structlog.configure(processors=[structlog.processors.JSONRenderer()])
 logger = structlog.get_logger()
-
-
-def _async_database_url(url: str) -> str:
-    if url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql+asyncpg://", 1)
-    if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    return url
-
-
-engine = create_async_engine(_async_database_url(settings.database_url), pool_pre_ping=True)
-SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 def run_migrations() -> None:
@@ -83,6 +70,8 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/status")
     async def api_status() -> dict:
         return {"service": "macro-analytics", "ok": True}
+
+    app.include_router(api_router)
 
     return app
 

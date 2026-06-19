@@ -1,13 +1,13 @@
+import "@/styles/admin.css";
+import { AdminLoginForm } from "@/components/admin/AdminLoginForm";
+
 export default function AdminLoginPage() {
   return (
-    <main style={{ padding: 48 }}>
-      <div className="card">
+    <main className="admin-page">
+      <div className="admin-card">
         <h1>Админ-панель</h1>
-        <p className="muted">economicdb.com/adminus — scaffold первого деплоя.</p>
-        <p>
-          Email по умолчанию: <strong>erman.ai@yandex.ru</strong>
-        </p>
-        <p className="muted">Auth UI и RBAC будут добавлены в следующем этапе.</p>
+        <p className="muted">Вход для super_admin · economicdb.com/adminus</p>
+        <AdminLoginForm />
       </div>
     </main>
   );

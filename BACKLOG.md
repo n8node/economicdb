@@ -6,12 +6,13 @@
 - [x] FastAPI health + Alembic + seed super_admin
 - [x] Next.js placeholder `/app`, `/adminus`
 - [x] First-deploy scripts (Docker install, SSL, .env generation)
-- [ ] Admin auth UI + JWT login
-- [ ] Перенос mockups → React components
-- [ ] ETL providers (CBR, FRED, OECD)
+- [x] Admin auth UI + JWT login
+- [x] Dashboard «Обзор» из mockup + demo API
+- [x] ETL schema + providers list/sync stub
+- [ ] Перенос остальных mockups → React (indicators, compare, calendar, summaries)
 - [ ] OpenRouter weekly digest + validator
 - [ ] Robokassa billing
-- [ ] Admin settings (OpenRouter, SMTP, providers)
+- [ ] Admin settings UI (OpenRouter, SMTP, providers CRUD)
 
 ## Design gaps
 

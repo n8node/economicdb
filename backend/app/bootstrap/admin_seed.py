@@ -1,17 +1,12 @@
 import structlog
-from passlib.context import CryptContext
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
+from app.core.security import hash_password
 from app.models.admin import AdminRole, AdminUser
 
 logger = structlog.get_logger()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
 
 
 async def seed_super_admin(session: AsyncSession) -> None:
