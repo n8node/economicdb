@@ -5,7 +5,7 @@ services:
       backend:
         condition: service_healthy
       frontend:
-        condition: service_started
+        condition: service_healthy
       wordpress:
         condition: service_started
       filebrowser:
@@ -56,6 +56,16 @@ services:
       INTERNAL_API_URL: http://backend:8080
     expose:
       - "3000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/app').then(r=>process.exit(r.statusCode<500?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     restart: unless-stopped
 
   wordpress:

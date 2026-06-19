@@ -12,12 +12,17 @@ if [ -f .env ]; then
 fi
 
 BASE="https://${DOMAIN}"
+COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+
+echo "=== Reload nginx (refresh upstream DNS) ==="
+$COMPOSE exec nginx nginx -s reload 2>/dev/null || true
+sleep 2
 
 check() {
   local path="$1"
   local label="$2"
   local code
-  code=$(curl -sf -o /dev/null -w "%{http_code}" "${BASE}${path}" || echo "000")
+  code=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${path}")
   if [ "$code" = "200" ] || [ "$code" = "302" ] || [ "$code" = "307" ]; then
     echo "OK   ${label} (${code})"
   else
@@ -25,6 +30,7 @@ check() {
   fi
 }
 
+echo ""
 echo "=== HTTP status ==="
 check "/" "WordPress /"
 check "/app" "Product /app"
@@ -32,21 +38,27 @@ check "/health" "API health"
 check "/dbfiles/" "FileBrowser"
 
 echo ""
-echo "=== Cache-Control (must be no-store for HTML pages) ==="
+echo "=== Cache-Control (GET, must be no-store for HTML pages) ==="
 for path in "/app" "/dbfiles/" "/"; do
   echo "--- ${path} ---"
-  curl -sI "${BASE}${path}" | grep -iE '^(cache-control|pragma|expires|HTTP/)' || true
+  curl -s -D - -o /dev/null "${BASE}${path}" | grep -iE '^(HTTP/|cache-control|pragma|expires)' || true
 done
 
 echo ""
 echo "=== /app JS chunk sample (must exist, immutable cache OK) ==="
-chunk=$(curl -sf "${BASE}/app" | grep -oE '/_next/static/[^"]+\.js' | head -1 || true)
+html=$(curl -s "${BASE}/app")
+chunk=$(echo "$html" | grep -oE '/_next/static/[^"]+\.js' | head -1 || true)
 if [ -n "$chunk" ]; then
-  code=$(curl -sf -o /dev/null -w "%{http_code}" "${BASE}${chunk}" || echo "000")
+  code=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}${chunk}")
   echo "chunk ${chunk} -> ${code}"
 else
   echo "WARNING: no JS chunk found in /app HTML"
+  echo "$html" | head -3
 fi
 
 echo ""
-echo "=== If all OK above but browser broken: clear site data for ${DOMAIN} (one time) ==="
+if curl -s -o /dev/null -w "%{http_code}" "${BASE}/app" | grep -q 502; then
+  echo "502 on /app: run ./scripts/restart-frontend.sh"
+else
+  echo "Server OK. If browser still broken: clear site data for ${DOMAIN} once."
+fi
