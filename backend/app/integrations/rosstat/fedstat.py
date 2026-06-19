@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 import xml.etree.ElementTree as ET
 from datetime import date
 from decimal import Decimal
@@ -21,7 +22,6 @@ from app.integrations.rosstat.client import (
 logger = structlog.get_logger()
 
 FEDSTAT_DATA_URL = "https://www.fedstat.ru/indicator/data.do?format=sdmx"
-NS = {"g": "http://www.SDMX.org/resources/SDMXML/schemas/v1_0/generic"}
 
 MONTHS_RU = {
     "январь": 1,
@@ -57,16 +57,45 @@ def _transform_value(value: Decimal, transform: str) -> Decimal:
     return value
 
 
+def _normalize_text(value: str) -> str:
+    return unicodedata.normalize("NFC", value.strip())
+
+
+def _local_tag(element: ET.Element) -> str:
+    tag = element.tag
+    if "}" in tag:
+        return tag.rsplit("}", 1)[-1]
+    return tag
+
+
 def _series_matches(series_key_el: ET.Element, expected: dict[str, str]) -> bool:
     values: dict[str, str] = {}
     for child in series_key_el:
-        tag = child.tag.split("}")[-1]
-        if tag != "Value":
+        if _local_tag(child) != "Value":
             continue
         concept = child.attrib.get("concept")
         if concept:
-            values[concept] = child.attrib.get("value", "")
-    return all(values.get(key) == val for key, val in expected.items())
+            values[concept] = _normalize_text(child.attrib.get("value", ""))
+    return all(values.get(key) == _normalize_text(val) for key, val in expected.items())
+
+
+def _iter_series(root: ET.Element) -> list[ET.Element]:
+    series: list[ET.Element] = []
+    for element in root.iter():
+        if _local_tag(element) == "Series":
+            series.append(element)
+    return series
+
+
+def _find_child(parent: ET.Element, tag_name: str) -> ET.Element | None:
+    for child in parent:
+        if _local_tag(child) == tag_name:
+            return child
+    return None
+
+
+def _find_children(parent: ET.Element, tag_name: str) -> list[ET.Element]:
+    return [child for child in parent if _local_tag(child) == tag_name]
 
 
 def parse_fedstat_sdmx_series(
@@ -83,15 +112,17 @@ def parse_fedstat_sdmx_series(
         raise RosstatError(f"Не удалось разобрать SDMX fedstat ({exc})", code="rosstat_parse_error") from exc
 
     points: list[tuple[date, Decimal]] = []
-    for series_el in root.findall(".//g:Series", NS):
-        key_el = series_el.find("g:SeriesKey", NS)
+    matched_series = 0
+    for series_el in _iter_series(root):
+        key_el = _find_child(series_el, "SeriesKey")
         if key_el is None or not _series_matches(key_el, series_key):
             continue
+        matched_series += 1
 
         period_text = ""
-        attrs_el = series_el.find("g:Attributes", NS)
+        attrs_el = _find_child(series_el, "Attributes")
         if attrs_el is not None:
-            for attr in attrs_el.findall("g:Value", NS):
+            for attr in _find_children(attrs_el, "Value"):
                 if attr.attrib.get("concept") == "PERIOD":
                     period_text = attr.attrib.get("value", "")
                     break
@@ -100,17 +131,17 @@ def parse_fedstat_sdmx_series(
         if month is None:
             continue
 
-        for obs_el in series_el.findall("g:Obs", NS):
-            time_el = obs_el.find("g:Time", NS)
-            value_el = obs_el.find("g:ObsValue", NS)
+        for obs_el in _find_children(series_el, "Obs"):
+            time_el = _find_child(obs_el, "Time")
+            value_el = _find_child(obs_el, "ObsValue")
             if time_el is None or value_el is None:
                 continue
             try:
-                year = int(time_el.text or "")
+                year = int((time_el.text or "").strip())
             except ValueError:
                 continue
             observed = date(year, month, 1)
-            if observed < from_date.replace(day=1) or observed > to_date:
+            if observed < from_date.replace(day=1) or observed > to_date.replace(day=1):
                 continue
             raw_value = _parse_decimal(value_el.attrib.get("value", ""))
             if raw_value is None:
@@ -119,6 +150,12 @@ def parse_fedstat_sdmx_series(
 
     series = sorted(points, key=lambda item: item[0])
     if not series:
+        logger.warning(
+            "fedstat_series_empty",
+            matched_series=matched_series,
+            from_date=from_date.isoformat(),
+            to_date=to_date.isoformat(),
+        )
         raise RosstatError("Не удалось извлечь ряд из fedstat SDMX", code="rosstat_parse_error")
     return series
 
@@ -140,7 +177,7 @@ async def fetch_fedstat_sdmx(indicator_id: str) -> str:
             if response.status_code >= 400:
                 errors.append(f"HTTP {response.status_code}")
                 break
-            text = response.text
+            text = response.content.decode("utf-8", errors="replace")
             if "<GenericData" not in text:
                 errors.append("ответ не SDMX")
                 break

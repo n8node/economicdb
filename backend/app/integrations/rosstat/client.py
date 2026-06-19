@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Iterator
 
@@ -223,8 +223,7 @@ async def fetch_industrial_yoy_series(
 
 async def test_connection() -> dict:
     today = datetime.now(timezone.utc).date()
-    month_start = date(today.year, today.month, 1)
-    from_date = month_start - timedelta(days=120)
+    from_date = date(today.year - 2, 1, 1)
     cpi_series = await fetch_cpi_yoy_series(from_date=from_date, to_date=today)
     industrial_series = await fetch_industrial_yoy_series(from_date=from_date, to_date=today)
     cpi_date, cpi_value = cpi_series[-1]

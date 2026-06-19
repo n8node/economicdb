@@ -87,7 +87,19 @@ def _aggregate_daily_to_monthly(points: list[tuple[date, Decimal]]) -> list[tupl
     return sorted((month_start, value) for month_start, (_, value) in by_month.items())
 
 
-async def _http_get(url: str) -> str:
+def _latest_eurostat_month_end(end: date) -> date:
+    """Eurostat rejects endPeriod for months without published HICP yet."""
+    today = datetime.now(timezone.utc).date()
+    latest = date(today.year, today.month, 1)
+    if today.month == 1:
+        latest = date(today.year - 1, 12, 1)
+    else:
+        latest = date(today.year, today.month - 1, 1)
+    capped = date(end.year, end.month, 1)
+    return min(capped, latest)
+
+
+async def _http_get(url: str, *, allow_client_error: bool = False) -> str | None:
     errors: list[str] = []
     for attempt in range(1, HTTP_RETRIES + 1):
         try:
@@ -99,7 +111,16 @@ async def _http_get(url: str) -> str:
             ) as client:
                 response = await client.get(url)
             if response.status_code >= 400:
-                errors.append(f"HTTP {response.status_code}: {response.text[:200]}")
+                detail = response.text[:200]
+                if allow_client_error and 400 <= response.status_code < 500:
+                    logger.warning(
+                        "ecb_eurostat_http_client_error",
+                        url=url,
+                        status_code=response.status_code,
+                        detail=detail,
+                    )
+                    return None
+                errors.append(f"HTTP {response.status_code}: {detail}")
                 break
             logger.info("ecb_eurostat_http_get_ok", url=url, attempt=attempt, bytes=len(response.content))
             return response.text
@@ -155,6 +176,8 @@ async def fetch_ecb_deposit_rate_series(
             f"?startPeriod={chunk_from.isoformat()}&endPeriod={chunk_to.isoformat()}&format=csvdata"
         )
         csv_text = await _http_get(url)
+        if csv_text is None:
+            continue
         for observed, value in _aggregate_daily_to_monthly(_parse_ecb_csv(csv_text)):
             if observed < from_date.replace(day=1) or observed > end:
                 continue
@@ -171,14 +194,21 @@ async def fetch_eurostat_hicp_yoy_series(
     from_date: date = DEFAULT_FROM_DATE,
     to_date: date | None = None,
 ) -> list[tuple[date, Decimal]]:
-    end = to_date or datetime.now(timezone.utc).date()
+    end = _latest_eurostat_month_end(to_date or datetime.now(timezone.utc).date())
+    if from_date > end:
+        from_date = date(end.year - 1, end.month, 1)
     merged: dict[date, Decimal] = {}
     for chunk_from, chunk_to in _iter_year_chunks(from_date, end):
+        chunk_end = _latest_eurostat_month_end(chunk_to)
+        if chunk_from > chunk_end:
+            continue
         url = (
             f"{EUROSTAT_SDMX_BASE}/PRC_HICP_MANR/M.RCH_A.CP00.EA20"
-            f"?format=SDMX-CSV&startPeriod={_format_period(chunk_from)}&endPeriod={_format_period(chunk_to)}"
+            f"?format=SDMX-CSV&startPeriod={_format_period(chunk_from)}&endPeriod={_format_period(chunk_end)}"
         )
-        csv_text = await _http_get(url)
+        csv_text = await _http_get(url, allow_client_error=True)
+        if csv_text is None:
+            continue
         for observed, value in _parse_eurostat_csv(csv_text):
             merged[observed] = value
     series = sorted(merged.items(), key=lambda item: item[0])
