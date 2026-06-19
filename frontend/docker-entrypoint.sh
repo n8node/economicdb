@@ -1,7 +1,9 @@
 #!/bin/sh
 set -eu
 
-mkdir -p /app/.next/static
+STATIC_ROOT=/data/next-static
+
+mkdir -p "$STATIC_ROOT"
 
 if [ ! -d /opt/static-staging ]; then
   echo "ERROR: /opt/static-staging is missing" >&2
@@ -14,11 +16,17 @@ if [ "$staging_count" -eq 0 ]; then
   exit 1
 fi
 
-cp -a /opt/static-staging/. /app/.next/static/
+cp -a /opt/static-staging/. "$STATIC_ROOT/"
 
-volume_count=$(find /app/.next/static -type f 2>/dev/null | wc -l | tr -d " ")
+mkdir -p /app/.next
+if [ -e /app/.next/static ] && [ ! -L /app/.next/static ]; then
+  rm -rf /app/.next/static
+fi
+ln -sfn "$STATIC_ROOT" /app/.next/static
+
+volume_count=$(find "$STATIC_ROOT" -type f 2>/dev/null | wc -l | tr -d " ")
 if [ "$volume_count" -eq 0 ]; then
-  echo "ERROR: static volume is empty after copy" >&2
+  echo "ERROR: ${STATIC_ROOT} is empty after copy" >&2
   exit 1
 fi
 

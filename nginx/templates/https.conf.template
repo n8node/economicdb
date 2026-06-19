@@ -54,20 +54,14 @@ server {
     }
 
     location /_next/static/ {
-        alias /var/www/next-static/;
-        error_page 404 = @frontend_next_static;
+        set $frontend_upstream http://frontend:3000;
+        proxy_pass $frontend_upstream;
         add_header Cache-Control "public, max-age=31536000, immutable";
         access_log off;
     }
 
     location /app/_next/static/ {
         rewrite ^/app/_next/static/(.*)$ /_next/static/$1 last;
-    }
-
-    location @frontend_next_static {
-        set $frontend_upstream http://frontend:3000;
-        proxy_pass $frontend_upstream;
-        add_header Cache-Control "public, max-age=31536000, immutable";
     }
 
     location /app {

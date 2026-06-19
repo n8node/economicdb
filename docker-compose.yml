@@ -15,7 +15,6 @@ services:
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
-      - next_static:/var/www/next-static:ro
     restart: unless-stopped
 
   backend:
@@ -60,7 +59,7 @@ services:
     expose:
       - "3000"
     volumes:
-      - next_static:/app/.next/static
+      - next_static:/data/next-static
     healthcheck:
       test:
         [

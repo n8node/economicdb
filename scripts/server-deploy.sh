@@ -3,6 +3,7 @@
 set -euo pipefail
 
 cd /opt/economicdb
+git checkout -- .
 git pull origin main
 
 chmod +x scripts/*.sh
@@ -22,7 +23,7 @@ else
   $COMPOSE build frontend
   $COMPOSE build nginx
   $COMPOSE up -d backend worker
-  $COMPOSE up -d --no-deps frontend
+  $COMPOSE up -d --force-recreate --no-deps frontend
   SKIP_BUILD=1 bash scripts/restart-frontend.sh
   $COMPOSE up -d nginx
 fi
@@ -31,9 +32,10 @@ if [ -f scripts/apply-nginx-https.sh ]; then
   ./scripts/apply-nginx-https.sh
 fi
 
+bash scripts/fix-static-volume.sh
+
 $COMPOSE exec nginx nginx -s reload 2>/dev/null || true
 
 sleep 3
 curl -sf https://economicdb.com/health && echo " health OK" || echo "WARNING: health failed"
-curl -s -o /dev/null -w "/app -> %{http_code}\n" https://economicdb.com/app || true
-echo "=== Done ==="
+bash scripts/diagnose-site.sh

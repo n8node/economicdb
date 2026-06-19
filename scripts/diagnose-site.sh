@@ -61,5 +61,9 @@ echo "=== Static staging in image ==="
 $COMPOSE exec -T frontend sh -c 'find /opt/static-staging -type f 2>/dev/null | wc -l' 2>/dev/null || echo "staging check failed"
 
 echo ""
-echo "=== Static volume (chunk count) ==="
-$COMPOSE exec -T frontend sh -c 'find /app/.next/static -type f 2>/dev/null | wc -l' 2>/dev/null || echo "frontend exec failed"
+echo "=== Static volume (/data/next-static) ==="
+$COMPOSE exec -T frontend sh -c 'find /data/next-static -type f 2>/dev/null | wc -l' 2>/dev/null || echo "volume check failed"
+
+echo ""
+echo "=== Symlink /app/.next/static ==="
+$COMPOSE exec -T frontend sh -c 'ls -la /app/.next/static 2>/dev/null || echo missing' 2>/dev/null || true
