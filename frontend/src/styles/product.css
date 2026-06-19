@@ -193,6 +193,15 @@ button{ font-family: inherit; cursor: pointer; }
   font-family: inherit;
 }
 .search-box input::placeholder{ color: var(--text-tertiary); }
+.search-dropdown{
+  position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:20;
+  padding:6px; max-height:280px; overflow:auto;
+}
+.search-hit{
+  width:100%; text-align:left; border:none; background:transparent;
+  padding:8px 10px; border-radius:var(--radius-sm); cursor:pointer; font-size:13px;
+}
+.search-hit:hover{ background:var(--bg-muted); }
 .topbar-actions{ display:flex; align-items:center; gap:10px; }
 .icon-btn{
   width: 36px; height: 36px;
