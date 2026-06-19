@@ -17,7 +17,7 @@ COMPARE_PRESETS: dict[str, dict] = {
     },
     "gdp": {
         "label": "ВВП YoY",
-        "indicator_ids": ["us_gdp_yoy"],
+        "indicator_ids": ["us_gdp_yoy", "cn_gdp_yoy"],
     },
 }
 

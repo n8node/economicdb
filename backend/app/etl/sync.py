@@ -6,6 +6,8 @@ from app.integrations.cbr.client import CbrError, test_connection as cbr_test_co
 from app.integrations.cbr.sync import sync_cbr
 from app.integrations.fred.client import FredError, test_connection as fred_test_connection
 from app.integrations.fred.sync import sync_fred
+from app.integrations.imf.client import ImfError, test_connection as imf_test_connection
+from app.integrations.imf.sync import sync_imf
 from app.integrations.oecd.client import OecdError, test_connection as oecd_test_connection
 from app.integrations.oecd.sync import sync_oecd
 from app.integrations.rosstat.client import RosstatError, test_connection as rosstat_test_connection
@@ -37,6 +39,9 @@ async def sync_provider(session: AsyncSession, provider_id: str) -> dict:
 
     if provider_id == "oecd":
         return await sync_oecd(session, provider)
+
+    if provider_id == "imf":
+        return await sync_imf(session, provider)
 
     logger.info("etl_sync_unimplemented", provider_id=provider_id)
     return {
@@ -108,6 +113,24 @@ async def test_provider_connection(
                 "ok": False,
                 "error": "oecd_test_failed",
                 "message": "Ошибка проверки OECD, подробности в логах backend",
+            }
+
+    if provider_id == "imf":
+        try:
+            details = await imf_test_connection()
+            return {
+                "ok": True,
+                "message": "Подключение к IMF DataMapper успешно",
+                "details": details,
+            }
+        except ImfError as exc:
+            return {"ok": False, "error": exc.code, "message": exc.message}
+        except Exception:
+            logger.exception("imf_test_connection_failed")
+            return {
+                "ok": False,
+                "error": "imf_test_failed",
+                "message": "Ошибка проверки IMF, подробности в логах backend",
             }
 
     if provider_id in PROVIDERS_WITH_API_KEY:

@@ -41,6 +41,16 @@ REAL_INDICATORS: list[RealIndicatorSeed] = [
     RealIndicatorSeed("us_cpi_yoy", "US CPI, г/г", "us", "inflation", "monthly", "fred", "CPIAUCSL", "%"),
     RealIndicatorSeed("us_nfp", "Nonfarm Payrolls, США", "us", "labor", "monthly", "fred", "PAYEMS", "тыс."),
     RealIndicatorSeed("us_gdp_yoy", "ВВП США, г/г", "us", "gdp", "quarterly", "fred", "A191RL1Q225SBEA", "%"),
+    RealIndicatorSeed(
+        "cn_gdp_yoy",
+        "ВВП Китая, real YoY",
+        "cn",
+        "gdp",
+        "annual",
+        "imf",
+        "NGDP_RPCH/CHN",
+        "%",
+    ),
     RealIndicatorSeed("oil_brent", "Нефть Brent", "world", "commodities", "daily", "fred", "DCOILBRENTEU", "USD"),
 ]
 
