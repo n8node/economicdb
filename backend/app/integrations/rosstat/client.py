@@ -9,6 +9,8 @@ from typing import Iterator
 import httpx
 import structlog
 
+from app.integrations.rosstat.mappings import ROSSTAT_MAPPINGS
+
 logger = structlog.get_logger()
 
 CBR_INFLATION_URLS = (
@@ -138,7 +140,7 @@ async def _fetch_cpi_yoy_chunk(from_date: date, to_date: date) -> list[tuple[dat
     return series
 
 
-async def fetch_cpi_yoy_series(
+async def fetch_cpi_yoy_from_cbr(
     *,
     from_date: date = DEFAULT_FROM_DATE,
     to_date: date | None = None,
@@ -153,6 +155,65 @@ async def fetch_cpi_yoy_series(
         raise RosstatError("Не удалось получить ИПЦ России (г/г)", code="rosstat_parse_error")
     logger.info(
         "rosstat_cpi_yoy_loaded",
+        source="cbr",
+        points=len(series),
+        from_date=from_date.isoformat(),
+        to_date=end.isoformat(),
+    )
+    return series
+
+
+async def fetch_cpi_yoy_series(
+    *,
+    from_date: date = DEFAULT_FROM_DATE,
+    to_date: date | None = None,
+) -> list[tuple[date, Decimal]]:
+    from app.integrations.rosstat.fedstat import fetch_fedstat_series
+
+    end = to_date or datetime.now(timezone.utc).date()
+    mapping = next(item for item in ROSSTAT_MAPPINGS if item.series_type == "cpi_yoy")
+    try:
+        series = await fetch_fedstat_series(
+            mapping.fedstat_indicator_id or "",
+            series_key=mapping.fedstat_series_key or {},
+            transform=mapping.fedstat_transform,
+            from_date=from_date,
+            to_date=end,
+        )
+        logger.info(
+            "rosstat_cpi_yoy_loaded",
+            source="fedstat",
+            points=len(series),
+            from_date=from_date.isoformat(),
+            to_date=end.isoformat(),
+        )
+        return series
+    except RosstatError as exc:
+        logger.warning("rosstat_cpi_yoy_fedstat_failed", error=exc.message)
+    except Exception as exc:
+        logger.warning("rosstat_cpi_yoy_fedstat_failed", error=str(exc))
+    return await fetch_cpi_yoy_from_cbr(from_date=from_date, to_date=end)
+
+
+async def fetch_industrial_yoy_series(
+    *,
+    from_date: date = DEFAULT_FROM_DATE,
+    to_date: date | None = None,
+) -> list[tuple[date, Decimal]]:
+    from app.integrations.rosstat.fedstat import fetch_fedstat_series
+
+    end = to_date or datetime.now(timezone.utc).date()
+    mapping = next(item for item in ROSSTAT_MAPPINGS if item.series_type == "industrial_yoy")
+    series = await fetch_fedstat_series(
+        mapping.fedstat_indicator_id or "",
+        series_key=mapping.fedstat_series_key or {},
+        transform=mapping.fedstat_transform,
+        from_date=from_date,
+        to_date=end,
+    )
+    logger.info(
+        "rosstat_industrial_yoy_loaded",
+        source="fedstat",
         points=len(series),
         from_date=from_date.isoformat(),
         to_date=end.isoformat(),
@@ -164,11 +225,17 @@ async def test_connection() -> dict:
     today = datetime.now(timezone.utc).date()
     month_start = date(today.year, today.month, 1)
     from_date = month_start - timedelta(days=120)
-    series = await fetch_cpi_yoy_series(from_date=from_date, to_date=today)
-    observed, value = series[-1]
+    cpi_series = await fetch_cpi_yoy_series(from_date=from_date, to_date=today)
+    industrial_series = await fetch_industrial_yoy_series(from_date=from_date, to_date=today)
+    cpi_date, cpi_value = cpi_series[-1]
+    ind_date, ind_value = industrial_series[-1]
     return {
         "cpi_yoy_latest": {
-            "date": observed.isoformat(),
-            "value": str(value),
+            "date": cpi_date.isoformat(),
+            "value": str(cpi_value),
+        },
+        "industrial_yoy_latest": {
+            "date": ind_date.isoformat(),
+            "value": str(ind_value),
         },
     }

@@ -13,7 +13,9 @@ from app.integrations.rosstat.client import test_connection, RosstatError
 async def main():
     try:
         details = await test_connection()
-        print("OK:", details)
+        cpi = details["cpi_yoy_latest"]
+        ind = details["industrial_yoy_latest"]
+        print(f"OK: ИПЦ {cpi['value']}% ({cpi['date']}), пром. {ind['value']}% ({ind['date']})")
     except RosstatError as exc:
         print("ROSSTAT ERROR:", exc.code, exc.message)
         raise SystemExit(1)

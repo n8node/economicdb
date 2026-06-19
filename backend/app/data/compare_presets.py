@@ -5,7 +5,7 @@ from datetime import date, timedelta
 COMPARE_PRESETS: dict[str, dict] = {
     "rates": {
         "label": "Ставки ЦБ",
-        "indicator_ids": ["cbr_key_rate", "fed_funds"],
+        "indicator_ids": ["cbr_key_rate", "fed_funds", "ecb_deposit_rate"],
     },
     "inflation": {
         "label": "Инфляция г/г",

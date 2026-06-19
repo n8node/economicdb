@@ -78,6 +78,8 @@ export const SOURCE_LABELS: Record<string, string> = {
   rosstat: "Росстат",
   fred: "FRED",
   oecd: "OECD",
+  ecb: "ECB",
+  eurostat: "Eurostat",
   moex: "MOEX",
   imf: "IMF",
 };

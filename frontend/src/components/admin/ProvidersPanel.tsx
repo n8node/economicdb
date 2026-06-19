@@ -25,9 +25,11 @@ type TestDetails = {
   usd_rub_latest?: { date: string; value: string };
   cpi_yoy_latest?: { date: string; value: string };
   gdp_yoy_latest?: { date: string; value: string };
+  industrial_yoy_latest?: { date: string; value: string };
+  hicp_yoy_latest?: { date: string; value: string };
 };
 
-const PUBLIC_API_PROVIDERS = new Set(["cbr", "rosstat", "oecd", "imf"]);
+const PUBLIC_API_PROVIDERS = new Set(["cbr", "rosstat", "oecd", "imf", "ecb_eurostat"]);
 
 function providerStatus(provider: Provider) {
   if (provider.last_test_status === "error" || provider.last_sync_status === "error") {
@@ -114,15 +116,23 @@ export function ProvidersPanel() {
       const usdRub = result.details?.usd_rub_latest;
       const cpiYoy = result.details?.cpi_yoy_latest;
       const gdpYoy = result.details?.gdp_yoy_latest;
+      const industrialYoy = result.details?.industrial_yoy_latest;
+      const hicpYoy = result.details?.hicp_yoy_latest;
       const extra = latest
         ? ` · ${latest.date}: ${latest.value}`
         : keyRate && usdRub
           ? ` · ставка ${keyRate.value}% (${keyRate.date}), USD/RUB ${usdRub.value} (${usdRub.date})`
-          : cpiYoy
-            ? ` · ИПЦ ${cpiYoy.value}% (${cpiYoy.date})`
-            : gdpYoy
-              ? ` · ВВП ${gdpYoy.value}% (${gdpYoy.date})`
-              : "";
+          : keyRate && hicpYoy
+            ? ` · ECB ${keyRate.value}% (${keyRate.date}), HICP ${hicpYoy.value}% (${hicpYoy.date})`
+            : cpiYoy && industrialYoy
+              ? ` · ИПЦ ${cpiYoy.value}% (${cpiYoy.date}), пром. ${industrialYoy.value}% (${industrialYoy.date})`
+              : cpiYoy
+                ? ` · ИПЦ ${cpiYoy.value}% (${cpiYoy.date})`
+                : gdpYoy
+                  ? ` · ВВП ${gdpYoy.value}% (${gdpYoy.date})`
+                  : hicpYoy
+                    ? ` · HICP ${hicpYoy.value}% (${hicpYoy.date})`
+                    : "";
       setMessage(`${result.message || "OK"}${extra}`);
       await load();
     } catch {
