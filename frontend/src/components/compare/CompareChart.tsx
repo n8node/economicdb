@@ -5,6 +5,10 @@ import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { SERIES_COLORS, type CompareSeriesResponse } from "@/lib/compare";
 
+function toUnixDay(isoDate: string): number {
+  return uPlot.utcParse(isoDate.slice(0, 10)) ?? 0;
+}
+
 export function CompareChart({ data }: { data: CompareSeriesResponse | null }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<uPlot | null>(null);
@@ -12,7 +16,8 @@ export function CompareChart({ data }: { data: CompareSeriesResponse | null }) {
   useEffect(() => {
     if (!hostRef.current || !data || data.series.length === 0) return;
 
-    const xs = data.labels.map((_, i) => i);
+    const useDates = data.dates.length > 0;
+    const xs = useDates ? data.dates.map(toUnixDay) : data.labels.map((_, i) => i);
     const seriesData: uPlot.AlignedData = [
       xs,
       ...data.series.map((s) => s.values.map((v) => (v === null ? null : v))),
@@ -23,6 +28,9 @@ export function CompareChart({ data }: { data: CompareSeriesResponse | null }) {
       {
         width: hostRef.current.clientWidth,
         height: 320,
+        scales: {
+          x: { time: useDates },
+        },
         series: [
           {},
           ...data.series.map((s, idx) => ({
@@ -32,9 +40,14 @@ export function CompareChart({ data }: { data: CompareSeriesResponse | null }) {
           })),
         ],
         axes: [
-          {
-            values: (_u, vals) => vals.map((v) => data.labels[Number(v)] || ""),
-          },
+          useDates
+            ? {
+                stroke: "#8b92a0",
+                grid: { show: false },
+              }
+            : {
+                values: (_u, vals) => vals.map((v) => data.labels[Number(v)] || ""),
+              },
           { values: (_u, vals) => vals.map((v) => String(v)) },
         ],
         legend: { show: true },

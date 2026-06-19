@@ -72,7 +72,7 @@ def _stats(values: list[float | None]) -> CompareSeriesStats:
 
 
 async def build_compare_series(session: AsyncSession, req: CompareSeriesRequest) -> CompareSeriesResponse:
-    date_to = req.date_to or date(2026, 6, 1)
+    date_to = req.date_to or date.today()
     date_from = req.date_from or (date_to - timedelta(days=365))
     grid = _month_grid(date_from, date_to)
     labels = [d.strftime("%Y-%m") for d in grid]
@@ -93,6 +93,7 @@ async def build_compare_series(session: AsyncSession, req: CompareSeriesRequest)
             select(IndicatorValue.observed_at, IndicatorValue.value)
             .where(IndicatorValue.indicator_id == indicator_id)
             .where(IndicatorValue.observed_at <= date_to)
+            .where(IndicatorValue.observed_at >= date_from)
             .order_by(IndicatorValue.observed_at)
         )
         value_map = {obs: val for obs, val in rows.all()}

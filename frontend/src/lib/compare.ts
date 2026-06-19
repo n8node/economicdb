@@ -57,7 +57,7 @@ export async function fetchCompareSeries(body: CompareRequest): Promise<CompareS
 export const SERIES_COLORS = ["#1B7561", "#2B5A98", "#9A5B26", "#A33C53", "#6B4A9E", "#92701A"];
 
 export function periodToFrom(period: string): string | undefined {
-  const end = new Date("2026-06-01");
+  const end = new Date();
   const map: Record<string, number> = { "1M": 31, "3M": 92, "6M": 183, "1Y": 365, "3Y": 1095, "5Y": 1825 };
   if (period === "MAX") return undefined;
   const days = map[period] || 365;

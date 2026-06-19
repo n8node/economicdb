@@ -35,7 +35,7 @@ export function CompareView() {
         const res = await fetchCompareSeries({
           indicator_ids: ids,
           date_from: periodToFrom(period),
-          date_to: "2026-06-01",
+          date_to: new Date().toISOString().slice(0, 10),
           normalize,
         });
         setData(res);
