@@ -29,6 +29,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        BUILD_ID: ${BUILD_ID:-dev}
     restart: unless-stopped
     logging:
       driver: json-file

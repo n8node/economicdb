@@ -2,6 +2,8 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.integrations.cbr.client import CbrError, test_connection as cbr_test_connection
+from app.integrations.cbr.sync import sync_cbr
 from app.integrations.fred.client import FredError, test_connection as fred_test_connection
 from app.integrations.fred.sync import sync_fred
 from app.models.providers import DataProvider
@@ -23,6 +25,9 @@ async def sync_provider(session: AsyncSession, provider_id: str) -> dict:
     if provider_id == "fred":
         return await sync_fred(session, provider)
 
+    if provider_id == "cbr":
+        return await sync_cbr(session, provider)
+
     logger.info("etl_sync_unimplemented", provider_id=provider_id)
     return {
         "ok": False,
@@ -41,20 +46,32 @@ async def test_provider_connection(
     if provider is None:
         return {"ok": False, "error": "provider_not_found"}
 
-    key = (api_key or "").strip() or get_api_key(provider)
-    if not key:
-        return {"ok": False, "error": "missing_credentials", "message": "Укажите API key"}
-
-    if provider_id == "fred":
+    if provider_id == "cbr":
         try:
-            details = await fred_test_connection(key)
+            details = await cbr_test_connection()
             return {
                 "ok": True,
-                "message": "Подключение к FRED успешно",
+                "message": "Подключение к ЦБ РФ успешно",
                 "details": details,
             }
-        except FredError as exc:
+        except CbrError as exc:
             return {"ok": False, "error": exc.code, "message": exc.message}
+
+    if provider_id in PROVIDERS_WITH_API_KEY:
+        key = (api_key or "").strip() or get_api_key(provider)
+        if not key:
+            return {"ok": False, "error": "missing_credentials", "message": "Укажите API key"}
+
+        if provider_id == "fred":
+            try:
+                details = await fred_test_connection(key)
+                return {
+                    "ok": True,
+                    "message": "Подключение к FRED успешно",
+                    "details": details,
+                }
+            except FredError as exc:
+                return {"ok": False, "error": exc.code, "message": exc.message}
 
     return {
         "ok": False,

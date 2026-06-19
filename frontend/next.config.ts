@@ -8,6 +8,7 @@ const noStoreHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  generateBuildId: async () => process.env.BUILD_ID || "development",
   async headers() {
     return [
       { source: "/app", headers: noStoreHeaders },

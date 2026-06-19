@@ -19,7 +19,11 @@ type TestDetails = {
   title?: string;
   frequency?: string;
   latest_observation?: { date: string; value: string };
+  key_rate_latest?: { date: string; value: string };
+  usd_rub_latest?: { date: string; value: string };
 };
+
+const PUBLIC_API_PROVIDERS = new Set(["cbr", "rosstat"]);
 
 export function ProvidersPanel() {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -91,7 +95,13 @@ export function ProvidersPanel() {
         return;
       }
       const latest = result.details?.latest_observation;
-      const extra = latest ? ` · ${latest.date}: ${latest.value}` : "";
+      const keyRate = result.details?.key_rate_latest;
+      const usdRub = result.details?.usd_rub_latest;
+      const extra = latest
+        ? ` · ${latest.date}: ${latest.value}`
+        : keyRate && usdRub
+          ? ` · ставка ${keyRate.value}% (${keyRate.date}), USD/RUB ${usdRub.value} (${usdRub.date})`
+          : "";
       setMessage(`${result.message || "OK"}${extra}`);
     } catch {
       setMessage("Ошибка проверки подключения");
@@ -115,12 +125,9 @@ export function ProvidersPanel() {
     <div>
       <h1 style={{ marginTop: 0 }}>Провайдеры данных</h1>
       <p className="muted" style={{ maxWidth: 720 }}>
-        Для проверки на реальных данных начните с FRED: бесплатный API key на{" "}
-        <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noreferrer">
-          fred.stlouisfed.org
-        </a>
-        . После сохранения ключа — «Проверить», включите провайдер и нажмите «Синхронизация».
+        Для проверки на реальных данных: FRED (нужен API key) или ЦБ РФ (публичный API, без ключа).
         Включённые провайдеры синхронизируются автоматически каждый день в 04:00 МСК (worker).
+        После деплоя: Ctrl+Shift+R на сайте или очистка данных для {`economicdb.com`} один раз.
       </p>
       {message ? <p className="muted">{message}</p> : null}
       <table className="admin-table">
@@ -170,8 +177,15 @@ export function ProvidersPanel() {
                       </button>
                     </div>
                   </div>
+                ) : PUBLIC_API_PROVIDERS.has(provider.id) ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span className="muted">Публичный API</span>
+                    <button type="button" className="admin-btn" onClick={() => testConnection(provider.id)}>
+                      Проверить
+                    </button>
+                  </div>
                 ) : (
-                  <span className="muted">Публичный API</span>
+                  <span className="muted">Скоро</span>
                 )}
               </td>
               <td>
