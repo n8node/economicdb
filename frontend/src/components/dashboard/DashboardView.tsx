@@ -1,3 +1,8 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { MiniSparkline } from "@/components/indicators/MiniSparkline";
 import type { DashboardOverview } from "@/lib/dashboard";
 
 const DELTA_ICON: Record<string, string> = {
@@ -7,6 +12,8 @@ const DELTA_ICON: Record<string, string> = {
 };
 
 export function DashboardView({ data }: { data: DashboardOverview }) {
+  const router = useRouter();
+
   return (
     <div className="content">
       <div className="page-head">
@@ -14,7 +21,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
           <h1>Обзор</h1>
           <p className="meta">Данные обновлены {data.updated_at}</p>
         </div>
-        <button type="button" className="btn">
+        <button type="button" className="btn" onClick={() => router.refresh()}>
           <i className="ti ti-refresh" />
           Обновить
         </button>
@@ -29,7 +36,9 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
               <i className={`ti ${DELTA_ICON[kpi.delta_direction]}`} />
               {kpi.delta}
             </span>
-            <div className="kpi-spark" />
+            <div className="kpi-spark">
+              <MiniSparkline values={kpi.sparkline || []} width={120} height={32} />
+            </div>
           </div>
         ))}
       </div>
@@ -49,9 +58,9 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
               <li key={item}>{item}</li>
             ))}
           </ul>
-          <button type="button" className="btn primary">
+          <Link href="/app/summaries/ws_2026_w25" className="btn primary">
             Читать полностью
-          </button>
+          </Link>
           <p className="ai-disclaimer">
             Сгенерировано AI на основе официальных данных. Не является инвестиционной рекомендацией.
           </p>
@@ -70,18 +79,18 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
               <span className={`country-badge ${event.country}`}>{event.country.toUpperCase()}</span>
             </div>
           ))}
-          <button type="button" className="btn" style={{ width: "100%", marginTop: 14, justifyContent: "center" }}>
+          <Link href="/app/calendar" className="btn" style={{ width: "100%", marginTop: 14, justifyContent: "center" }}>
             Весь календарь
-          </button>
+          </Link>
         </div>
       </div>
 
       <div style={{ marginBottom: 22 }}>
         <p className="section-title">
           Мои избранные показатели
-          <button type="button" className="btn ghost">
+          <Link href="/app/favorites" className="btn ghost">
             Все <i className="ti ti-arrow-right" />
-          </button>
+          </Link>
         </p>
         <div className="fav-grid">
           {data.favorites.map((item) => (
@@ -125,8 +134,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
       </div>
 
       <footer className="app-footer">
-        Данные предоставлены Банком России, Росстатом, FRED, IMF, OECD, ECB/Eurostat. Демо-данные для прототипа
-        интерфейса.
+        Данные предоставлены Банком России, Росстатом, FRED, IMF, OECD, ECB/Eurostat.
       </footer>
     </div>
   );

@@ -7,6 +7,7 @@ export type DashboardOverview = {
     value: string;
     delta: string;
     delta_direction: DeltaDirection;
+    sparkline?: number[];
   }>;
   ai_summary: {
     period: string;

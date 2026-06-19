@@ -6,6 +6,7 @@ class KpiItem(BaseModel):
     value: str
     delta: str
     delta_direction: str  # up | down | flat
+    sparkline: list[float] = []
 
 
 class AiSummaryBlock(BaseModel):
