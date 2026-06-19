@@ -22,7 +22,7 @@ export function MiniSparkline({ values, width = 72, height = 28 }: MiniSparkline
     .join(" ");
 
   const trend = values[values.length - 1] - values[0];
-  const stroke = trend > 0 ? "var(--negative-text)" : trend < 0 ? "var(--positive-text)" : "var(--neutral-text)";
+  const stroke = trend > 0 ? "var(--positive-text)" : trend < 0 ? "var(--negative-text)" : "var(--neutral-text)";
 
   return (
     <svg width={width} height={height} aria-hidden className="mini-spark">

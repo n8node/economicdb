@@ -307,8 +307,8 @@ button{ font-family: inherit; cursor: pointer; }
   font-size: 12px; font-weight: 500;
   padding: 2px 7px; border-radius: var(--radius-sm);
 }
-.delta.up{ background: var(--negative-bg); color: var(--negative-text); }
-.delta.down{ background: var(--positive-bg); color: var(--positive-text); }
+.delta.up{ background: var(--positive-bg); color: var(--positive-text); }
+.delta.down{ background: var(--negative-bg); color: var(--negative-text); }
 .delta.flat{ background: var(--neutral-bg); color: var(--neutral-text); }
 .kpi-spark{ height: 28px; margin-top: 8px; }
 
@@ -425,8 +425,8 @@ button{ font-family: inherit; cursor: pointer; }
   display:flex; align-items:center; justify-content:center;
   flex-shrink:0; font-size: 14px; margin-top: 1px;
 }
-.change-icon.up{ background: var(--negative-bg); color: var(--negative-text); }
-.change-icon.down{ background: var(--positive-bg); color: var(--positive-text); }
+.change-icon.up{ background: var(--positive-bg); color: var(--positive-text); }
+.change-icon.down{ background: var(--negative-bg); color: var(--negative-text); }
 .change-icon.flat{ background: var(--neutral-bg); color: var(--neutral-text); }
 .change-text{ margin:0; font-size: 13.5px; }
 .change-meta{ margin: 3px 0 0; font-size: 12px; color: var(--text-tertiary); }

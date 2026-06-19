@@ -24,8 +24,8 @@
 .compare-page .data-table th,.compare-page .data-table td{ padding:10px 14px; border-bottom:1px solid var(--border-subtle); font-size:13px; }
 .compare-page .data-table .num{ text-align:right; }
 .compare-page .delta-badge{ display:inline-flex; align-items:center; gap:3px; font-size:12px; padding:2px 7px; border-radius:var(--radius-sm); }
-.compare-page .delta-badge.up{ background:var(--negative-bg); color:var(--negative-text); }
-.compare-page .delta-badge.down{ background:var(--positive-bg); color:var(--positive-text); }
+.compare-page .delta-badge.up{ background:var(--positive-bg); color:var(--positive-text); }
+.compare-page .delta-badge.down{ background:var(--negative-bg); color:var(--negative-text); }
 .compare-page .delta-badge.flat{ background:var(--neutral-bg); color:var(--neutral-text); }
 .compare-page .source-tag{ font-size:11px; padding:2px 7px; border-radius:var(--radius-sm); }
 .compare-page .source-tag.cbr{ background:var(--src-cbr-bg); color:var(--src-cbr-text); }

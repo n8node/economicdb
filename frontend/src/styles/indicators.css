@@ -51,8 +51,8 @@
 .indicators-page .country-flag{ font-size:11px; font-weight:600; padding:2px 7px; border-radius:var(--radius-sm); background:var(--bg-muted); }
 .indicators-page .value-cell{ font-family:var(--font-mono); font-weight:500; }
 .indicators-page .delta-badge{ display:inline-flex; align-items:center; gap:3px; font-size:12px; padding:2px 7px; border-radius:var(--radius-sm); font-family:var(--font-mono); }
-.indicators-page .delta-badge.up{ background:var(--negative-bg); color:var(--negative-text); }
-.indicators-page .delta-badge.down{ background:var(--positive-bg); color:var(--positive-text); }
+.indicators-page .delta-badge.up{ background:var(--positive-bg); color:var(--positive-text); }
+.indicators-page .delta-badge.down{ background:var(--negative-bg); color:var(--negative-text); }
 .indicators-page .delta-badge.flat{ background:var(--neutral-bg); color:var(--neutral-text); }
 .indicators-page .source-tag{ font-size:11.5px; font-weight:500; padding:2px 8px; border-radius:var(--radius-sm); }
 .indicators-page .source-tag.cbr{ background:var(--src-cbr-bg); color:var(--src-cbr-text); }

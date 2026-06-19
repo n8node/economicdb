@@ -29,11 +29,11 @@ type TestDetails = {
 const PUBLIC_API_PROVIDERS = new Set(["cbr", "rosstat"]);
 
 function providerStatus(provider: Provider) {
-  if (provider.last_test_status === "ok") {
-    return { className: "ok", label: provider.enabled ? "Подключён" : "Проверен, выключен" };
-  }
-  if (provider.last_test_status === "error") {
+  if (provider.last_test_status === "error" || provider.last_sync_status === "error") {
     return { className: "error", label: "Ошибка подключения" };
+  }
+  if (provider.last_test_status === "ok" || provider.last_sync_status === "ok") {
+    return { className: "ok", label: provider.enabled ? "Подключён" : "Проверен, выключен" };
   }
   return { className: "idle", label: "Не проверен" };
 }
