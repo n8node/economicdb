@@ -1,3 +1,4 @@
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +17,7 @@ from app.schemas.providers import (
 from app.services.credentials import has_stored_credentials, save_api_key
 
 router = APIRouter(prefix="/admin/providers", tags=["admin-providers"])
+logger = structlog.get_logger()
 
 
 def _provider_item(row: DataProvider) -> ProviderItem:
@@ -92,7 +94,15 @@ async def test_provider(
     _: AdminUser = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> TestConnectionResult:
-    result = await test_provider_connection(session, provider_id, api_key=body.api_key)
+    try:
+        result = await test_provider_connection(session, provider_id, api_key=body.api_key)
+    except Exception:
+        logger.exception("provider_test_unhandled", provider_id=provider_id)
+        return TestConnectionResult(
+            ok=False,
+            error="test_failed",
+            message="Ошибка проверки подключения, подробности в логах backend",
+        )
     if not result["ok"]:
         error = result.get("error", "test_failed")
         if error == "provider_not_found":

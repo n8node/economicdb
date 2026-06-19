@@ -56,6 +56,13 @@ async def test_provider_connection(
             }
         except CbrError as exc:
             return {"ok": False, "error": exc.code, "message": exc.message}
+        except Exception:
+            logger.exception("cbr_test_connection_failed")
+            return {
+                "ok": False,
+                "error": "cbr_test_failed",
+                "message": "Ошибка проверки ЦБ РФ, подробности в логах backend",
+            }
 
     if provider_id in PROVIDERS_WITH_API_KEY:
         key = (api_key or "").strip() or get_api_key(provider)

@@ -40,18 +40,24 @@ def _soap_datetime(value: date) -> str:
 
 async def _soap_call(action: str, inner_body: str) -> str:
     envelope = _soap_envelope(action, inner_body)
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(
-            CBR_SOAP_URL,
-            content=envelope.encode("utf-8"),
-            headers={
-                "Content-Type": "text/xml; charset=utf-8",
-                "SOAPAction": f'"{CBR_NAMESPACE}{action}"',
-            },
-        )
-        if response.status_code >= 400:
-            raise CbrError(f"HTTP {response.status_code} от ЦБ РФ", code="cbr_http_error")
-        return response.text
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                CBR_SOAP_URL,
+                content=envelope.encode("utf-8"),
+                headers={
+                    "Content-Type": "text/xml; charset=utf-8",
+                    "SOAPAction": f'"{CBR_NAMESPACE}{action}"',
+                    "User-Agent": "economicdb/0.1 (+https://economicdb.com)",
+                },
+            )
+            if response.status_code >= 400:
+                raise CbrError(f"HTTP {response.status_code} от ЦБ РФ", code="cbr_http_error")
+            return response.text
+    except httpx.TimeoutException as exc:
+        raise CbrError("ЦБ РФ не ответил за 30 секунд", code="cbr_timeout") from exc
+    except httpx.HTTPError as exc:
+        raise CbrError(f"Не удалось подключиться к ЦБ РФ: {exc}", code="cbr_network_error") from exc
 
 
 def _extract_result_xml(response_text: str, result_tag: str) -> str:
@@ -92,7 +98,10 @@ def _parse_observed(value: str) -> date | None:
 
 
 def _parse_key_rate_xml(xml_text: str) -> list[tuple[date, Decimal]]:
-    root = ET.fromstring(xml_text)
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as exc:
+        raise CbrError("ЦБ РФ вернул некорректный XML для ключевой ставки", code="cbr_parse_error") from exc
     points: list[tuple[date, Decimal]] = []
     for node in root.iter():
         if node.tag.endswith("KR") or node.tag == "KR":
@@ -115,7 +124,10 @@ def _parse_key_rate_xml(xml_text: str) -> list[tuple[date, Decimal]]:
 
 
 def _parse_dynamic_curs_xml(xml_text: str) -> list[tuple[date, Decimal]]:
-    root = ET.fromstring(xml_text)
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as exc:
+        raise CbrError("ЦБ РФ вернул некорректный XML для курса валют", code="cbr_parse_error") from exc
     points: list[tuple[date, Decimal]] = []
     for node in root.iter():
         tag = node.tag.split("}")[-1]
