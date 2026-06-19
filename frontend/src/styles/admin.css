@@ -162,3 +162,29 @@
   padding: 6px 10px;
   font-size: 13px;
 }
+
+.provider-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.provider-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #98a2b3;
+  box-shadow: 0 0 0 3px rgba(152, 162, 179, 0.14);
+}
+
+.provider-status-dot.ok {
+  background: #12b76a;
+  box-shadow: 0 0 0 3px rgba(18, 183, 106, 0.16);
+}
+
+.provider-status-dot.error {
+  background: #f04438;
+  box-shadow: 0 0 0 3px rgba(240, 68, 56, 0.16);
+}

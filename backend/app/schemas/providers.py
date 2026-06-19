@@ -8,6 +8,8 @@ class ProviderItem(BaseModel):
     base_url: str | None = None
     has_credentials: bool = False
     supports_credentials: bool = False
+    last_test_at: str | None = None
+    last_test_status: str | None = None
     last_sync_at: str | None
     last_sync_status: str | None
 

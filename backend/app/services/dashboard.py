@@ -17,8 +17,8 @@ from app.schemas.dashboard import (
     KpiItem,
 )
 
-KPI_IDS = ["cbr_key_rate", "ru_cpi_yoy", "usd_rub", "us_cpi_yoy", "fed_funds"]
-FAVORITE_IDS = ["ru_cpi_yoy", "cbr_key_rate", "us_cpi_yoy", "eur_hicp_yoy"]
+KPI_IDS = ["cbr_key_rate", "usd_rub", "us_cpi_yoy", "fed_funds", "oil_brent"]
+FAVORITE_IDS = ["cbr_key_rate", "usd_rub", "us_cpi_yoy", "fed_funds"]
 
 
 async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryBlock | None = None) -> DashboardOverview:
@@ -105,12 +105,12 @@ async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryB
         )
 
     summary = ai_summary or AiSummaryBlock(
-        period="16–22 июня 2026",
-        headline="Данные обновляются из PostgreSQL — полная AI-сводка в разделе «AI-сводки»",
+        period="Реальные данные",
+        headline="AI-сводка появится после подключения OpenRouter и генерации worker-ом",
         bullets=[
-            "KPI и календарь загружаются из базы показателей и событий",
-            "AI digest генерируется worker-ом (OpenRouter) — см. /app/summaries",
-            "Facts-first: числа только из Facts JSON",
+            "Показатели на дашборде загружаются только из подключённых провайдеров",
+            "Фейковые события и demo-сводки отключены",
+            "Числа в AI-блоках будут использовать только Facts JSON из реальных рядов",
         ],
     )
 

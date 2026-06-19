@@ -11,7 +11,7 @@ from app.services.credentials import get_api_key
 
 logger = structlog.get_logger()
 
-PROVIDERS_WITH_API_KEY = {"fred", "oecd"}
+PROVIDERS_WITH_API_KEY = {"fred"}
 
 
 async def sync_provider(session: AsyncSession, provider_id: str) -> dict:

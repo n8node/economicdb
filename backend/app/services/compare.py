@@ -134,7 +134,7 @@ async def build_compare_series(session: AsyncSession, req: CompareSeriesRequest)
 
 
 def list_presets() -> list[ComparePreset]:
-    from app.data.demo_compare_presets import COMPARE_PRESETS
+    from app.data.compare_presets import COMPARE_PRESETS
 
     return [
         ComparePreset(key=key, label=data["label"], indicator_ids=data["indicator_ids"])

@@ -1,56 +1,74 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import structlog
-from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.data.demo_indicators import DEMO_INDICATORS, generate_series
-from app.models.indicators import Indicator, IndicatorValue
+from app.models.indicators import Indicator
 
 logger = structlog.get_logger()
 
 
-async def seed_demo_indicators(session: AsyncSession) -> None:
-    count = await session.scalar(select(func.count()).select_from(Indicator))
-    if count and count > 0:
-        logger.info("indicator_seed_skipped", reason="indicators not empty")
-        return
+@dataclass(frozen=True)
+class RealIndicatorSeed:
+    id: str
+    name_ru: str
+    country: str
+    category: str
+    frequency: str
+    source: str
+    external_id: str
+    unit: str
 
+
+REAL_INDICATORS: list[RealIndicatorSeed] = [
+    RealIndicatorSeed("cbr_key_rate", "Ключевая ставка ЦБ", "ru", "rates", "monthly", "cbr", "KeyRate", "%"),
+    RealIndicatorSeed("usd_rub", "USD / RUB", "ru", "fx", "daily", "cbr", "R01235", "RUB"),
+    RealIndicatorSeed("fed_funds", "Fed Funds Rate", "us", "rates", "monthly", "fred", "FEDFUNDS", "%"),
+    RealIndicatorSeed("us_cpi_yoy", "US CPI, г/г", "us", "inflation", "monthly", "fred", "CPIAUCSL", "%"),
+    RealIndicatorSeed("us_nfp", "Nonfarm Payrolls, США", "us", "labor", "monthly", "fred", "PAYEMS", "тыс."),
+    RealIndicatorSeed("us_gdp_yoy", "ВВП США, г/г", "us", "gdp", "quarterly", "fred", "A191RL1Q225SBEA", "%"),
+    RealIndicatorSeed("oil_brent", "Нефть Brent", "world", "commodities", "daily", "fred", "DCOILBRENTEU", "USD"),
+]
+
+
+async def seed_real_indicators(session: AsyncSession) -> None:
     now = datetime.now(timezone.utc)
-    for seed in DEMO_INDICATORS:
-        series = generate_series(seed)
-        last_date, last_val = series[-1]
-        prev_val = series[-2][1] if len(series) > 1 else last_val
-        change = last_val - prev_val if seed.unit in {"%", "п.п.", "index", "RUB", "USD"} else (
-            (last_val - prev_val) / abs(prev_val) * 100 if prev_val else Decimal("0")
-        )
-
-        session.add(
-            Indicator(
-                id=seed.id,
-                name_ru=seed.name_ru,
-                country=seed.country,
-                category=seed.category,
-                frequency=seed.frequency,
-                source=seed.source,
-                external_id=seed.id,
-                unit=seed.unit,
-                last_value=last_val,
-                last_change=Decimal(str(round(float(change), 2))),
-                updated_at=now,
-            )
-        )
-        for observed_at, value in series:
+    created = 0
+    updated = 0
+    for seed in REAL_INDICATORS:
+        row = await session.get(Indicator, seed.id)
+        if row is None:
             session.add(
-                IndicatorValue(
-                    indicator_id=seed.id,
-                    observed_at=observed_at,
-                    value=value,
+                Indicator(
+                    id=seed.id,
+                    name_ru=seed.name_ru,
+                    country=seed.country,
+                    category=seed.category,
+                    frequency=seed.frequency,
+                    source=seed.source,
+                    external_id=seed.external_id,
+                    unit=seed.unit,
+                    last_value=None,
+                    last_change=None,
+                    updated_at=now,
                 )
             )
+            created += 1
+        else:
+            row.name_ru = seed.name_ru
+            row.country = seed.country
+            row.category = seed.category
+            row.frequency = seed.frequency
+            row.source = seed.source
+            row.external_id = seed.external_id
+            row.unit = seed.unit
+            updated += 1
 
     await session.commit()
-    logger.info("indicator_seed_complete", count=len(DEMO_INDICATORS))
+    logger.info("real_indicator_catalog_seed_complete", created=created, updated=updated)
+
+
+REAL_INDICATOR_IDS = {seed.id for seed in REAL_INDICATORS}

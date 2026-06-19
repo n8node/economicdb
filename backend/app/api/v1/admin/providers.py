@@ -1,4 +1,5 @@
 import structlog
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +29,8 @@ def _provider_item(row: DataProvider) -> ProviderItem:
         base_url=row.base_url,
         has_credentials=has_stored_credentials(row),
         supports_credentials=row.id in PROVIDERS_WITH_API_KEY,
+        last_test_at=row.last_test_at.isoformat() if row.last_test_at else None,
+        last_test_status=row.last_test_status,
         last_sync_at=row.last_sync_at.isoformat() if row.last_sync_at else None,
         last_sync_status=row.last_sync_status,
     )
@@ -94,10 +97,17 @@ async def test_provider(
     _: AdminUser = Depends(get_current_admin),
     session: AsyncSession = Depends(get_session),
 ) -> TestConnectionResult:
+    provider = await session.get(DataProvider, provider_id)
+    if provider is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Провайдер не найден")
+
     try:
         result = await test_provider_connection(session, provider_id, api_key=body.api_key)
     except Exception:
         logger.exception("provider_test_unhandled", provider_id=provider_id)
+        provider.last_test_at = datetime.now(timezone.utc)
+        provider.last_test_status = "error"
+        await session.commit()
         return TestConnectionResult(
             ok=False,
             error="test_failed",
@@ -107,11 +117,17 @@ async def test_provider(
         error = result.get("error", "test_failed")
         if error == "provider_not_found":
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Провайдер не найден")
+        provider.last_test_at = datetime.now(timezone.utc)
+        provider.last_test_status = "error"
+        await session.commit()
         return TestConnectionResult(
             ok=False,
             error=error,
             message=result.get("message"),
         )
+    provider.last_test_at = datetime.now(timezone.utc)
+    provider.last_test_status = "ok"
+    await session.commit()
     return TestConnectionResult(
         ok=True,
         message=result.get("message"),

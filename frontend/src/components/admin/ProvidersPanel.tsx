@@ -10,6 +10,8 @@ type Provider = {
   base_url: string | null;
   has_credentials: boolean;
   supports_credentials: boolean;
+  last_test_at: string | null;
+  last_test_status: string | null;
   last_sync_at: string | null;
   last_sync_status: string | null;
 };
@@ -23,7 +25,17 @@ type TestDetails = {
   usd_rub_latest?: { date: string; value: string };
 };
 
-const PUBLIC_API_PROVIDERS = new Set(["cbr", "rosstat"]);
+const PUBLIC_API_PROVIDERS = new Set(["cbr"]);
+
+function providerStatus(provider: Provider) {
+  if (provider.last_test_status === "ok") {
+    return { className: "ok", label: provider.enabled ? "Подключён" : "Проверен, выключен" };
+  }
+  if (provider.last_test_status === "error") {
+    return { className: "error", label: "Ошибка подключения" };
+  }
+  return { className: "idle", label: "Не проверен" };
+}
 
 export function ProvidersPanel() {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -92,6 +104,7 @@ export function ProvidersPanel() {
       });
       if (!result.ok) {
         setMessage(result.message || result.error || "Ошибка подключения");
+        await load();
         return;
       }
       const latest = result.details?.latest_observation;
@@ -103,6 +116,7 @@ export function ProvidersPanel() {
           ? ` · ставка ${keyRate.value}% (${keyRate.date}), USD/RUB ${usdRub.value} (${usdRub.date})`
           : "";
       setMessage(`${result.message || "OK"}${extra}`);
+      await load();
     } catch {
       setMessage("Ошибка проверки подключения");
     }
@@ -135,7 +149,7 @@ export function ProvidersPanel() {
           <tr>
             <th>ID</th>
             <th>Название</th>
-            <th>Статус</th>
+            <th>Подключение</th>
             <th>Ключ</th>
             <th>Последняя синхронизация</th>
             <th />
@@ -145,16 +159,18 @@ export function ProvidersPanel() {
           {providers.map((provider) => (
             <tr key={provider.id}>
               <td>{provider.id}</td>
-              <td>{provider.name_ru}</td>
               <td>
-                <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={provider.enabled}
-                    onChange={(event) => toggleEnabled(provider.id, event.target.checked)}
-                  />
-                  {provider.enabled ? "Включён" : "Выключен"}
-                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span>{provider.name_ru}</span>
+                  <span className="muted">{provider.enabled ? "Автосинхронизация включена" : "Автосинхронизация выключена"}</span>
+                </div>
+              </td>
+              <td>
+                <span className="provider-status">
+                  <span className={`provider-status-dot ${providerStatus(provider).className}`} />
+                  <span>{providerStatus(provider).label}</span>
+                </span>
+                {provider.last_test_at ? <div className="muted">{provider.last_test_at}</div> : null}
               </td>
               <td>
                 {provider.supports_credentials ? (
@@ -200,6 +216,14 @@ export function ProvidersPanel() {
                   onClick={() => sync(provider.id)}
                 >
                   Синхронизация
+                </button>
+                <button
+                  type="button"
+                  className="admin-btn"
+                  style={{ marginLeft: 6 }}
+                  onClick={() => toggleEnabled(provider.id, !provider.enabled)}
+                >
+                  {provider.enabled ? "Выключить" : "Включить"}
                 </button>
               </td>
             </tr>

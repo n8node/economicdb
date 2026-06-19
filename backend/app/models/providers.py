@@ -14,6 +14,8 @@ class DataProvider(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     base_url: Mapped[str | None] = mapped_column(String(512))
     credentials_encrypted: Mapped[str | None] = mapped_column(Text)
+    last_test_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_test_status: Mapped[str | None] = mapped_column(String(32))
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_sync_status: Mapped[str | None] = mapped_column(String(32))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -7,8 +7,8 @@
 - [x] Next.js placeholder `/app`, `/adminus`
 - [x] First-deploy scripts (Docker install, SSL, .env generation)
 - [x] Admin auth UI + JWT login
-- [x] Dashboard «Обзор» из mockup + demo API
-- [x] ETL schema + providers list/sync stub
+- [x] Dashboard «Обзор» на реальных рядах FRED/ЦБ без demo fallback
+- [x] ETL schema + providers admin + FRED/ЦБ sync
 - [ ] Перенос остальных mockups → React (indicators, compare, calendar, summaries)
 - [ ] OpenRouter weekly digest + validator
 - [ ] Robokassa billing
@@ -21,6 +21,6 @@
 
 ## Mock/demo gaps (не баги)
 
-- Compare presets FX/ВВП в demo JS
+- Реальные calendar events ещё не подключены к провайдерам
 - Calendar forecast «—»
 - AI archive filters в demo
