@@ -11,7 +11,12 @@ import structlog
 
 logger = structlog.get_logger()
 
-CBR_SOAP_URL = "https://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx"
+CBR_SOAP_URLS = (
+    "https://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx",
+    "http://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx",
+    "https://cbr.ru/DailyInfoWebServ/DailyInfo.asmx",
+    "http://cbr.ru/DailyInfoWebServ/DailyInfo.asmx",
+)
 CBR_NAMESPACE = "http://web.cbr.ru/"
 DEFAULT_FROM_DATE = date(2020, 1, 1)
 
@@ -40,24 +45,34 @@ def _soap_datetime(value: date) -> str:
 
 async def _soap_call(action: str, inner_body: str) -> str:
     envelope = _soap_envelope(action, inner_body)
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                CBR_SOAP_URL,
-                content=envelope.encode("utf-8"),
-                headers={
-                    "Content-Type": "text/xml; charset=utf-8",
-                    "SOAPAction": f'"{CBR_NAMESPACE}{action}"',
-                    "User-Agent": "economicdb/0.1 (+https://economicdb.com)",
-                },
-            )
-            if response.status_code >= 400:
-                raise CbrError(f"HTTP {response.status_code} от ЦБ РФ", code="cbr_http_error")
-            return response.text
-    except httpx.TimeoutException as exc:
-        raise CbrError("ЦБ РФ не ответил за 30 секунд", code="cbr_timeout") from exc
-    except httpx.HTTPError as exc:
-        raise CbrError(f"Не удалось подключиться к ЦБ РФ: {exc}", code="cbr_network_error") from exc
+    errors: list[str] = []
+    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+        for url in CBR_SOAP_URLS:
+            try:
+                response = await client.post(
+                    url,
+                    content=envelope.encode("utf-8"),
+                    headers={
+                        "Content-Type": "text/xml; charset=utf-8",
+                        "SOAPAction": f'"{CBR_NAMESPACE}{action}"',
+                        "User-Agent": "economicdb/0.1 (+https://economicdb.com)",
+                    },
+                )
+                if response.status_code >= 400:
+                    errors.append(f"{url}: HTTP {response.status_code}")
+                    continue
+                logger.info("cbr_soap_call_ok", action=action, url=url)
+                return response.text
+            except httpx.TimeoutException:
+                errors.append(f"{url}: timeout")
+                logger.warning("cbr_soap_call_timeout", action=action, url=url)
+            except httpx.HTTPError as exc:
+                errors.append(f"{url}: {exc}")
+                logger.warning("cbr_soap_call_failed", action=action, url=url, error=str(exc))
+
+    if any("timeout" in error for error in errors):
+        raise CbrError(f"ЦБ РФ не ответил за 30 секунд ({'; '.join(errors)})", code="cbr_timeout")
+    raise CbrError(f"Не удалось подключиться к ЦБ РФ: {'; '.join(errors)}", code="cbr_network_error")
 
 
 def _extract_result_xml(response_text: str, result_tag: str) -> str:
