@@ -40,12 +40,17 @@ chmod 644 nginx/ssl/fullchain.pem
 chmod 600 nginx/ssl/privkey.pem
 
 echo "=== Enabling HTTPS in nginx ==="
-if [ -f nginx/conf.d/https.conf.sample ] && [ ! -f nginx/conf.d/https.conf ]; then
-    cp nginx/conf.d/https.conf.sample nginx/conf.d/https.conf
-    sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/https.conf
-fi
+cp nginx/conf.d/https.conf.sample nginx/conf.d/https.conf
+sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/https.conf
+
+cp nginx/conf.d/default.http-redirect.conf nginx/conf.d/default.conf
 
 echo "=== Starting nginx ==="
 $COMPOSE up -d nginx
 
+echo "=== Testing nginx config ==="
+$COMPOSE exec nginx nginx -t
+
 echo "=== SSL init complete ==="
+echo "  https://$DOMAIN/"
+echo "  https://$DOMAIN/wp-admin/install.php"

@@ -65,12 +65,7 @@ services:
       WORDPRESS_DB_USER: ${WP_DB_USER}
       WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD}
       WORDPRESS_CONFIG_EXTRA: |
-        if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-          $$_SERVER['HTTPS'] = 'on';
-        }
-        $$_domain = getenv('DOMAIN') ?: 'economicdb.com';
-        define('WP_HOME', 'https://' . $$_domain);
-        define('WP_SITEURL', 'https://' . $$_domain);
+        if (file_exists('/usr/local/share/economicdb/extra.php')) { require_once '/usr/local/share/economicdb/extra.php'; }
     depends_on:
       mysql:
         condition: service_healthy
