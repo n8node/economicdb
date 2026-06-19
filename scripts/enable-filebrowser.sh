@@ -45,16 +45,7 @@ fi
 echo "=== Starting FileBrowser ==="
 $COMPOSE up -d filebrowser
 
-if [ -f nginx/templates/https.conf.template ]; then
-  DOMAIN="${DOMAIN:-economicdb.com}"
-  cp nginx/templates/https.conf.template nginx/conf.d/https.conf
-  sed -i "s/DOMAIN_PLACEHOLDER/${DOMAIN}/g" nginx/conf.d/https.conf
-fi
-
-echo "=== Reloading nginx ==="
-$COMPOSE up -d nginx
-$COMPOSE exec nginx nginx -t
-$COMPOSE exec nginx nginx -s reload
+"$(dirname "$0")/apply-nginx-https.sh"
 
 echo
 echo "=== FileBrowser ready ==="

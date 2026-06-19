@@ -1,27 +1,22 @@
 #!/bin/bash
-# Отключить кэш WordPress в nginx (после смены HTTP→HTTPS)
+# Переприменить HTTPS nginx с no-cache (WP, /app, /adminus, /dbfiles, /api)
 set -euo pipefail
 
-cd /opt/economicdb
-set -a
-# shellcheck disable=SC1091
-source .env
-set +a
+cd "$(dirname "$0")/.."
 
 DOMAIN="${DOMAIN:-economicdb.com}"
-COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+if [ -f .env ]; then
+  # shellcheck disable=SC1091
+  source .env
+  DOMAIN="${DOMAIN:-economicdb.com}"
+fi
 
-echo "=== Apply HTTPS nginx with no-cache headers ==="
-cp nginx/templates/https.conf.template nginx/conf.d/https.conf
-sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/https.conf
-
-$COMPOSE exec nginx nginx -t
-$COMPOSE exec nginx nginx -s reload
+"$(dirname "$0")/apply-nginx-https.sh"
 
 echo ""
-echo "=== Verify Cache-Control on install page ==="
-curl -sI "https://$DOMAIN/wp-admin/install.php" | grep -iE 'cache-control|pragma|expires' || true
+echo "=== Verify Cache-Control on /app ==="
+curl -sI "https://$DOMAIN/app" | grep -iE 'cache-control|pragma|expires' || true
 
 echo ""
 echo "=== Done (server) ==="
-echo "Browsers still need one-time cleanup for economicdb.com — see instructions in chat."
+echo "В браузере один раз: очистить данные сайта economicdb.com или открыть в режиме инкognito."
