@@ -26,6 +26,9 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     depends_on:
       postgres:
         condition: service_healthy
@@ -146,6 +149,9 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     depends_on:
       postgres:
         condition: service_healthy

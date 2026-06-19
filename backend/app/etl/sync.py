@@ -94,22 +94,22 @@ async def list_providers(session: AsyncSession) -> list[DataProvider]:
 
 async def sync_all_enabled_providers(session: AsyncSession) -> dict:
     providers = await list_providers(session)
-    enabled = [provider for provider in providers if provider.enabled]
-    if not enabled:
+    enabled_ids = [provider.id for provider in providers if provider.enabled]
+    if not enabled_ids:
         logger.info("scheduled_sync_skipped", reason="no_enabled_providers")
         return {"ok": True, "providers": [], "total_records": 0}
 
     results: list[dict] = []
     total_records = 0
-    for provider in enabled:
-        result = await sync_provider(session, provider.id)
-        result["provider_id"] = provider.id
+    for provider_id in enabled_ids:
+        result = await sync_provider(session, provider_id)
+        result["provider_id"] = provider_id
         results.append(result)
         if result.get("ok"):
             total_records += int(result.get("records") or 0)
         logger.info(
             "scheduled_sync_provider",
-            provider_id=provider.id,
+            provider_id=provider_id,
             ok=result.get("ok"),
             records=result.get("records"),
             error=result.get("error"),
