@@ -12,7 +12,7 @@ if [ -f "$WP_CONFIG" ]; then
     sed -i '/define("WP_SITEURL"/d' "$WP_CONFIG" 2>/dev/null || true
 
     if ! grep -q "$MARKER" "$WP_CONFIG"; then
-        sed -i "/That's all, stop editing/i\\
+        sed -i "/require_once ABSPATH . 'wp-settings.php';/i\\
 /* $MARKER */\\
 if (file_exists('$EXTRA')) { require_once '$EXTRA'; }\\
 " "$WP_CONFIG"
