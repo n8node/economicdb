@@ -1,6 +1,6 @@
 # DATA_CATALOG — каталог показателей Макроаналитики
 
-Источник правды для ETL shortlist: **~150 макро-показателей** (целевой объём 150–200, расширяем до 200 во W5).
+Источник правды для ETL shortlist: **~250 макро-показателей** (базовый shortlist 150–200 + дополнительный multisource-пакет).
 
 **Не включено:** EconDB, Trading Economics, consensus/forecast (Tier C — editorial или «—» в UI).
 
@@ -88,8 +88,8 @@
 | ru_cpi_mom | ИПЦ, м/м | inflation | M | rosstat | fedstat:31074/mom | backlog | ✅ |
 | ru_core_cpi_yoy | ИПЦ базовый, г/г | inflation | M | rosstat | fedstat:TBD | backlog | ✅ |
 | ru_industrial_yoy | Пром. производство, г/г | industrial | M | rosstat | fedstat:57806 | done | ✅* |
-| ru_retail_yoy | Розничная торговля, г/г | consumption | M | rosstat | fedstat:42934 | next | ✅ |
-| ru_unemployment | Безработица | labor | M | rosstat | fedstat:57614 | next | ✅ |
+| ru_retail_yoy | Розничная торговля, г/г | consumption | M | rosstat | fedstat:31066 | next | ✅ |
+| ru_unemployment | Безработица | labor | Q | rosstat | fedstat:43062 | next | ✅ |
 | ru_gdp_q_yoy | ВВП, г/г | gdp | Q | rosstat | fedstat:57746 | next | ✅ |
 | ru_wages_yoy | Реальные доходы / зарплаты | labor | M | rosstat | fedstat:58548 | backlog | ✅ |
 | ru_gdp_yoy_wb | ВВП, рост (WB) | gdp | A | world_bank | NY.GDP.MKTP.KD.ZG/RU | done | ✅ |
@@ -258,6 +258,26 @@
 
 ---
 
+## Дополнительный multisource-пакет — 97 показателей
+
+Новые строки добавляются миграцией в `indicators` как `enabled=false`: они доступны для ETL в админке, но не попадают в продукт до ручного включения после успешной загрузки.
+
+| source | ids |
+|--------|-----|
+| cbr | `jpy_rub`, `chf_rub`, `try_rub`, `kzt_rub`, `byn_rub`, `ru_fx_reserves`, `ru_m2`, `ru_mortgage_rate` |
+| fred | `us_retail_sales_yoy`, `us_jolts_openings`, `us_building_permits`, `us_new_home_sales`, `us_capacity_utilization`, `us_pce_level`, `us_real_disposable_income`, `us_business_inventories`, `us_5y_breakeven`, `us_10y_breakeven`, `us_high_yield_spread`, `us_financial_conditions`, `nasdaq`, `vix` |
+| ecb | `ecb_eur_gbp`, `ecb_eur_jpy`, `ecb_eur_chf`, `ecb_eur_cny`, `ecb_eur_rub`, `ecb_3m_money_market`, `ecb_bank_lending_households`, `ecb_bank_lending_corporates` |
+| moex | `moex_oilgas`, `moex_financials`, `moex_metals`, `moex_consumer`, `moex_it`, `moex_transport`, `moex_usd_tom`, `moex_eur_tom`, `moex_cny_tom`, `moex_gold_futures`, `moex_brent_futures` |
+| rosstat | `ru_ppi_yoy`, `ru_food_cpi_yoy`, `ru_services_cpi_yoy`, `ru_construction_yoy`, `ru_real_wages_yoy`, `ru_real_income_yoy`, `ru_investment_yoy`, `ru_freight_turnover_yoy`, `ru_agriculture_yoy`, `ru_exports_goods`, `ru_imports_goods` |
+| eurostat | `eu_core_hicp_yoy`, `eu_food_hicp_yoy`, `eu_energy_hicp_yoy`, `eu_ppi_yoy`, `eu_services_ppi_yoy`, `eu_construction_yoy`, `eu_house_price_yoy`, `eu_retail_sales_yoy`, `eu_industrial_new_orders`, `eu_employment_q_yoy`, `eu_gov_debt_pct_gdp`, `eu_budget_balance_pct_gdp` |
+| oecd | `oecd_cli_us`, `oecd_cli_eu`, `oecd_cli_cn`, `oecd_cli_jp`, `oecd_cli_de`, `oecd_bci_us`, `oecd_bci_eu`, `oecd_cci_us`, `oecd_cci_eu`, `oecd_real_gdp_g7`, `oecd_unemployment_g7` |
+| world_bank | `world_gdp_growth_wb`, `world_inflation_wb`, `world_exports_pct_gdp_wb`, `world_imports_pct_gdp_wb`, `world_fdi_pct_gdp_wb`, `de_industry_pct_gdp_wb`, `cn_exports_pct_gdp_wb`, `in_inflation_wb`, `br_unemp_wb`, `tr_current_account_wb` |
+| imf | `global_gdp_imf`, `global_cpi_imf`, `global_trade_volume_imf`, `global_current_account_imf`, `us_debt_imf`, `cn_debt_imf`, `jp_debt_imf`, `de_debt_imf`, `gb_debt_imf`, `in_gdp_imf`, `br_gdp_imf`, `tr_cpi_imf` |
+
+Оговорки по готовности: `CBR SOAP:*`, `Rosstat fedstat:TODO_*`, placeholder-ключи `OECD ...` и часть сложных Eurostat dimensions требуют отдельной проверки/настройки парсеров перед включением в продукт.
+
+---
+
 ## Сводка shortlist
 
 | Блок | Кол-во |
@@ -270,8 +290,9 @@
 | G20 other | **24** |
 | World | 18 − 1 done = **17** |
 | IMF fiscal template | **12** (unique additions) |
-| **Итого planned (backlog)** | **~134** |
-| **Итого с done** | **~149** (+ резерв до 200 во W5) |
+| multisource-пакет | **97** |
+| **Итого planned (backlog)** | **~231** |
+| **Итого с done** | **~246** |
 
 ---
 

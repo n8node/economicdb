@@ -27,12 +27,12 @@ FEDSTAT_CONFIG: dict[str, FedstatConfig] = {
         series_key={"s_OKATO": "643004.АГ", "s_OKVED2": "1323500.029.31", "s_POK": "3"},
         transform="index_yoy",
     ),
-    "42934": FedstatConfig(
-        series_key={"s_OKATO": "643", "s_POK": "3"},
+    "31066": FedstatConfig(
+        series_key={"s_OKATO": "643004.АГ", "s_POK": "9", "s_formtorg": "1"},
         transform="index_yoy",
     ),
-    "57614": FedstatConfig(
-        series_key={"s_OKATO": "643", "s_POK": "1"},
+    "43062": FedstatConfig(
+        series_key={"s_OKATO": "643", "s_vozr": "207"},
         transform="direct",
     ),
     "57746": FedstatConfig(

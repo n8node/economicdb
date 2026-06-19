@@ -9,6 +9,7 @@
 - [x] Admin auth UI + JWT login
 - [x] Dashboard «Обзор» на реальных рядах FRED/ЦБ без demo fallback
 - [x] ETL schema + providers admin + FRED/ЦБ sync
+- [x] DATA_CATALOG multisource-пакет: +97 показателей, hidden until ETL verification
 - [ ] Перенос остальных mockups → React (indicators, compare, calendar, summaries)
 - [ ] OpenRouter weekly digest + validator
 - [ ] Robokassa billing

@@ -21,7 +21,9 @@ from app.integrations.rosstat.client import (
 
 logger = structlog.get_logger()
 
-FEDSTAT_DATA_URL = "https://www.fedstat.ru/indicator/data.do?format=sdmx"
+FEDSTAT_DATA_URL = "https://www.fedstat.ru/indicator/data.do"
+QUARTER_PERIOD_RU_RE = re.compile(r"^(I|II|III|IV)\s+квартал$", re.IGNORECASE)
+ROMAN_QUARTER = {"I": 1, "II": 2, "III": 3, "IV": 4}
 
 MONTHS_RU = {
     "январь": 1,
@@ -48,7 +50,20 @@ def _parse_month_period(raw: str) -> int | None:
         month = int(match.group(1))
         if 1 <= month <= 12:
             return month
+    quarter_match = QUARTER_PERIOD_RU_RE.match(raw.strip())
+    if quarter_match:
+        quarter = ROMAN_QUARTER.get(quarter_match.group(1).upper())
+        if quarter is not None:
+            return (quarter - 1) * 3 + 1
     return None
+
+
+def _fedstat_headers(indicator_id: str) -> dict[str, str]:
+    return {
+        **HTTP_HEADERS,
+        "Accept": "application/xml,text/xml,*/*",
+        "Referer": f"https://www.fedstat.ru/indicator/{indicator_id}",
+    }
 
 
 def _transform_value(value: Decimal, transform: str) -> Decimal:
@@ -168,39 +183,32 @@ async def fetch_fedstat_sdmx(
     to_date: date | None = None,
 ) -> str:
     params: dict[str, str] = {"format": "sdmx", "id": indicator_id}
-    post_data: dict[str, str] = {"id": indicator_id}
     if year is not None:
-        post_data["Year"] = str(year)
         params["Year"] = str(year)
     elif from_date is not None and to_date is not None:
         params["startPeriod"] = str(from_date.year)
         params["endPeriod"] = str(to_date.year)
-        post_data["startPeriod"] = str(from_date.year)
-        post_data["endPeriod"] = str(to_date.year)
 
     errors: list[str] = []
+    headers = _fedstat_headers(indicator_id)
     for attempt in range(1, HTTP_RETRIES + 1):
         try:
             async with httpx.AsyncClient(
                 timeout=HTTP_TIMEOUT,
                 follow_redirects=True,
-                headers=HTTP_HEADERS,
+                headers=headers,
                 trust_env=False,
             ) as client:
-                response = await client.post(
-                    FEDSTAT_DATA_URL,
-                    params=params,
-                    data=post_data,
-                )
+                response = await client.get(FEDSTAT_DATA_URL, params=params)
             if response.status_code >= 400:
                 errors.append(f"HTTP {response.status_code}")
                 break
             text = response.content.decode("utf-8", errors="replace")
             if "<GenericData" not in text:
-                errors.append("ответ не SDMX")
+                errors.append("fedstat вернул HTML вместо SDMX")
                 break
             logger.info(
-                "fedstat_http_post_ok",
+                "fedstat_http_get_ok",
                 indicator_id=indicator_id,
                 year=year,
                 attempt=attempt,

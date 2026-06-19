@@ -20,7 +20,7 @@ async def fetch_indicator_series(
         series = await fetch_key_rate_series(from_date=from_date, to_date=to_date)
         return series, "KeyRate"
 
-    if external_id.startswith("R") and len(external_id) == 6:
+    if external_id.startswith("R") and len(external_id) in {6, 7}:
         series = await fetch_usd_rub_series(
             from_date=from_date,
             to_date=to_date,

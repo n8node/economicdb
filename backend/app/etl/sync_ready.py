@@ -12,10 +12,12 @@ def is_sync_ready(indicator: Indicator) -> bool:
     external_id = (indicator.external_id or "").strip()
     if not external_id:
         return False
+    if "TODO" in external_id or "..." in external_id:
+        return False
     if indicator.source not in SUPPORTED_SOURCES:
         return False
     if indicator.source == "cbr":
-        return external_id == "KeyRate" or (external_id.startswith("R") and len(external_id) == 6)
+        return external_id == "KeyRate" or (external_id.startswith("R") and len(external_id) in {6, 7})
     if indicator.source == "rosstat":
         fedstat_id = parse_fedstat_id(external_id)
         return fedstat_id is not None and fedstat_id in FEDSTAT_CONFIG
