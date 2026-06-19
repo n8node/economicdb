@@ -30,6 +30,16 @@ for path in /health /app /adminus/; do
 done
 
 echo ""
+echo "=== HTTPS protocol checks ==="
+curl -sS --http1.1 --connect-timeout 10 -o /dev/null -w "https http/1.1 /health -> %{http_code}\n" "${BASE}/health" || true
+curl -sS --connect-timeout 10 -o /dev/null -w "https default /health -> %{http_code}\n" "${BASE}/health" || true
+
+echo ""
+echo "=== Nginx listeners ==="
+ss -ltnp 2>/dev/null | grep -E ':(80|443)\s' || true
+$COMPOSE exec -T nginx sh -c "nginx -T 2>/dev/null | grep -n 'listen 443\\|http2'" || true
+
+echo ""
 echo "=== /app HTML deploy-id ==="
 curl -s "${BASE}/app" | grep -o 'name="deploy-id" content="[^"]*"' || echo "deploy-id meta not found"
 
