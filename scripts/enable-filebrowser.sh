@@ -21,21 +21,29 @@ fi
 FILEBROWSER_USERNAME="${FILEBROWSER_USERNAME:-admin}"
 FILEBROWSER_BASE_PATH="${FILEBROWSER_BASE_PATH:-/dbfiles}"
 COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+FB_CLI=(run --rm --no-deps --entrypoint /filebrowser filebrowser)
+
+fb_cli() {
+  $COMPOSE "${FB_CLI[@]}" "$@"
+}
+
+echo "=== Configuring FileBrowser user (server must be stopped for DB access) ==="
+$COMPOSE stop filebrowser 2>/dev/null || true
+
+if ! fb_cli users find "$FILEBROWSER_USERNAME" --database /database/filebrowser.db >/dev/null 2>&1; then
+  echo "Creating user ${FILEBROWSER_USERNAME}..."
+  fb_cli users add "$FILEBROWSER_USERNAME" "$FILEBROWSER_PASSWORD" \
+    --perm.admin \
+    --database /database/filebrowser.db
+else
+  echo "Updating password for ${FILEBROWSER_USERNAME}..."
+  fb_cli users update "$FILEBROWSER_USERNAME" \
+    --password "$FILEBROWSER_PASSWORD" \
+    --database /database/filebrowser.db
+fi
 
 echo "=== Starting FileBrowser ==="
 $COMPOSE up -d filebrowser
-
-echo "=== Setting FileBrowser login ==="
-sleep 3
-if $COMPOSE exec -T filebrowser filebrowser users ls --database /database/filebrowser.db 2>/dev/null | grep -q "$FILEBROWSER_USERNAME"; then
-  $COMPOSE exec -T filebrowser filebrowser users update "$FILEBROWSER_USERNAME" \
-    --password "$FILEBROWSER_PASSWORD" \
-    --database /database/filebrowser.db
-else
-  $COMPOSE exec -T filebrowser filebrowser users add "$FILEBROWSER_USERNAME" "$FILEBROWSER_PASSWORD" \
-    --perm.admin \
-    --database /database/filebrowser.db
-fi
 
 if [ -f nginx/templates/https.conf.template ]; then
   DOMAIN="${DOMAIN:-economicdb.com}"
