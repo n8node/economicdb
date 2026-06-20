@@ -42,7 +42,8 @@
 }
 .chart-brush-label{ font-size:12px; font-weight:600; color:var(--text-secondary); }
 .chart-brush-hint{ font-size:11.5px; color:var(--text-tertiary); }
-.chart-brush-host{ width:100%; min-height:64px; }
+.chart-brush-host{ width:100%; min-height:64px; position:relative; overflow:hidden; }
+.chart-brush-host .uplot{ width:100% !important; }
 .chart-footnote{
   margin:10px 0 0; text-align:right; font-size:12px; color:var(--text-tertiary);
 }
