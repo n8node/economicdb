@@ -465,7 +465,7 @@ export function IndicatorsView() {
                         <input type="checkbox" checked={selected.includes(row.id)} onChange={() => toggleSelect(row.id)} />
                       </td>
                       <td>
-                        <Link href={`/app/indicators/${row.id}`} className="indicator-name" title={row.name_ru}>
+                        <Link href={`/app/indicators/${row.id}`} target="_top" className="indicator-name" title={row.name_ru}>
                           {row.name_ru}
                         </Link>
                       </td>
@@ -514,7 +514,7 @@ export function IndicatorsView() {
               {items.map((row) => (
                 <div key={row.id} className="indicator-card card card-pad">
                   <div className="indicator-card-head">
-                    <Link href={`/app/indicators/${row.id}`} className="indicator-name">
+                    <Link href={`/app/indicators/${row.id}`} target="_top" className="indicator-name">
                       {row.name_ru}
                     </Link>
                     <button
@@ -561,7 +561,7 @@ export function IndicatorsView() {
                 Вперёд
               </button>
             </div>
-            <Link href="/app/compare" className="btn">
+            <Link href="/app/compare" target="_top" className="btn">
               Открыть сравнение
             </Link>
           </div>

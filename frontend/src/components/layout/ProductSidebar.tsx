@@ -27,7 +27,7 @@ export function ProductSidebar() {
         {NAV.map((item) => {
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           return (
-            <a key={item.href} href={item.href} className={`nav-item${active ? " active" : ""}`}>
+            <a key={item.href} href={item.href} target="_top" className={`nav-item${active ? " active" : ""}`}>
               <i className={`ti ${item.icon}`} />
               <span>{item.label}</span>
             </a>

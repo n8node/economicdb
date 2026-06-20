@@ -58,7 +58,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
               <li key={item}>{item}</li>
             ))}
           </ul>
-          <Link href="/app/summaries/ws_2026_w25" className="btn primary">
+          <Link href="/app/summaries/ws_2026_w25" target="_top" className="btn primary">
             Читать полностью
           </Link>
           <p className="ai-disclaimer">
@@ -79,7 +79,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
               <span className={`country-badge ${event.country}`}>{event.country.toUpperCase()}</span>
             </div>
           ))}
-          <Link href="/app/calendar" className="btn" style={{ width: "100%", marginTop: 14, justifyContent: "center" }}>
+          <Link href="/app/calendar" target="_top" className="btn" style={{ width: "100%", marginTop: 14, justifyContent: "center" }}>
             Весь календарь
           </Link>
         </div>
@@ -88,7 +88,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
       <div style={{ marginBottom: 22 }}>
         <p className="section-title">
           Мои избранные показатели
-          <Link href="/app/favorites" className="btn ghost">
+          <Link href="/app/favorites" target="_top" className="btn ghost">
             Все <i className="ti ti-arrow-right" />
           </Link>
         </p>

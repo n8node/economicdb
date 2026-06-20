@@ -9,7 +9,7 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin", "cyrillic"], variable: "--
 const hardNavigationScript = `
 (function () {
   function shouldHandle(anchor, event) {
-    if (!anchor || event.defaultPrevented || event.button !== 0) return false;
+    if (!anchor || event.button !== 0) return false;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
     if (anchor.target && anchor.target !== "_self") return false;
     if (anchor.hasAttribute("download")) return false;
@@ -18,14 +18,19 @@ const hardNavigationScript = `
     return url.pathname === "/app" || url.pathname.indexOf("/app/") === 0 || url.pathname.indexOf("/adminus") === 0;
   }
 
-  document.addEventListener("click", function (event) {
+  function handleClick(event) {
     var target = event.target;
     if (!target || !target.closest) return;
     var anchor = target.closest("a[href]");
     if (!shouldHandle(anchor, event)) return;
     event.preventDefault();
-    window.location.href = anchor.href;
-  }, true);
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    window.location.assign(anchor.href);
+  }
+
+  window.__macroHardNavigation = true;
+  window.addEventListener("click", handleClick, true);
+  document.addEventListener("click", handleClick, true);
 })();
 `;
 
@@ -41,13 +46,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru" className={`${inter.variable} ${jetbrains.variable}`}>
       <head>
         <meta name="deploy-id" content={deployId} />
-        <script dangerouslySetInnerHTML={{ __html: hardNavigationScript }} />
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css"
         />
       </head>
       <body>
+        <script id="macro-hard-navigation" dangerouslySetInnerHTML={{ __html: hardNavigationScript }} />
         <NavigationFallback />
         {children}
       </body>

@@ -184,13 +184,13 @@ export function IndicatorDetailView({ id }: { id: string }) {
   if (notFound || !indicator) {
     return (
       <div className="content indicator-detail-page">
-        <Link href="/app/indicators" className="btn ghost detail-back">
+        <Link href="/app/indicators" target="_top" className="btn ghost detail-back">
           ← К каталогу
         </Link>
         <div className="card card-pad">
           <h1>Показатель недоступен</h1>
           <p className="meta">Показатель не найден или скрыт из продукта.</p>
-          <Link href="/app/indicators" className="btn primary">
+          <Link href="/app/indicators" target="_top" className="btn primary">
             Перейти в каталог
           </Link>
         </div>
@@ -216,7 +216,7 @@ export function IndicatorDetailView({ id }: { id: string }) {
 
   return (
     <div className="content indicator-detail-page">
-      <Link href="/app/indicators" className="btn ghost detail-back">
+      <Link href="/app/indicators" target="_top" className="btn ghost detail-back">
         ← К каталогу
       </Link>
 
@@ -251,7 +251,7 @@ export function IndicatorDetailView({ id }: { id: string }) {
             >
               CSV
             </button>
-            <Link href="/app/compare" className="btn">
+            <Link href="/app/compare" target="_top" className="btn">
               Сравнение
             </Link>
           </div>
@@ -460,7 +460,7 @@ export function IndicatorDetailView({ id }: { id: string }) {
               <h2>Похожие показатели</h2>
               <div className="related-list">
                 {related.map((item) => (
-                  <Link key={item.id} href={`/app/indicators/${item.id}`} className="related-item">
+                  <Link key={item.id} href={`/app/indicators/${item.id}`} target="_top" className="related-item">
                     <span>{item.name_ru}</span>
                     <span className="meta">{item.last_value || "—"}</span>
                   </Link>

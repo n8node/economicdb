@@ -43,7 +43,7 @@ export function SummariesArchiveView() {
       ) : (
         <div className="summary-grid">
           {items.map((item, idx) => (
-            <Link key={item.id} href={`/app/summaries/${item.id}`} className={`summary-card card card-pad ${idx === 0 ? "pinned" : ""}`}>
+            <Link key={item.id} href={`/app/summaries/${item.id}`} target="_top" className={`summary-card card card-pad ${idx === 0 ? "pinned" : ""}`}>
               <p className="meta">{item.period_label}</p>
               <h2>{item.headline}</h2>
               <p className="meta">{Math.max(1, Math.round(item.word_count / 200))} мин · {item.source_count} источников</p>

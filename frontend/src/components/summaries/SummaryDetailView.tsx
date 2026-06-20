@@ -21,7 +21,7 @@ export function SummaryDetailView({ id }: { id: string }) {
 
   return (
     <div className="content summaries-page">
-      <Link href="/app/summaries" className="btn ghost" style={{ marginBottom: 12 }}>
+      <Link href="/app/summaries" target="_top" className="btn ghost" style={{ marginBottom: 12 }}>
         ← Архив
       </Link>
       <p className="meta">{data.period_label} · {data.reading_minutes} мин чтения</p>

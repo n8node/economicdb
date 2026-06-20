@@ -54,6 +54,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
+              target="_top"
               className={pathname === item.href || pathname.startsWith(`${item.href}/`) ? "active" : ""}
             >
               {item.label}

@@ -25,14 +25,14 @@ export function FavoritesView() {
           <h1>Избранное</h1>
           <p className="meta">Показатели, отмеченные звёздочкой в каталоге (localStorage)</p>
         </div>
-        <Link href="/app/indicators" className="btn primary">К каталогу</Link>
+        <Link href="/app/indicators" target="_top" className="btn primary">К каталогу</Link>
       </div>
       {items.length === 0 ? (
         <div className="card card-pad"><p>Нет избранных показателей. Отметьте их на странице «Показатели».</p></div>
       ) : (
         <div className="fav-grid">
           {items.map((item) => (
-            <Link key={item.id} href={`/app/indicators/${item.id}`} className="fav-card card card-pad">
+            <Link key={item.id} href={`/app/indicators/${item.id}`} target="_top" className="fav-card card card-pad">
               <p className="fav-label">{item.name_ru}</p>
               <p className="fav-value">{item.last_value}</p>
               <span className={`delta ${item.delta_direction}`}>{item.last_change}</span>

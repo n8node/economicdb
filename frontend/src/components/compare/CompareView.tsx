@@ -131,7 +131,7 @@ export function CompareView() {
           >
             CSV
           </button>
-          <Link href="/app/indicators" className="btn primary">
+          <Link href="/app/indicators" target="_top" className="btn primary">
             К каталогу
           </Link>
         </div>
@@ -332,7 +332,7 @@ export function CompareView() {
                 <i className="ti ti-plus" /> Добавить из каталога
               </span>
             ) : (
-              <Link href="/app/indicators" className="catalog-link">
+              <Link href="/app/indicators" target="_top" className="catalog-link">
                 <i className="ti ti-plus" /> Добавить из каталога
               </Link>
             )}
