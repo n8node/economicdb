@@ -21,16 +21,25 @@ function formatTooltipValue(value: number | null, unit: string | null, normalize
   return value.toLocaleString("ru-RU", { maximumFractionDigits: 4 });
 }
 
+function seriesColor(data: CompareSeriesResponse, indicatorId: string): string {
+  const idx = data.series.findIndex((s) => s.indicator_id === indicatorId);
+  return SERIES_COLORS[(idx >= 0 ? idx : 0) % SERIES_COLORS.length];
+}
+
 type HoverRow = { name: string; color: string; value: string };
 
 export function CompareChart({
   data,
   hiddenIds,
   normalize,
+  resetToken,
+  onResetZoom,
 }: {
   data: CompareSeriesResponse | null;
   hiddenIds: Set<string>;
   normalize: "absolute" | "index" | "change";
+  resetToken?: number;
+  onResetZoom?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const brushRef = useRef<HTMLDivElement>(null);
@@ -47,9 +56,9 @@ export function CompareChart({
 
   const hoverRows = useMemo((): HoverRow[] => {
     if (hoverIdx === null || !data || visibleSeries.length === 0) return [];
-    return visibleSeries.map((series, idx) => ({
+    return visibleSeries.map((series) => ({
       name: series.name_ru,
-      color: SERIES_COLORS[data.series.indexOf(series) % SERIES_COLORS.length],
+      color: seriesColor(data, series.indicator_id),
       value: formatTooltipValue(series.values[hoverIdx], series.unit, normalized),
     }));
   }, [data, hoverIdx, normalized, visibleSeries]);
@@ -63,6 +72,7 @@ export function CompareChart({
   useEffect(() => {
     if (!hostRef.current || !data || visibleSeries.length === 0) return;
 
+    const host = hostRef.current;
     const useDates = data.dates.length > 0;
     const xs = useDates ? data.dates.map(toUnixDay) : data.labels.map((_, i) => i);
     initialXRef.current = { min: xs[0], max: xs[xs.length - 1] };
@@ -71,7 +81,7 @@ export function CompareChart({
       {},
       ...visibleSeries.map((s) => ({
         label: s.name_ru,
-        stroke: SERIES_COLORS[data.series.indexOf(s) % SERIES_COLORS.length],
+        stroke: seriesColor(data, s.indicator_id),
         width: 2,
         spanGaps: true,
       })),
@@ -82,53 +92,62 @@ export function CompareChart({
       ...visibleSeries.map((s) => s.values.map((v) => (v === null ? null : v))),
     ];
 
-    const opts: Options = {
-      width: hostRef.current.clientWidth,
-      height: 380,
-      scales: { x: { time: useDates } },
-      series: seriesList,
-      legend: { show: false },
-      axes: [
-        useDates
-          ? { stroke: "#8b92a0", grid: { show: true, stroke: "rgba(228,231,236,0.8)" } }
-          : {
+    const ensureChart = () => {
+      const width = host.clientWidth;
+      if (width < 20) return;
+
+      if (chartRef.current) {
+        chartRef.current.setSize({ width, height: 360 });
+        return;
+      }
+
+      chartRef.current = new uPlot(
+        {
+          width,
+          height: 360,
+          scales: { x: { time: useDates } },
+          series: seriesList,
+          legend: { show: false },
+          axes: [
+            useDates
+              ? { stroke: "#8b92a0", grid: { show: true, stroke: "rgba(228,231,236,0.8)" } }
+              : {
+                  stroke: "#8b92a0",
+                  grid: { show: true, stroke: "rgba(228,231,236,0.8)" },
+                  values: (_u, vals) => vals.map((v) => data.labels[Number(v)] || ""),
+                },
+            {
               stroke: "#8b92a0",
               grid: { show: true, stroke: "rgba(228,231,236,0.8)" },
-              values: (_u, vals) => vals.map((v) => data.labels[Number(v)] || ""),
+              values: (_u, vals) => vals.map((v) => formatAxisValue(Number(v), normalized)),
             },
-        {
-          stroke: "#8b92a0",
-          grid: { show: true, stroke: "rgba(228,231,236,0.8)" },
-          values: (_u, vals) => vals.map((v) => formatAxisValue(Number(v), normalized)),
-        },
-      ],
-      cursor: {
-        show: true,
-        x: true,
-        y: false,
-        points: { show: false },
-        drag: { setScale: true, x: true, y: false },
-      },
-      hooks: {
-        setCursor: [
-          (u) => {
-            setHoverIdx(u.cursor.idx ?? null);
+          ],
+          cursor: {
+            show: true,
+            x: true,
+            y: false,
+            points: { show: false },
+            drag: { setScale: true, x: true, y: false },
           },
-        ],
-      },
+          hooks: {
+            setCursor: [
+              (u) => {
+                setHoverIdx(u.cursor.idx ?? null);
+              },
+            ],
+          },
+        },
+        seriesData,
+        host,
+      );
     };
 
-    chartRef.current?.destroy();
-    chartRef.current = new uPlot(opts, seriesData, hostRef.current);
+    ensureChart();
+    const observer = new ResizeObserver(ensureChart);
+    observer.observe(host);
 
-    const onResize = () => {
-      if (chartRef.current && hostRef.current) {
-        chartRef.current.setSize({ width: hostRef.current.clientWidth, height: 380 });
-      }
-    };
-    window.addEventListener("resize", onResize);
     return () => {
-      window.removeEventListener("resize", onResize);
+      observer.disconnect();
       chartRef.current?.destroy();
       chartRef.current = null;
     };
@@ -137,48 +156,64 @@ export function CompareChart({
   useEffect(() => {
     if (!brushRef.current || !data || visibleSeries.length === 0 || xsLength(data) < 8) return;
 
+    const brushHost = brushRef.current;
     const useDates = data.dates.length > 0;
     const xs = useDates ? data.dates.map(toUnixDay) : data.labels.map((_, i) => i);
     const first = visibleSeries[0];
     const ys = first.values.map((v) => (v === null ? null : v));
+    const stroke = seriesColor(data, first.indicator_id);
 
-    brushChartRef.current?.destroy();
-    brushChartRef.current = new uPlot(
-      {
-        width: brushRef.current.clientWidth,
-        height: 48,
-        scales: { x: { time: useDates } },
-        legend: { show: false },
-        series: [{}, { stroke: SERIES_COLORS[data.series.indexOf(first) % SERIES_COLORS.length], width: 1, points: { show: false } }],
-        axes: [{ show: false }, { show: false }],
-        cursor: { show: true, x: true, y: false, points: { show: false }, drag: { setScale: true, x: true, y: false } },
-        hooks: {
-          setScale: [
-            (u, scaleKey) => {
-              if (scaleKey !== "x" || !chartRef.current) return;
-              const { min, max } = u.scales.x;
-              if (min == null || max == null) return;
-              chartRef.current.setScale("x", { min, max });
-            },
-          ],
+    const buildBrush = (width: number) => {
+      brushChartRef.current?.destroy();
+      brushChartRef.current = new uPlot(
+        {
+          width,
+          height: 56,
+          scales: { x: { time: useDates } },
+          legend: { show: false },
+          series: [{}, { stroke, width: 1, points: { show: false } }],
+          axes: [{ show: false }, { show: false }],
+          cursor: { show: true, x: true, y: false, points: { show: false }, drag: { setScale: true, x: true, y: false } },
+          hooks: {
+            setScale: [
+              (u, scaleKey) => {
+                if (scaleKey !== "x" || !chartRef.current) return;
+                const { min, max } = u.scales.x;
+                if (min == null || max == null) return;
+                chartRef.current.setScale("x", { min, max });
+              },
+            ],
+          },
         },
-      },
-      [xs, ys],
-      brushRef.current,
-    );
-
-    const onResize = () => {
-      if (brushChartRef.current && brushRef.current) {
-        brushChartRef.current.setSize({ width: brushRef.current.clientWidth, height: 48 });
-      }
+        [xs, ys],
+        brushHost,
+      );
     };
-    window.addEventListener("resize", onResize);
+
+    const syncBrush = () => {
+      const width = brushHost.clientWidth;
+      if (width < 20) return;
+      if (!brushChartRef.current) buildBrush(width);
+      else brushChartRef.current.setSize({ width, height: 56 });
+    };
+
+    buildBrush(Math.max(brushHost.clientWidth, 20));
+    const observer = new ResizeObserver(syncBrush);
+    observer.observe(brushHost);
+    window.addEventListener("resize", syncBrush);
+
     return () => {
-      window.removeEventListener("resize", onResize);
+      observer.disconnect();
+      window.removeEventListener("resize", syncBrush);
       brushChartRef.current?.destroy();
       brushChartRef.current = null;
     };
   }, [data, visibleSeries]);
+
+  useEffect(() => {
+    if (!chartRef.current || !initialXRef.current) return;
+    chartRef.current.setScale("x", initialXRef.current);
+  }, [resetToken]);
 
   if (!data || data.series.length === 0) {
     return <div className="empty-chart">Нет данных для сравнения</div>;
@@ -192,11 +227,11 @@ export function CompareChart({
     <div className="chart-stack">
       <div className="chart-tooltip-row">
         {hoverRows.length > 0 && hoverDate ? (
-          <div className="compare-tooltip">
+          <div className="chart-tooltip">
             <strong>{hoverDate}</strong>
             {hoverRows.map((row) => (
-              <span key={row.name} className="compare-tooltip-item">
-                <span className="compare-tooltip-dot" style={{ background: row.color }} />
+              <span key={row.name} className="chart-tooltip-item">
+                <span className="chart-tooltip-dot" style={{ background: row.color }} />
                 {row.name}: {row.value}
               </span>
             ))}
@@ -211,13 +246,14 @@ export function CompareChart({
             if (chartRef.current && initialXRef.current) {
               chartRef.current.setScale("x", initialXRef.current);
             }
+            onResetZoom?.();
           }}
         >
           Сбросить масштаб
         </button>
       </div>
-      <div className="compare-chart-host" ref={hostRef} />
-      {xsLength(data) >= 8 ? <div className="compare-brush-host" ref={brushRef} /> : null}
+      <div className="indicator-chart-host" ref={hostRef} />
+      {xsLength(data) >= 8 ? <div className="indicator-brush-host" ref={brushRef} /> : null}
       {data.axis_note ? <p className="axis-note">{data.axis_note}</p> : null}
     </div>
   );

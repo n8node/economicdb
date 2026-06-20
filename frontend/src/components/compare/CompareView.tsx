@@ -28,6 +28,7 @@ export function CompareView() {
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [data, setData] = useState<CompareSeriesResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resetToken, setResetToken] = useState(0);
 
   const loadSeries = useCallback(
     async (ids: string[]) => {
@@ -142,6 +143,113 @@ export function CompareView() {
       <p className="compare-summary">{summaryText}</p>
 
       <div className="compare-layout">
+        <div className="compare-main">
+          {data?.unit_warning && (
+            <div className="warning-banner">
+              <div className="wb-left">
+                <i className="ti ti-alert-triangle" />
+                На одной оси смешаны разные единицы. Рекомендуем режим «Индекс (100)».
+              </div>
+              <button type="button" className="btn warning-action" onClick={() => setNormalize("index")}>
+                Переключить
+              </button>
+            </div>
+          )}
+
+          <section className="chart-card">
+            <div className="chart-toolbar">
+              <div className="period-bar">
+                {PERIODS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`period-btn ${period === key ? "active" : ""}`}
+                    onClick={() => setPeriod(key)}
+                  >
+                    {key === "MAX" ? "Макс." : key}
+                  </button>
+                ))}
+              </div>
+              <select
+                className="select-sort"
+                value={normalize}
+                onChange={(e) => setNormalize(e.target.value as typeof normalize)}
+              >
+                <option value="absolute">Абсолютные</option>
+                <option value="index">Индекс (100)</option>
+                <option value="change">Изменение %</option>
+              </select>
+            </div>
+
+            {loading ? (
+              <p className="meta">Загрузка графика…</p>
+            ) : (
+              <CompareChart
+                data={data}
+                hiddenIds={hiddenIds}
+                normalize={normalize}
+                resetToken={resetToken}
+                onResetZoom={() => setResetToken((v) => v + 1)}
+              />
+            )}
+          </section>
+
+          {data && data.series.length > 0 && (
+            <section className="table-card">
+              <p className="table-section-title">Сводка за период</p>
+              <div className="table-scroll">
+                <table className="data-table compare-table">
+                  <thead>
+                    <tr>
+                      <th>Показатель</th>
+                      <th>Страна</th>
+                      <th className="num">Текущее</th>
+                      <th className="num">Min</th>
+                      <th className="num">Max</th>
+                      <th className="num">Avg</th>
+                      <th className="num">Δ периода</th>
+                      <th>Источник</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.series.map((s, idx) => (
+                      <tr key={s.indicator_id} className={hiddenIds.has(s.indicator_id) ? "muted-row" : undefined}>
+                        <td>
+                          <div className="series-cell">
+                            <span
+                              className="series-cell-dot"
+                              style={{ background: SERIES_COLORS[idx % SERIES_COLORS.length] }}
+                            />
+                            {s.name_ru}
+                          </div>
+                        </td>
+                        <td>
+                          <span className="country-flag">{s.country.toUpperCase()}</span>
+                        </td>
+                        <td className="num">{s.last_value ?? "—"}</td>
+                        <td className="num">{s.stats.min}</td>
+                        <td className="num">{s.stats.max}</td>
+                        <td className="num">{s.stats.avg}</td>
+                        <td className="num">
+                          <span className={`delta-badge ${s.stats.change_direction}`}>
+                            <i
+                              className={`ti ${DELTA_ICON[s.stats.change_direction as keyof typeof DELTA_ICON] || "ti-minus"}`}
+                            />
+                            {s.stats.change}
+                          </span>
+                        </td>
+                        <td className="source-cell">
+                          <SourceTag source={s.source} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </div>
+
         <aside className="series-panel card">
           <div className="series-panel-head card-pad">
             <p className="panel-title">Серии ({indicatorIds.length}/6)</p>
@@ -205,109 +313,6 @@ export function CompareView() {
             </Link>
           </div>
         </aside>
-
-        <div className="chart-panel">
-          <div className="chart-toolbar card card-pad">
-            <div className="toolbar-group">
-              <div className="period-bar">
-                {PERIODS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`period-btn ${period === key ? "active" : ""}`}
-                    onClick={() => setPeriod(key)}
-                  >
-                    {key === "MAX" ? "Макс." : key}
-                  </button>
-                ))}
-              </div>
-              <select
-                className="select-sort"
-                value={normalize}
-                onChange={(e) => setNormalize(e.target.value as typeof normalize)}
-              >
-                <option value="absolute">Абсолютные</option>
-                <option value="index">Индекс (100)</option>
-                <option value="change">Изменение %</option>
-              </select>
-            </div>
-          </div>
-
-          {data?.unit_warning && (
-            <div className="warning-banner">
-              <div className="wb-left">
-                <i className="ti ti-alert-triangle" />
-                На одной оси смешаны разные единицы. Рекомендуем режим «Индекс (100)».
-              </div>
-              <button type="button" className="btn warning-action" onClick={() => setNormalize("index")}>
-                Переключить
-              </button>
-            </div>
-          )}
-
-          <div className="card card-pad chart-card">
-            {loading ? (
-              <p className="meta">Загрузка графика…</p>
-            ) : (
-              <CompareChart data={data} hiddenIds={hiddenIds} normalize={normalize} />
-            )}
-          </div>
-
-          {data && data.series.length > 0 && (
-            <div className="table-card">
-              <p className="table-section-title">Сводка за период</p>
-              <div className="table-scroll">
-                <table className="data-table compare-table">
-                  <thead>
-                    <tr>
-                      <th>Показатель</th>
-                      <th>Страна</th>
-                      <th className="num">Текущее</th>
-                      <th className="num">Min</th>
-                      <th className="num">Max</th>
-                      <th className="num">Avg</th>
-                      <th className="num">Δ периода</th>
-                      <th>Источник</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.series.map((s, idx) => (
-                      <tr key={s.indicator_id} className={hiddenIds.has(s.indicator_id) ? "muted-row" : undefined}>
-                        <td>
-                          <div className="series-cell">
-                            <span
-                              className="series-cell-dot"
-                              style={{ background: SERIES_COLORS[idx % SERIES_COLORS.length] }}
-                            />
-                            {s.name_ru}
-                          </div>
-                        </td>
-                        <td>
-                          <span className="country-flag">{s.country.toUpperCase()}</span>
-                        </td>
-                        <td className="num">{s.last_value ?? "—"}</td>
-                        <td className="num">{s.stats.min}</td>
-                        <td className="num">{s.stats.max}</td>
-                        <td className="num">{s.stats.avg}</td>
-                        <td className="num">
-                          <span className={`delta-badge ${s.stats.change_direction}`}>
-                            <i
-                              className={`ti ${DELTA_ICON[s.stats.change_direction as keyof typeof DELTA_ICON] || "ti-minus"}`}
-                            />
-                            {s.stats.change}
-                          </span>
-                        </td>
-                        <td className="source-cell">
-                          <SourceTag source={s.source} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

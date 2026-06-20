@@ -36,18 +36,6 @@
 .indicator-detail-page .period-btn.active{
   background:var(--primary-50); color:var(--primary-700); border-color:var(--primary-100);
 }
-.indicator-detail-page .chart-stack{ width:100%; }
-.indicator-detail-page .chart-tooltip-row{
-  display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; min-height:32px;
-}
-.indicator-detail-page .chart-tooltip{
-  display:flex; align-items:center; gap:12px; font-size:13px; font-family:var(--font-mono);
-}
-.indicator-detail-page .chart-tooltip .up{ color:var(--positive-text); }
-.indicator-detail-page .chart-tooltip .down{ color:var(--negative-text); }
-.indicator-detail-page .chart-reset-btn{ font-size:12px; padding:5px 10px; }
-.indicator-detail-page .indicator-chart-host{ width:100%; min-height:320px; }
-.indicator-detail-page .indicator-brush-host{ width:100%; margin-top:8px; opacity:.85; }
 .indicator-detail-page .stats-grid{
   display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:16px;
 }

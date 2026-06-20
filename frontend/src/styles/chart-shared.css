@@ -1,0 +1,39 @@
+.chart-card{
+  background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card); padding:18px 20px;
+}
+.chart-toolbar{
+  display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;
+}
+.chart-toolbar .period-bar{ display:flex; gap:8px; flex-wrap:wrap; }
+.chart-toolbar .period-btn{
+  border:1px solid var(--border-default); background:var(--bg-surface); color:var(--text-secondary);
+  border-radius:999px; padding:6px 14px; font-size:13px; cursor:pointer;
+}
+.chart-toolbar .period-btn.active{
+  background:var(--primary-50); color:var(--primary-700); border-color:var(--primary-100);
+}
+.chart-toolbar .select-sort{
+  border:1px solid var(--border-default); border-radius:var(--radius-md);
+  padding:7px 11px; background:var(--bg-surface); font-size:13px;
+}
+.chart-stack{ width:100%; }
+.chart-tooltip-row{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+  margin-bottom:10px; min-height:32px;
+}
+.chart-tooltip{
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px;
+  font-size:13px; font-family:var(--font-mono);
+}
+.chart-tooltip .up{ color:var(--positive-text); }
+.chart-tooltip .down{ color:var(--negative-text); }
+.chart-tooltip-item{ display:inline-flex; align-items:center; gap:6px; }
+.chart-tooltip-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.chart-reset-btn{ font-size:12px; padding:5px 10px; flex-shrink:0; }
+.indicator-chart-host{ width:100%; min-height:320px; }
+.indicator-brush-host{ width:100%; margin-top:8px; opacity:.85; }
+.empty-chart{
+  min-height:280px; display:flex; align-items:center; justify-content:center; color:var(--text-tertiary);
+}
+.u-legend{ display:none !important; }

@@ -1,3 +1,4 @@
+import "@/styles/chart-shared.css";
 import "@/styles/indicator-detail.css";
 import { IndicatorDetailView } from "@/components/indicators/IndicatorDetailView";
 
