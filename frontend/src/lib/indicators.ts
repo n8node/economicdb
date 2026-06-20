@@ -206,6 +206,10 @@ export const FREQ_LABELS: Record<string, string> = {
 export const FAVORITES_KEY = "macro_favorites";
 export const COMPARE_KEY = "macro_compare_ids";
 
+export function compareActionLabel(compareIds: string[]): string {
+  return compareIds.length > 0 ? "Добавить к сравнению" : "Сравнить";
+}
+
 export function loadIds(key: string): string[] {
   if (typeof window === "undefined") return [];
   try {

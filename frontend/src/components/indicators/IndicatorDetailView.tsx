@@ -16,6 +16,7 @@ import {
   fetchIndicatorRelated,
   fetchIndicatorSeries,
   fetchIndicatorStats,
+  compareActionLabel,
   loadIds,
   saveIds,
   toggleId,
@@ -82,12 +83,14 @@ export function IndicatorDetailView({ id }: { id: string }) {
   const [seriesLoading, setSeriesLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [resetToken, setResetToken] = useState(0);
 
   useEffect(() => {
     setFavoriteIds(loadIds(FAVORITES_KEY));
+    setCompareIds(loadIds(COMPARE_KEY));
     fetchFacetLabels().then(setLabels).catch(() => undefined);
   }, []);
 
@@ -161,8 +164,11 @@ export function IndicatorDetailView({ id }: { id: string }) {
       return;
     }
     saveIds(COMPARE_KEY, [...current, indicator.id]);
+    setCompareIds([...current, indicator.id]);
     setMessage("Добавлено в сравнение");
   };
+
+  const compareLabel = compareActionLabel(compareIds);
 
   if (loading) {
     return (
@@ -228,7 +234,7 @@ export function IndicatorDetailView({ id }: { id: string }) {
               <i className={`ti ${favoriteIds.includes(indicator.id) ? "ti-star-filled" : "ti-star"}`} /> Избранное
             </button>
             <button type="button" className="btn" onClick={addToCompare}>
-              <i className="ti ti-plus" /> В сравнение
+              <i className="ti ti-plus" /> {compareLabel}
             </button>
             <button
               type="button"

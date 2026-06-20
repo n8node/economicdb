@@ -15,6 +15,7 @@ import {
   fetchIndicators,
   loadIds,
   saveIds,
+  compareActionLabel,
   toggleId,
   type FacetLabels,
   type IndicatorFacets,
@@ -74,10 +75,12 @@ export function IndicatorsView() {
   const [applied, setApplied] = useState<DraftFilters>({ country: [], category: [], frequency: [], source: [] });
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
 
   useEffect(() => {
     setFavoriteIds(loadIds(FAVORITES_KEY));
+    setCompareIds(loadIds(COMPARE_KEY));
     Promise.all([fetchIndicatorFacets(), fetchFacetLabels()]).then(([f, l]) => {
       setFacets(f);
       setLabels(l);
@@ -169,7 +172,9 @@ export function IndicatorsView() {
   const addToCompare = (id: string) => {
     const current = loadIds(COMPARE_KEY);
     if (current.includes(id) || current.length >= MAX_COMPARE_SERIES) return;
-    saveIds(COMPARE_KEY, [...current, id]);
+    const next = [...current, id];
+    saveIds(COMPARE_KEY, next);
+    setCompareIds(next);
   };
 
   const toggleSelect = (id: string) => {
@@ -184,8 +189,11 @@ export function IndicatorsView() {
     const current = loadIds(COMPARE_KEY);
     const merged = [...new Set([...current, ...selected])].slice(0, MAX_COMPARE_SERIES);
     saveIds(COMPARE_KEY, merged);
+    setCompareIds(merged);
     window.location.href = "/app/compare";
   };
+
+  const compareLabel = compareActionLabel(compareIds);
 
   const filterGroups = useMemo<FilterGroupConfig[]>(() => {
     if (!facets) return [];
@@ -352,7 +360,7 @@ export function IndicatorsView() {
             <div className="bulk-bar">
               <span>Выбрано: {selected.length}</span>
               <button type="button" className="btn primary" onClick={bulkCompare}>
-                Сравнить
+                {compareLabel}
               </button>
               <button type="button" className="btn" onClick={() => setSelected([])}>
                 Отмена
@@ -426,7 +434,13 @@ export function IndicatorsView() {
                         </button>
                       </td>
                       <td>
-                        <button type="button" className="row-icon-btn" onClick={() => addToCompare(row.id)} aria-label="Сравнение">
+                        <button
+                          type="button"
+                          className="row-icon-btn"
+                          onClick={() => addToCompare(row.id)}
+                          aria-label={compareLabel}
+                          title={compareLabel}
+                        >
                           <i className="ti ti-plus" />
                         </button>
                       </td>
@@ -458,7 +472,7 @@ export function IndicatorsView() {
                     <MetaTags country={row.country} source={row.source} />
                   </div>
                   <button type="button" className="btn" onClick={() => addToCompare(row.id)}>
-                    В сравнение
+                    {compareLabel}
                   </button>
                 </div>
               ))}
