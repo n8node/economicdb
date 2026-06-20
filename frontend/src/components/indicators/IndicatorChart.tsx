@@ -75,6 +75,7 @@ export function IndicatorChart({
       height: 360,
       scales: { x: { time: true } },
       series,
+      legend: { show: false },
       axes: [
         { stroke: "#8b92a0", grid: { show: true, stroke: "rgba(228,231,236,0.8)" } },
         {

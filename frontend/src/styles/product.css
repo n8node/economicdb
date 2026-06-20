@@ -413,6 +413,12 @@ button{ font-family: inherit; cursor: pointer; }
   gap: 6px;
   flex-wrap: wrap;
 }
+.meta-tags-compact{ gap: 4px; }
+.meta-tags-compact .country-flag,
+.meta-tags-compact .source-tag{
+  font-size: 10px;
+  padding: 2px 6px;
+}
 .country-flag{
   display: inline-flex;
   align-items: center;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MetaTags } from "@/components/ui/MetaTags";
+import { MetaTags, SourceTag } from "@/components/ui/MetaTags";
 import { CompareChart } from "./CompareChart";
 import { COMPARE_KEY, loadIds, saveIds } from "@/lib/indicators";
 import {
@@ -149,37 +149,43 @@ export function CompareView() {
           <div className="series-list">
             {data?.series.map((s, idx) => {
               const hidden = hiddenIds.has(s.indicator_id);
+              const color = SERIES_COLORS[idx % SERIES_COLORS.length];
               return (
-                <div key={s.indicator_id} className={`series-row ${hidden ? "hidden-series" : ""}`}>
-                  <span
-                    className="series-dot"
-                    style={{ background: SERIES_COLORS[idx % SERIES_COLORS.length] }}
-                  />
-                  <div className="series-info">
-                    <span className="series-name" title={s.name_ru}>
-                      {s.name_ru}
-                    </span>
-                    <MetaTags country={s.country} source={s.source} />
+                <div
+                  key={s.indicator_id}
+                  className={`series-row ${hidden ? "hidden-series" : ""}`}
+                  style={{ ["--series-color" as string]: color }}
+                >
+                  <span className="series-dot" style={{ background: color }} />
+                  <div className="series-body">
+                    <div className="series-title-row">
+                      <span className="series-name" title={s.name_ru}>
+                        {s.name_ru}
+                      </span>
+                      <span className="series-value">{s.last_value ?? "—"}</span>
+                    </div>
+                    <MetaTags country={s.country} source={s.source} compact />
                   </div>
-                  <span className="series-value">{s.last_value ?? "—"}</span>
-                  <div className="series-icons">
+                  <div className="series-actions">
                     <button
                       type="button"
-                      className={`series-icon-btn ${hidden ? "off" : ""}`}
+                      className={`series-action ${hidden ? "is-off" : ""}`}
                       onClick={() => toggleVisibility(s.indicator_id)}
                       title={hidden ? "Показать на графике" : "Скрыть на графике"}
                       aria-label={hidden ? "Показать на графике" : "Скрыть на графике"}
                     >
                       <i className={`ti ${hidden ? "ti-eye-off" : "ti-eye"}`} />
+                      <span>{hidden ? "Показать" : "Скрыть"}</span>
                     </button>
                     <button
                       type="button"
-                      className="series-icon-btn danger"
+                      className="series-action danger"
                       onClick={() => removeSeries(s.indicator_id)}
                       title="Удалить из сравнения"
                       aria-label="Удалить из сравнения"
                     >
-                      <i className="ti ti-x" />
+                      <i className="ti ti-trash" />
+                      <span>Удалить</span>
                     </button>
                   </div>
                 </div>
@@ -192,7 +198,7 @@ export function CompareView() {
           <div className="series-footer card-pad">
             <p className="series-hint">
               <i className="ti ti-info-circle" />
-              Перетаскивание на графике — zoom по оси X. Скрытые серии остаются в таблице.
+              На графике потяните мышью для zoom. Скрытые серии остаются в таблице.
             </p>
             <Link href="/app/indicators" className="catalog-link">
               <i className="ti ti-plus" /> Добавить из каталога
@@ -248,29 +254,9 @@ export function CompareView() {
           </div>
 
           {data && data.series.length > 0 && (
-            <>
-              <div className="custom-legend card card-pad">
-                {data.series.map((s, idx) => {
-                  const hidden = hiddenIds.has(s.indicator_id);
-                  return (
-                    <button
-                      key={s.indicator_id}
-                      type="button"
-                      className={`legend-item ${hidden ? "muted" : ""}`}
-                      onClick={() => toggleVisibility(s.indicator_id)}
-                    >
-                      <span
-                        className="legend-swatch"
-                        style={{ background: SERIES_COLORS[idx % SERIES_COLORS.length] }}
-                      />
-                      {s.name_ru} ({s.country.toUpperCase()})
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="table-card">
-                <p className="table-section-title">Сводка за период</p>
+            <div className="table-card">
+              <p className="table-section-title">Сводка за период</p>
+              <div className="table-scroll">
                 <table className="data-table compare-table">
                   <thead>
                     <tr>
@@ -311,15 +297,15 @@ export function CompareView() {
                             {s.stats.change}
                           </span>
                         </td>
-                        <td>
-                          <MetaTags country={s.country} source={s.source} />
+                        <td className="source-cell">
+                          <SourceTag source={s.source} />
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

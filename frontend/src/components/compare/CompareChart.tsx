@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import uPlot, { type AlignedData, type Options, type Series } from "uplot";
 import "uplot/dist/uPlot.min.css";
-import { SERIES_COLORS, type CompareSeriesItem, type CompareSeriesResponse } from "@/lib/compare";
+import { SERIES_COLORS, type CompareSeriesResponse } from "@/lib/compare";
 
 function toUnixDay(isoDate: string): number {
   return Math.floor(new Date(`${isoDate.slice(0, 10)}T00:00:00Z`).getTime() / 1000);
@@ -87,6 +87,7 @@ export function CompareChart({
       height: 380,
       scales: { x: { time: useDates } },
       series: seriesList,
+      legend: { show: false },
       axes: [
         useDates
           ? { stroke: "#8b92a0", grid: { show: true, stroke: "rgba(228,231,236,0.8)" } }
@@ -105,6 +106,7 @@ export function CompareChart({
         show: true,
         x: true,
         y: false,
+        points: { show: false },
         drag: { setScale: true, x: true, y: false },
       },
       hooks: {
@@ -144,11 +146,12 @@ export function CompareChart({
     brushChartRef.current = new uPlot(
       {
         width: brushRef.current.clientWidth,
-        height: 56,
+        height: 48,
         scales: { x: { time: useDates } },
+        legend: { show: false },
         series: [{}, { stroke: SERIES_COLORS[data.series.indexOf(first) % SERIES_COLORS.length], width: 1, points: { show: false } }],
         axes: [{ show: false }, { show: false }],
-        cursor: { show: true, x: true, y: false, drag: { setScale: true, x: true, y: false } },
+        cursor: { show: true, x: true, y: false, points: { show: false }, drag: { setScale: true, x: true, y: false } },
         hooks: {
           setScale: [
             (u, scaleKey) => {
@@ -166,7 +169,7 @@ export function CompareChart({
 
     const onResize = () => {
       if (brushChartRef.current && brushRef.current) {
-        brushChartRef.current.setSize({ width: brushRef.current.clientWidth, height: 56 });
+        brushChartRef.current.setSize({ width: brushRef.current.clientWidth, height: 48 });
       }
     };
     window.addEventListener("resize", onResize);
