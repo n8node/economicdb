@@ -11,10 +11,10 @@ import {
   syncBrushSelect,
 } from "@/lib/uplotBrush";
 import { createYAxisSize } from "@/lib/uplotAxis";
+import { deferChartUpdate, needsChartRecreate, safeToUnixDay } from "@/lib/uplotSafe";
 
 function toUnixDay(value: string): number {
-  const text = value.slice(0, 10);
-  return Math.floor(new Date(`${text}T00:00:00Z`).getTime() / 1000);
+  return safeToUnixDay(value) ?? 0;
 }
 
 function formatAxisValue(value: number, normalized: boolean): string {
@@ -72,6 +72,7 @@ export function CompareChart({
   const initialXRef = useRef<{ min: number; max: number } | null>(null);
   const syncKeyRef = useRef(createBrushSyncKey(`compare-${Math.random().toString(36).slice(2, 10)}`));
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [chartError, setChartError] = useState<string | null>(null);
 
   const visibleSeries = useMemo(
     () => data?.series.filter((s) => !hiddenIds.has(s.indicator_id)) ?? [],
@@ -97,12 +98,24 @@ export function CompareChart({
   }, [data, hoverIdx]);
 
   useLayoutEffect(() => {
-    if (!hostRef.current || !data || visibleSeries.length === 0) return;
+    if (!hostRef.current || !data || visibleSeries.length === 0) {
+      chartRef.current?.destroy();
+      chartRef.current = null;
+      brushChartRef.current?.destroy();
+      brushChartRef.current = null;
+      return;
+    }
 
     const host = hostRef.current;
     const syncKey = syncKeyRef.current;
     const useDates = data.dates.length > 0;
     const xs = useDates ? data.dates.map(toUnixDay) : data.labels.map((_, i) => i);
+    if (!xs.length) {
+      setChartError("Нет данных для графика");
+      return;
+    }
+
+    setChartError(null);
     const fullRange = { min: xs[0], max: xs[xs.length - 1] };
     initialXRef.current = fullRange;
 
@@ -145,85 +158,105 @@ export function CompareChart({
     };
 
     const mountCharts = () => {
-      const mainWidth = resolveHostWidth(host, null);
-      if (mainWidth < 20) return;
+      try {
+        const mainWidth = resolveHostWidth(host, null);
+        if (mainWidth < 20) return;
 
-      if (!chartRef.current) {
-        chartRef.current = new uPlot(
-          {
-            width: mainWidth,
-            height: 360,
-            scales: { x: { time: useDates }, y: { auto: true } },
-            series: seriesList,
-            legend: { show: false },
-            axes: [
-              useDates
-                ? { stroke: "#8b92a0", grid: { show: true, stroke: "rgba(228,231,236,0.8)" } }
-                : {
-                    stroke: "#8b92a0",
-                    grid: { show: true, stroke: "rgba(228,231,236,0.8)" },
-                    values: (_u, vals) => vals.map((v) => data.labels[Number(v)] || ""),
+        if (needsChartRecreate(chartRef.current, visibleSeries.length)) {
+          chartRef.current?.destroy();
+          chartRef.current = null;
+        }
+
+        if (!chartRef.current) {
+          chartRef.current = new uPlot(
+            {
+              width: mainWidth,
+              height: 360,
+              scales: { x: { time: useDates }, y: { auto: true } },
+              series: seriesList,
+              legend: { show: false },
+              axes: [
+                useDates
+                  ? { stroke: "#8b92a0", grid: { show: true, stroke: "rgba(228,231,236,0.8)" } }
+                  : {
+                      stroke: "#8b92a0",
+                      grid: { show: true, stroke: "rgba(228,231,236,0.8)" },
+                      values: (_u, vals) => vals.map((v) => data.labels[Number(v)] || ""),
+                    },
+                {
+                  stroke: "#8b92a0",
+                  grid: { show: true, stroke: "rgba(228,231,236,0.8)" },
+                  values: (_u, vals) => vals.map((v) => formatY(Number(v))),
+                  size: yAxisSize,
+                  gap: 8,
+                },
+              ],
+              cursor: mainChartSyncCursor(syncKey),
+              hooks: {
+                setCursor: [
+                  (u) => {
+                    const idx = u.cursor.idx ?? null;
+                    deferChartUpdate(() => setHoverIdx(idx));
                   },
-              {
-                stroke: "#8b92a0",
-                grid: { show: true, stroke: "rgba(228,231,236,0.8)" },
-                values: (_u, vals) => vals.map((v) => formatY(Number(v))),
-                size: yAxisSize,
-                gap: 8,
+                ],
+                setScale: [
+                  (u, scaleKey) => {
+                    if (scaleKey !== "x" || !brushChartRef.current) return;
+                    const { min, max } = u.scales.x;
+                    if (min == null || max == null) return;
+                    syncBrushSelect(brushChartRef.current, min, max);
+                  },
+                ],
               },
-            ],
-            cursor: mainChartSyncCursor(syncKey),
-            hooks: {
-              setCursor: [
-                (u) => {
-                  setHoverIdx(u.cursor.idx ?? null);
-                },
-              ],
-              setScale: [
-                (u, scaleKey) => {
-                  if (scaleKey !== "x" || !brushChartRef.current) return;
-                  const { min, max } = u.scales.x;
-                  if (min == null || max == null) return;
-                  syncBrushSelect(brushChartRef.current, min, max);
-                },
-              ],
             },
-          },
-          seriesData,
-          host,
-        );
-      } else {
-        chartRef.current.setSize({ width: mainWidth, height: 360 });
-        chartRef.current.setData(seriesData);
-      }
+            seriesData,
+            host,
+          );
+        } else {
+          chartRef.current.setSize({ width: mainWidth, height: 360 });
+          chartRef.current.setData(seriesData);
+        }
 
-      const brushHost = brushHostRef.current;
-      if (!showBrush || !brushHost) return;
+        const brushHost = brushHostRef.current;
+        if (!showBrush || !brushHost) return;
 
-      const brushWidth = resolveHostWidth(brushHost, host);
-      if (brushWidth < 20) return;
+        const brushWidth = resolveHostWidth(brushHost, host);
+        if (brushWidth < 20) return;
 
-      const mainX = chartRef.current.scales.x;
-      const selectRange =
-        mainX.min != null && mainX.max != null ? { min: mainX.min, max: mainX.max } : fullRange;
+        const mainX = chartRef.current.scales.x;
+        const selectRange =
+          mainX.min != null && mainX.max != null ? { min: mainX.min, max: mainX.max } : fullRange;
 
-      if (!brushChartRef.current) {
-        brushChartRef.current = new uPlot(
-          buildBrushOptions({
-            width: brushWidth,
-            syncKey,
-            useDates,
-            series: brushSeries,
-            formatX: (value) => formatBrushYear(value, useDates),
-            initialSelect: selectRange,
-          }),
-          seriesData,
-          brushHost,
-        );
-      } else {
-        brushChartRef.current.setSize({ width: brushWidth, height: 72 });
-        brushChartRef.current.setData(seriesData);
-        syncBrushSelect(brushChartRef.current, selectRange.min, selectRange.max);
+        if (needsChartRecreate(brushChartRef.current, visibleSeries.length)) {
+          brushChartRef.current?.destroy();
+          brushChartRef.current = null;
+        }
+
+        if (!brushChartRef.current) {
+          brushChartRef.current = new uPlot(
+            buildBrushOptions({
+              width: brushWidth,
+              syncKey,
+              useDates,
+              series: brushSeries,
+              formatX: (value) => formatBrushYear(value, useDates),
+              initialSelect: selectRange,
+            }),
+            seriesData,
+            brushHost,
+          );
+        } else {
+          brushChartRef.current.setSize({ width: brushWidth, height: 72 });
+          brushChartRef.current.setData(seriesData);
+          syncBrushSelect(brushChartRef.current, selectRange.min, selectRange.max);
+        }
+      } catch (error) {
+        console.error("[compare-chart]", error);
+        chartRef.current?.destroy();
+        chartRef.current = null;
+        brushChartRef.current?.destroy();
+        brushChartRef.current = null;
+        setChartError("Не удалось построить график");
       }
     };
 
@@ -256,6 +289,10 @@ export function CompareChart({
 
   if (visibleSeries.length === 0) {
     return <div className="empty-chart">Все серии скрыты — включите хотя бы одну</div>;
+  }
+
+  if (chartError) {
+    return <div className="empty-chart">{chartError}</div>;
   }
 
   return (

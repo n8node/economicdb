@@ -418,18 +418,22 @@ export function IndicatorDetailView({ id }: { id: string }) {
             </div>
             {stats ? (
               <>
-                <div className="meta-row">
-                  <span className="meta-key">Лучший</span>
-                  <span className="meta-val">
-                    {formatDate(stats.best.date)} · {formatStatValue(stats.best.value, unit, "absolute")}
-                  </span>
-                </div>
-                <div className="meta-row">
-                  <span className="meta-key">Худший</span>
-                  <span className="meta-val">
-                    {formatDate(stats.worst.date)} · {formatStatValue(stats.worst.value, unit, "absolute")}
-                  </span>
-                </div>
+                {stats.best ? (
+                  <div className="meta-row">
+                    <span className="meta-key">Лучший</span>
+                    <span className="meta-val">
+                      {formatDate(stats.best.date)} · {formatStatValue(stats.best.value, unit, "absolute")}
+                    </span>
+                  </div>
+                ) : null}
+                {stats.worst ? (
+                  <div className="meta-row">
+                    <span className="meta-key">Худший</span>
+                    <span className="meta-val">
+                      {formatDate(stats.worst.date)} · {formatStatValue(stats.worst.value, unit, "absolute")}
+                    </span>
+                  </div>
+                ) : null}
               </>
             ) : null}
             <p className="source-note">

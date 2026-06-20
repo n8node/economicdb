@@ -5,11 +5,17 @@ export function createBrushSyncKey(scope: string): string {
 }
 
 export function syncBrushSelect(brush: uPlot, xMin: number, xMax: number): void {
-  const left = brush.valToPos(xMin, "x");
-  const width = brush.valToPos(xMax, "x") - left;
-  const top = brush.bbox.top / devicePixelRatio;
-  const height = brush.bbox.height / devicePixelRatio;
-  brush.setSelect({ left, top, width, height }, false);
+  if (!Number.isFinite(xMin) || !Number.isFinite(xMax)) return;
+  try {
+    const left = brush.valToPos(xMin, "x");
+    const width = brush.valToPos(xMax, "x") - left;
+    if (!Number.isFinite(left) || !Number.isFinite(width)) return;
+    const top = brush.bbox.top / devicePixelRatio;
+    const height = brush.bbox.height / devicePixelRatio;
+    brush.setSelect({ left, top, width, height }, false);
+  } catch {
+    // Brush sync can fail while chart is resizing or data is updating.
+  }
 }
 
 export type BrushBuildParams = {

@@ -29,6 +29,7 @@ export function CompareView() {
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [data, setData] = useState<CompareSeriesResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [resetToken, setResetToken] = useState(0);
 
   const loadSeries = useCallback(
@@ -39,6 +40,7 @@ export function CompareView() {
         return;
       }
       setLoading(true);
+      setLoadError(null);
       try {
         const res = await fetchCompareSeries({
           indicator_ids: ids,
@@ -48,6 +50,9 @@ export function CompareView() {
         });
         setData(res);
         setHiddenIds(new Set());
+      } catch {
+        setData(null);
+        setLoadError("Не удалось загрузить данные сравнения. Проверьте backend и нажмите «Повторить».");
       } finally {
         setLoading(false);
       }
@@ -56,16 +61,18 @@ export function CompareView() {
   );
 
   useEffect(() => {
-    fetchComparePresets().then((p) => {
-      setPresets(p);
-      const stored = loadIds(COMPARE_KEY);
-      if (stored.length) {
-        setIndicatorIds(stored.slice(0, MAX_COMPARE_SERIES));
-      } else {
-        const rates = p.find((x) => x.key === "rates") || p[0];
-        if (rates) setIndicatorIds(rates.indicator_ids);
-      }
-    });
+    fetchComparePresets()
+      .then((p) => {
+        setPresets(p);
+        const stored = loadIds(COMPARE_KEY);
+        if (stored.length) {
+          setIndicatorIds(stored.slice(0, MAX_COMPARE_SERIES));
+        } else {
+          const rates = p.find((x) => x.key === "rates") || p[0];
+          if (rates) setIndicatorIds(rates.indicator_ids);
+        }
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -184,7 +191,14 @@ export function CompareView() {
               </select>
             </div>
 
-            {loading ? (
+            {loadError ? (
+              <div className="empty-chart">
+                <p>{loadError}</p>
+                <button type="button" className="btn primary" onClick={() => void loadSeries(indicatorIds)}>
+                  Повторить
+                </button>
+              </div>
+            ) : loading ? (
               <p className="meta">Загрузка графика…</p>
             ) : (
               <CompareChart
@@ -230,15 +244,15 @@ export function CompareView() {
                           <span className="country-flag">{s.country.toUpperCase()}</span>
                         </td>
                         <td className="num">{s.last_value ?? "—"}</td>
-                        <td className="num">{s.stats.min}</td>
-                        <td className="num">{s.stats.max}</td>
-                        <td className="num">{s.stats.avg}</td>
+                        <td className="num">{s.stats?.min ?? "—"}</td>
+                        <td className="num">{s.stats?.max ?? "—"}</td>
+                        <td className="num">{s.stats?.avg ?? "—"}</td>
                         <td className="num">
-                          <span className={`delta-badge ${s.stats.change_direction}`}>
+                          <span className={`delta-badge ${s.stats?.change_direction || "flat"}`}>
                             <i
-                              className={`ti ${DELTA_ICON[s.stats.change_direction as keyof typeof DELTA_ICON] || "ti-minus"}`}
+                              className={`ti ${DELTA_ICON[(s.stats?.change_direction as keyof typeof DELTA_ICON) || "flat"] || "ti-minus"}`}
                             />
-                            {s.stats.change}
+                            {s.stats?.change ?? "—"}
                           </span>
                         </td>
                         <td className="source-cell">
