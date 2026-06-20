@@ -215,6 +215,10 @@
   margin-bottom:12px; padding:8px 10px 4px;
   background:linear-gradient(180deg, rgba(27,117,97,.05), rgba(27,117,97,0));
   border:1px solid var(--border-subtle); border-radius:var(--radius-md);
+  overflow:hidden;
+}
+.indicator-row-preview .preview-chart .mini-spark-responsive{
+  display:block; width:100%; max-width:100%;
 }
 .indicator-row-preview .preview-kpi{
   display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;
