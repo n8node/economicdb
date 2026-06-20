@@ -3,22 +3,43 @@
 import { useEffect } from "react";
 
 const RELOAD_FLAG = "macro_chunk_reload";
+const RELOAD_COUNT_KEY = "macro_reload_count";
 const DEPLOY_ID_KEY = "macro_deploy_id";
 const CHECK_COOLDOWN_MS = 60_000;
+const MAX_RELOADS = 3;
 
 const CHUNK_ERROR =
   /Loading chunk|ChunkLoadError|Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i;
 
 function reloadOnce(reason: string) {
-  if (sessionStorage.getItem(RELOAD_FLAG)) return;
+  const count = Number(sessionStorage.getItem(RELOAD_COUNT_KEY) || "0");
+  if (count >= MAX_RELOADS) return;
+  sessionStorage.setItem(RELOAD_COUNT_KEY, String(count + 1));
   sessionStorage.setItem(RELOAD_FLAG, reason);
   const url = new URL(window.location.href);
   url.searchParams.set("_", Date.now().toString());
   window.location.replace(url.toString());
 }
 
-function readDeployIdFromDom(): string | null {
-  return document.querySelector('meta[name="deploy-id"]')?.getAttribute("content") ?? null;
+function isNextStaticScript(target: EventTarget | null): target is HTMLScriptElement {
+  return (
+    target instanceof HTMLScriptElement &&
+    typeof target.src === "string" &&
+    target.src.includes("/_next/static/")
+  );
+}
+
+async function fetchDeployId(signal: AbortSignal): Promise<string | null> {
+  const response = await fetch("/deploy-id", { cache: "no-store", signal });
+  if (!response.ok) return null;
+  const payload = (await response.json()) as { id?: string };
+  return payload.id ?? null;
+}
+
+function markDeploySynced(deployId: string) {
+  sessionStorage.setItem(DEPLOY_ID_KEY, deployId);
+  sessionStorage.removeItem(RELOAD_COUNT_KEY);
+  sessionStorage.removeItem(RELOAD_FLAG);
 }
 
 export function DeployCacheGuard() {
@@ -27,9 +48,8 @@ export function DeployCacheGuard() {
     let checking = false;
 
     const onError = (event: ErrorEvent) => {
-      const target = event.target;
-      if (target instanceof HTMLScriptElement || target instanceof HTMLLinkElement) {
-        reloadOnce("asset");
+      if (isNextStaticScript(event.target)) {
+        reloadOnce("chunk");
         return;
       }
       if (CHUNK_ERROR.test(event.message || "")) {
@@ -46,19 +66,7 @@ export function DeployCacheGuard() {
       }
     };
 
-    const deployId = readDeployIdFromDom();
-    if (deployId) {
-      const stored = sessionStorage.getItem(DEPLOY_ID_KEY);
-      if (stored && stored !== deployId) {
-        sessionStorage.setItem(DEPLOY_ID_KEY, deployId);
-        sessionStorage.removeItem(RELOAD_FLAG);
-        reloadOnce("deploy");
-        return;
-      }
-      sessionStorage.setItem(DEPLOY_ID_KEY, deployId);
-    }
-
-    const checkFreshDeployId = async () => {
+    const syncDeployId = async () => {
       const now = Date.now();
       if (checking || now - lastCheckAt < CHECK_COOLDOWN_MS) return;
       checking = true;
@@ -68,19 +76,17 @@ export function DeployCacheGuard() {
       const timeout = window.setTimeout(() => controller.abort(), 5000);
 
       try {
-        const response = await fetch("/deploy-id", {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (!response.ok) return;
-        const payload = (await response.json()) as { id?: string };
-        const remoteId = payload.id ?? null;
-        const localId = readDeployIdFromDom();
-        if (remoteId && localId && remoteId !== localId) {
+        const remoteId = await fetchDeployId(controller.signal);
+        if (!remoteId) return;
+
+        const stored = sessionStorage.getItem(DEPLOY_ID_KEY);
+        if (stored && stored !== remoteId) {
           sessionStorage.setItem(DEPLOY_ID_KEY, remoteId);
-          sessionStorage.removeItem(RELOAD_FLAG);
-          reloadOnce("deploy-remote");
+          reloadOnce("deploy");
+          return;
         }
+
+        markDeploySynced(remoteId);
       } catch {
         // ignore transient network errors
       } finally {
@@ -91,21 +97,20 @@ export function DeployCacheGuard() {
 
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
-        void checkFreshDeployId();
+        void syncDeployId();
       }
     };
+
+    void syncDeployId();
 
     window.addEventListener("error", onError, true);
     window.addEventListener("unhandledrejection", onRejection);
     document.addEventListener("visibilitychange", onVisibility);
 
-    const timer = window.setTimeout(() => sessionStorage.removeItem(RELOAD_FLAG), 8000);
-
     return () => {
       window.removeEventListener("error", onError, true);
       window.removeEventListener("unhandledrejection", onRejection);
       document.removeEventListener("visibilitychange", onVisibility);
-      window.clearTimeout(timer);
     };
   }, []);
 
