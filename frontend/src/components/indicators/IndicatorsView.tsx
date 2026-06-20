@@ -184,22 +184,29 @@ export function IndicatorsView() {
     options: Record<string, number>,
     labelMap?: Record<string, string>,
   ) => (
-    <details className="filter-section" open>
-      <summary>
-        {title} <i className="ti ti-chevron-down" />
-      </summary>
-      <div className="filter-options">
-        {Object.entries(options).map(([key, count]) => (
-          <div key={key} className="filter-row" onClick={() => toggleDraft(group, key)}>
-            <div className="filter-row-left">
-              <input type="checkbox" checked={(draft[group] as string[]).includes(key)} readOnly />
-              <label>{labelMap?.[key] || key.toUpperCase()}</label>
-            </div>
-            <span className="filter-count">{count}</span>
-          </div>
-        ))}
+    <div className="filter-group-row">
+      <span className="filter-group-label">{title}</span>
+      <div className="filter-group-options">
+        {Object.entries(options).map(([key, count]) => {
+          const checked = (draft[group] as string[]).includes(key);
+          const label = labelMap?.[key] || key.toUpperCase();
+          return (
+            <label key={key} className={`filter-pill ${checked ? "active" : ""}`}>
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggleDraft(group, key)}
+              />
+              <span className="filter-pill-box" aria-hidden="true">
+                <i className="ti ti-check" />
+              </span>
+              <span className="filter-pill-label">{label}</span>
+              <span className="filter-pill-count">{count}</span>
+            </label>
+          );
+        })}
       </div>
-    </details>
+    </div>
   );
 
   return (
@@ -235,33 +242,35 @@ export function IndicatorsView() {
         </div>
       )}
 
-      <div className="layout-grid">
-        <aside className="filters-card">
-          <div className="filters-head">
-            <p>Фильтры</p>
+      <section className="filters-bar">
+        <div className="filters-bar-head">
+          <div className="filters-bar-title">
+            <i className="ti ti-adjustments-horizontal" aria-hidden="true" />
+            <span>Фильтры</span>
+          </div>
+          <div className="filters-bar-actions">
+            <span className="filters-bar-meta">
+              Показано {items.length} из {total.toLocaleString("ru-RU")}
+            </span>
             <button type="button" className="chip-reset" onClick={resetFilters}>
               Сбросить
             </button>
-          </div>
-          <div className="filters-body">
-            {facets &&
-              renderFilterGroup("Регион", "country", facets.countries, labels?.countries)}
-            {facets &&
-              renderFilterGroup("Категория", "category", facets.categories, labels?.categories)}
-            {facets && renderFilterGroup("Частота", "frequency", facets.frequencies, FREQ_LABELS)}
-            {facets && renderFilterGroup("Источник", "source", facets.sources, SOURCE_LABELS)}
-          </div>
-          <div className="filters-footer">
-            <span>
-              Показано {items.length} из {total.toLocaleString("ru-RU")}
-            </span>
             <button type="button" className="btn primary" onClick={applyFilters}>
               Применить
             </button>
           </div>
-        </aside>
+        </div>
+        {facets && (
+          <div className="filters-bar-body">
+            {renderFilterGroup("Регион", "country", facets.countries, labels?.countries)}
+            {renderFilterGroup("Категория", "category", facets.categories, labels?.categories)}
+            {renderFilterGroup("Частота", "frequency", facets.frequencies, FREQ_LABELS)}
+            {renderFilterGroup("Источник", "source", facets.sources, SOURCE_LABELS)}
+          </div>
+        )}
+      </section>
 
-        <div className="results-col">
+      <div className="results-col">
           <div className="results-toolbar">
             <div className="toolbar-left">
               <div className="inline-search">
@@ -285,13 +294,16 @@ export function IndicatorsView() {
                 <option value="updated">По дате обновления</option>
                 <option value="country">По стране</option>
               </select>
-              <label className="check-fav">
+              <label className={`filter-pill filter-pill-compact ${favoritesOnly ? "active" : ""}`}>
                 <input
                   type="checkbox"
                   checked={favoritesOnly}
                   onChange={(e) => setFavoritesOnly(e.target.checked)}
                 />
-                Только избранное
+                <span className="filter-pill-box" aria-hidden="true">
+                  <i className="ti ti-check" />
+                </span>
+                <span className="filter-pill-label">Только избранное</span>
               </label>
             </div>
           </div>
@@ -439,7 +451,6 @@ export function IndicatorsView() {
               Открыть сравнение
             </Link>
           </div>
-        </div>
       </div>
     </div>
   );
