@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { MetaTags } from "@/components/ui/MetaTags";
 import { MiniSparkline } from "./MiniSparkline";
 import {
   COMPARE_KEY,
@@ -401,8 +402,7 @@ export function IndicatorsView() {
                   <DeltaBadge direction={row.delta_direction} value={row.last_change} />
                   <MiniSparkline values={row.sparkline} width={240} height={36} />
                   <div className="card-meta">
-                    <SourceTag source={row.source} />
-                    <span className="country-flag">{row.country.toUpperCase()}</span>
+                    <MetaTags country={row.country} source={row.source} />
                   </div>
                   <button type="button" className="btn" onClick={() => addToCompare(row.id)}>
                     В сравнение

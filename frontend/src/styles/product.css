@@ -404,16 +404,81 @@ button{ font-family: inherit; cursor: pointer; }
 }
 .star-btn.active{ color: #D89614; }
 .fav-value{ margin: 0 0 8px; font-size: 19px; font-weight: 600; font-family: var(--font-mono); }
-.source-tag{
-  display:inline-flex; align-items:center; gap:4px;
-  font-size: 10.5px; font-weight: 500;
-  padding: 2px 7px; border-radius: var(--radius-sm);
-  margin-top: 8px;
+
+/* Shared badges, meta rows, icon buttons */
+.meta-tags,
+.series-meta-row{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
+.country-flag{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.source-tag{
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+.fav-card .source-tag,
+.fav-card .meta-tags{ margin-top: 8px; }
 .source-tag.cbr{ background: var(--src-cbr-bg); color: var(--src-cbr-text); }
 .source-tag.fred{ background: var(--src-fred-bg); color: var(--src-fred-text); }
 .source-tag.rosstat{ background: var(--src-rosstat-bg); color: var(--src-rosstat-text); }
 .source-tag.oecd{ background: var(--src-oecd-bg); color: var(--src-oecd-text); }
+.source-tag.ecb{ background: var(--src-imf-bg); color: var(--src-imf-text); }
+.source-tag.eurostat{ background: var(--src-oecd-bg); color: var(--src-oecd-text); }
+.source-tag.moex{ background: var(--src-moex-bg); color: var(--src-moex-text); }
+.source-tag.imf{ background: var(--src-imf-bg); color: var(--src-imf-text); }
+.source-tag.world_bank{ background: var(--src-cbr-bg); color: var(--src-cbr-text); }
+.row-icon-btn,
+.series-icon-btn{
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  min-width: 28px;
+  min-height: 28px;
+  line-height: 1;
+}
+.row-icon-btn:hover,
+.series-icon-btn:hover{
+  background: var(--bg-muted);
+  color: var(--text-primary);
+}
+.row-icon-btn.danger:hover,
+.series-icon-btn.danger:hover{
+  background: var(--negative-bg);
+  color: var(--negative-text);
+}
+.row-icon-btn.star.active,
+.series-icon-btn.star.active{ color: #D89614; }
+.row-icon-btn.off,
+.series-icon-btn.off{ opacity: 0.45; }
 
 /* changes list */
 .change-row{

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { MetaTags } from "@/components/ui/MetaTags";
 import { IndicatorChart } from "./IndicatorChart";
 import {
   COMPARE_KEY,
@@ -243,11 +244,8 @@ export function IndicatorDetailView({ id }: { id: string }) {
         </div>
 
         <div className="detail-tags">
-          <span className="country-flag">{countryLabel}</span>
+          <MetaTags country={indicator.country} source={indicator.source} countryLabel={countryLabel} />
           <span className="freq-tag">{FREQ_LABELS[indicator.frequency] || indicator.frequency}</span>
-          <span className={`source-tag ${indicator.source}`}>
-            {SOURCE_LABELS[indicator.source] || indicator.source}
-          </span>
           <span className="meta">{categoryLabel}</span>
         </div>
 

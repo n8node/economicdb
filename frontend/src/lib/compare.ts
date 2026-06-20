@@ -65,3 +65,21 @@ export function periodToFrom(period: string): string | undefined {
   from.setDate(from.getDate() - days);
   return from.toISOString().slice(0, 10);
 }
+
+export function exportCompareCsv(data: CompareSeriesResponse) {
+  const headers = ["date", ...data.series.map((s) => s.name_ru.replace(/,/g, " "))];
+  const length = data.dates.length || data.labels.length;
+  const rows: string[] = [headers.join(",")];
+  for (let i = 0; i < length; i += 1) {
+    const date = data.dates[i] || data.labels[i] || String(i);
+    const values = data.series.map((s) => (s.values[i] == null ? "" : String(s.values[i])));
+    rows.push([date, ...values].join(","));
+  }
+  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "compare.csv";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
