@@ -116,7 +116,7 @@ def _find_children(parent: ET.Element, tag_name: str) -> list[ET.Element]:
 def parse_fedstat_sdmx_series(
     xml_text: str,
     *,
-    series_key: dict[str, str],
+    series_key: dict[str, str] | None = None,
     transform: str = "index_yoy",
     from_date: date = DEFAULT_FROM_DATE,
     to_date: date,
@@ -129,9 +129,10 @@ def parse_fedstat_sdmx_series(
     points: list[tuple[date, Decimal]] = []
     matched_series = 0
     for series_el in _iter_series(root):
-        key_el = _find_child(series_el, "SeriesKey")
-        if key_el is None or not _series_matches(key_el, series_key):
-            continue
+        if series_key is not None:
+            key_el = _find_child(series_el, "SeriesKey")
+            if key_el is None or not _series_matches(key_el, series_key):
+                continue
         matched_series += 1
 
         period_text = ""
@@ -172,6 +173,52 @@ def parse_fedstat_sdmx_series(
             to_date=to_date.isoformat(),
         )
         raise RosstatError("Не удалось извлечь ряд из fedstat SDMX", code="rosstat_parse_error")
+    return series
+
+
+async def fetch_fedstat_with_filters(
+    indicator_id: str,
+    *,
+    filters: dict[str, str | list[str]],
+    transform: str = "index_yoy",
+    from_date: date = DEFAULT_FROM_DATE,
+    to_date: date,
+) -> list[tuple[date, Decimal]]:
+    from app.integrations.rosstat.fedstat_apir import (
+        fetch_data_ids,
+        filter_data_ids,
+        post_data_ids_filtered,
+    )
+
+    data_ids = await fetch_data_ids(indicator_id)
+    chunks: list[list[tuple[date, Decimal]]] = []
+    for year in range(from_date.year, to_date.year + 1):
+        year_filters = {**filters, "Год": str(year)}
+        try:
+            filtered = filter_data_ids(data_ids, year_filters)
+            xml_text = await post_data_ids_filtered(filtered, indicator_id=indicator_id)
+            year_from = max(from_date, date(year, 1, 1))
+            year_to = min(to_date, date(year, 12, 31))
+            chunk = parse_fedstat_sdmx_series(
+                xml_text,
+                series_key=None,
+                transform=transform,
+                from_date=year_from,
+                to_date=year_to,
+            )
+            if chunk:
+                chunks.append(chunk)
+        except RosstatError as exc:
+            logger.warning(
+                "fedstat_filter_year_failed",
+                indicator_id=indicator_id,
+                year=year,
+                error=exc.message,
+            )
+
+    series = merge_series(chunks)
+    if not series:
+        raise RosstatError("Не удалось извлечь ряд fedstat через POST", code="rosstat_parse_error")
     return series
 
 
