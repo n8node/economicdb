@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MetaTags } from "@/components/ui/MetaTags";
 import { MiniSparkline } from "./MiniSparkline";
 import { MAX_COMPARE_SERIES } from "@/lib/compare";
@@ -41,14 +41,6 @@ type FilterGroupConfig = {
   labelMap?: Record<string, string>;
 };
 
-const FILTER_UI_MODES = [
-  { id: "pills", label: "A · Чипы", hint: "Все опции видны сразу, быстрый мультивыбор" },
-  { id: "dropdown", label: "B · Выпадающие", hint: "Компактно, раскрываете только нужную группу" },
-  { id: "panel", label: "C · Панель", hint: "Рекомендуем: одна кнопка, поиск, все группы сразу" },
-] as const;
-
-type FilterUiMode = (typeof FILTER_UI_MODES)[number]["id"];
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("ru-RU");
 }
@@ -83,9 +75,6 @@ export function IndicatorsView() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [panelSearch, setPanelSearch] = useState("");
-  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setFavoriteIds(loadIds(FAVORITES_KEY));
@@ -94,22 +83,6 @@ export function IndicatorsView() {
       setLabels(l);
     });
   }, []);
-
-  useEffect(() => {
-    if (!panelOpen) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!panelRef.current?.contains(event.target as Node)) setPanelOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPanelOpen(false);
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [panelOpen]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -224,8 +197,6 @@ export function IndicatorsView() {
     ];
   }, [facets, labels]);
 
-  const draftSelectedTotal = draft.country.length + draft.category.length + draft.frequency.length + draft.source.length;
-
   const optionLabel = (group: FilterGroupConfig, key: string) =>
     group.labelMap?.[key] || key.toUpperCase();
 
@@ -234,14 +205,6 @@ export function IndicatorsView() {
   const dropdownSummary = (title: string, group: FilterGroupKey) => {
     const count = groupSelectedCount(group);
     return count > 0 ? `${title} · ${count}` : title;
-  };
-
-  const filterOptionsForGroup = (group: FilterGroupConfig, withSearch = false) => {
-    const needle = withSearch ? panelSearch.trim().toLowerCase() : "";
-    return Object.entries(group.options).filter(([key]) => {
-      if (!needle) return true;
-      return optionLabel(group, key).toLowerCase().includes(needle);
-    });
   };
 
   const clearGroup = (group: FilterGroupKey) => {
@@ -253,21 +216,8 @@ export function IndicatorsView() {
     key: string,
     label: string,
     count: number,
-    variant: "list" | "pill" = "list",
   ) => {
     const checked = (draft[group] as string[]).includes(key);
-    if (variant === "pill") {
-      return (
-        <label key={key} className={`filter-pill ${checked ? "active" : ""}`}>
-          <input type="checkbox" checked={checked} onChange={() => toggleDraft(group, key)} />
-          <span className="filter-pill-box" aria-hidden="true">
-            <i className="ti ti-check" />
-          </span>
-          <span className="filter-pill-label">{label}</span>
-          <span className="filter-pill-count">{count}</span>
-        </label>
-      );
-    }
     return (
       <label key={key} className={`filter-check-row ${checked ? "active" : ""}`}>
         <input type="checkbox" checked={checked} onChange={() => toggleDraft(group, key)} />
@@ -277,157 +227,6 @@ export function IndicatorsView() {
         <span className="filter-check-label">{label}</span>
         <span className="filter-pill-count">{count}</span>
       </label>
-    );
-  };
-
-  const renderPillsFilters = () => (
-    <div className="filters-bar-body">
-      {filterGroups.map((group) => (
-        <div key={group.group} className="filter-group-row">
-          <span className="filter-group-label">{group.title}</span>
-          <div className="filter-group-options">
-            {Object.entries(group.options).map(([key, count]) =>
-              renderFilterCheckboxRow(group.group, key, optionLabel(group, key), count, "pill"),
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderDropdownFilters = () => (
-    <div className="filters-dropdown-row">
-      {filterGroups.map((group) => (
-        <details key={group.group} className="filter-dropdown">
-          <summary>
-            <span>{dropdownSummary(group.title, group.group)}</span>
-            <i className="ti ti-chevron-down" aria-hidden="true" />
-          </summary>
-          <div className="filter-dropdown-menu">
-            <div className="filter-dropdown-menu-head">
-              <span>{group.title}</span>
-              {groupSelectedCount(group.group) > 0 && (
-                <button type="button" className="chip-reset" onClick={() => clearGroup(group.group)}>
-                  Очистить
-                </button>
-              )}
-            </div>
-            <div className="filter-dropdown-options">
-              {Object.entries(group.options).map(([key, count]) =>
-                renderFilterCheckboxRow(group.group, key, optionLabel(group, key), count),
-              )}
-            </div>
-          </div>
-        </details>
-      ))}
-    </div>
-  );
-
-  const renderPanelFilters = (preview = false) => (
-    <div className={`filter-panel-wrap ${preview ? "is-preview" : ""}`} ref={preview ? undefined : panelRef}>
-      <button
-        type="button"
-        className={`filter-panel-trigger ${!preview && panelOpen ? "open" : ""} ${draftSelectedTotal ? "has-value" : ""}`}
-        aria-expanded={preview ? true : panelOpen}
-        disabled={preview}
-        onClick={() => !preview && setPanelOpen((open) => !open)}
-      >
-        <i className="ti ti-filter" aria-hidden="true" />
-        <span>Все фильтры</span>
-        {draftSelectedTotal > 0 && <span className="filter-panel-badge">{draftSelectedTotal}</span>}
-        <i className="ti ti-chevron-down filter-panel-chevron" aria-hidden="true" />
-      </button>
-      {(preview || panelOpen) && (
-        <div className="filter-panel-popover">
-          <div className="filter-panel-popover-head">
-            <div className="filter-panel-search">
-              <i className="ti ti-search" aria-hidden="true" />
-              <input
-                type="text"
-                placeholder="Поиск по опциям фильтра…"
-                value={panelSearch}
-                onChange={(e) => setPanelSearch(e.target.value)}
-              />
-            </div>
-            {draftSelectedTotal > 0 && (
-              <button type="button" className="chip-reset" onClick={resetFilters}>
-                Сбросить всё
-              </button>
-            )}
-          </div>
-          <div className="filter-panel-grid">
-            {filterGroups.map((group) => {
-              const options = filterOptionsForGroup(group, true);
-              return (
-                <div key={group.group} className="filter-panel-group">
-                  <div className="filter-panel-group-head">
-                    <span>{group.title}</span>
-                    {groupSelectedCount(group.group) > 0 && (
-                      <button type="button" className="chip-reset" onClick={() => clearGroup(group.group)}>
-                        Очистить
-                      </button>
-                    )}
-                  </div>
-                  <div className="filter-panel-options">
-                    {options.length === 0 ? (
-                      <p className="meta filter-panel-empty">Ничего не найдено</p>
-                    ) : (
-                      options.map(([key, count]) =>
-                        renderFilterCheckboxRow(group.group, key, optionLabel(group, key), count),
-                      )
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {!preview && (
-            <div className="filter-panel-footer">
-              <span className="meta">Выбрано {draftSelectedTotal} значений</span>
-              <button
-                type="button"
-                className="btn primary"
-                onClick={() => {
-                  applyFilters();
-                  setPanelOpen(false);
-                }}
-              >
-                Применить
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
-  const renderFiltersShell = (variant: FilterUiMode, body: ReactNode) => {
-    const meta = FILTER_UI_MODES.find((mode) => mode.id === variant);
-    return (
-      <section id={`filter-variant-${variant}`} className={`filters-bar filters-variant filters-variant-${variant}`}>
-        <div className="filters-variant-label">
-          <span className="filters-variant-badge">{meta?.label}</span>
-          <span className="filters-variant-hint">{meta?.hint}</span>
-        </div>
-        <div className="filters-bar-head">
-          <div className="filters-bar-title">
-            <i className="ti ti-adjustments-horizontal" aria-hidden="true" />
-            <span>Фильтры</span>
-          </div>
-          <div className="filters-bar-actions">
-            <span className="filters-bar-meta">
-              Показано {items.length} из {total.toLocaleString("ru-RU")}
-            </span>
-            <button type="button" className="chip-reset" onClick={resetFilters}>
-              Сбросить
-            </button>
-            <button type="button" className="btn primary" onClick={applyFilters}>
-              Применить
-            </button>
-          </div>
-        </div>
-        {body}
-      </section>
     );
   };
 
@@ -464,36 +263,52 @@ export function IndicatorsView() {
         </div>
       )}
 
-      <div className="filters-compare">
-        <div className="filters-compare-head">
-          <div>
-            <p className="filters-compare-title">Сравнение вариантов фильтров</p>
-            <p className="meta filters-compare-note">
-              Все три блока используют одно состояние — меняете в любом, значения синхронизируются.
-            </p>
+      <section className="filters-bar">
+        <div className="filters-bar-head">
+          <div className="filters-bar-title">
+            <i className="ti ti-adjustments-horizontal" aria-hidden="true" />
+            <span>Фильтры</span>
           </div>
-          <div className="filter-ui-switch" aria-label="Прокрутка к варианту">
-            {FILTER_UI_MODES.map((mode) => (
-              <button
-                key={mode.id}
-                type="button"
-                title={mode.hint}
-                onClick={() =>
-                  document.getElementById(`filter-variant-${mode.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
-              >
-                {mode.label}
-              </button>
+          <div className="filters-bar-actions">
+            <span className="filters-bar-meta">
+              Показано {items.length} из {total.toLocaleString("ru-RU")}
+            </span>
+            <button type="button" className="chip-reset" onClick={resetFilters}>
+              Сбросить
+            </button>
+            <button type="button" className="btn primary" onClick={applyFilters}>
+              Применить
+            </button>
+          </div>
+        </div>
+        {facets && (
+          <div className="filters-dropdown-row">
+            {filterGroups.map((group) => (
+              <details key={group.group} className="filter-dropdown">
+                <summary>
+                  <span>{dropdownSummary(group.title, group.group)}</span>
+                  <i className="ti ti-chevron-down" aria-hidden="true" />
+                </summary>
+                <div className="filter-dropdown-menu">
+                  <div className="filter-dropdown-menu-head">
+                    <span>{group.title}</span>
+                    {groupSelectedCount(group.group) > 0 && (
+                      <button type="button" className="chip-reset" onClick={() => clearGroup(group.group)}>
+                        Очистить
+                      </button>
+                    )}
+                  </div>
+                  <div className="filter-dropdown-options">
+                    {Object.entries(group.options).map(([key, count]) =>
+                      renderFilterCheckboxRow(group.group, key, optionLabel(group, key), count),
+                    )}
+                  </div>
+                </div>
+              </details>
             ))}
           </div>
-        </div>
-
-        <div className="filters-compare-stack">
-          {facets && renderFiltersShell("pills", renderPillsFilters())}
-          {facets && renderFiltersShell("dropdown", renderDropdownFilters())}
-          {facets && renderFiltersShell("panel", renderPanelFilters(true))}
-        </div>
-      </div>
+        )}
+      </section>
 
       <div className="results-col">
           <div className="results-toolbar">
