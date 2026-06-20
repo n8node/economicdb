@@ -48,6 +48,7 @@ cp nginx/templates/https.conf.template nginx/conf.d/https.conf
 sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/https.conf
 
 cp nginx/templates/default.http-redirect.conf nginx/conf.d/default.conf
+sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/default.conf
 
 echo "=== Starting nginx ==="
 $COMPOSE up -d nginx

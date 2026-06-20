@@ -36,6 +36,8 @@ services:
       args:
         BUILD_ID: ${BUILD_ID:-dev}
     restart: unless-stopped
+    environment:
+      NODE_OPTIONS: --max-old-space-size=640
     deploy:
       resources:
         limits:

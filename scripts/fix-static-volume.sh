@@ -19,6 +19,7 @@ fi
 $COMPOSE exec -T frontend sh -c '
   set -eu
   mkdir -p /data/next-static
+  rm -rf /data/next-static/*
   cp -a /opt/static-staging/. /data/next-static/
   mkdir -p /app/.next
   if [ -e /app/.next/static ] && [ ! -L /app/.next/static ]; then

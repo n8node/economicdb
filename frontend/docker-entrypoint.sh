@@ -16,6 +16,7 @@ if [ "$staging_count" -eq 0 ]; then
   exit 1
 fi
 
+rm -rf "${STATIC_ROOT:?}"/*
 cp -a /opt/static-staging/. "$STATIC_ROOT/"
 
 mkdir -p /app/.next

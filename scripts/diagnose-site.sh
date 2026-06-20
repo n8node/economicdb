@@ -48,6 +48,14 @@ ss -ltnp 2>/dev/null | grep -E ':(80|443)\s' || true
 $COMPOSE exec -T nginx sh -c "nginx -T 2>/dev/null | grep -n 'listen 443\\|http2'" || true
 
 echo ""
+echo "=== HTTP redirect (expect 301) ==="
+curl -sS --connect-timeout 10 -o /dev/null -w "http / -> %{http_code}\n" "${HTTP_BASE}/" || true
+
+echo ""
+echo "=== /deploy-id ==="
+curl -s --connect-timeout 5 "${HTTPS_BASE}/deploy-id" || echo "deploy-id failed"
+
+echo ""
 echo "=== /app HTML deploy-id ==="
 curl -s --connect-timeout 10 "${HTTPS_BASE}/app" | grep -o 'name="deploy-id" content="[^"]*"' || echo "deploy-id meta not found"
 
