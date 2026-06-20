@@ -134,6 +134,62 @@ CATALOG_TEMPLATES: list[CatalogTemplate] = [
     CatalogTemplate("tr_cpi_imf", "Turkey inflation", "tr", "inflation", "annual", "imf", "PCPIPCH/TUR", "%", "w4"),
     CatalogTemplate("de_hicp_yoy", "HICP Germany, г/г", "eu", "inflation", "monthly", "eurostat", "PRC_HICP_MANR/M.RCH_A.CP00.DE", "%", "w2"),
     CatalogTemplate("oil_wti", "WTI crude", "world", "commodities", "daily", "fred", "DCOILWTICO", "USD/bbl", "w2"),
+    # Wave A — income
+    CatalogTemplate("us_personal_income", "Личные доходы, США", "us", "income", "monthly", "fred", "PI", "USD bn", "w2"),
+    CatalogTemplate("us_real_personal_income", "Реальные личные доходы, США", "us", "income", "monthly", "fred", "RPI", "USD bn", "w2"),
+    CatalogTemplate("us_avg_hourly_earnings", "Средняя почасовая оплата, США", "us", "income", "monthly", "fred", "CES0500000003", "USD", "w2"),
+    CatalogTemplate("us_real_hourly_earnings", "Реальная почасовая оплата, США", "us", "income", "monthly", "fred", "COMPRNFB", "index", "w2"),
+    CatalogTemplate("us_wage_growth_yoy", "Рост заработной платы, г/г", "us", "income", "monthly", "fred", "AHETPI", "%", "w2"),
+    CatalogTemplate("ru_gdp_pc_wb", "ВВП на душу населения (WB)", "ru", "income", "annual", "world_bank", "NY.GDP.PCAP.KD/RU", "USD", "w3"),
+    # Wave A — financial conditions
+    CatalogTemplate("us_financial_stress", "Financial Stress Index (St. Louis Fed)", "us", "financial", "weekly", "fred", "STLFSI4", "index", "w2"),
+    CatalogTemplate("us_ted_spread", "TED spread", "us", "financial", "daily", "fred", "TEDRATE", "%", "w2"),
+    CatalogTemplate("us_baa_corporate_yield", "BAA corporate yield", "us", "financial", "daily", "fred", "BAMLC0A4CBBBEY", "%", "w2"),
+    CatalogTemplate("us_mortgage_30y", "Ипотека 30 лет, США", "us", "financial", "weekly", "fred", "MORTGAGE30US", "%", "w2"),
+    CatalogTemplate("us_lei", "Leading Economic Index, США", "us", "financial", "monthly", "fred", "USSLIND", "index", "w2"),
+    CatalogTemplate("us_ig_credit_spread", "Investment-grade credit spread", "us", "financial", "daily", "fred", "BAMLC0A0CM", "%", "w2"),
+    # Wave A — construction
+    CatalogTemplate("us_housing_starts", "Housing starts, США", "us", "construction", "monthly", "fred", "HOUST", "thousand", "w2"),
+    CatalogTemplate("us_case_shiller_yoy", "Case-Shiller, г/г", "us", "construction", "monthly", "fred", "CSUSHPINSA", "%", "w2"),
+    CatalogTemplate("us_existing_home_sales", "Продажи существующего жилья, США", "us", "construction", "monthly", "fred", "EXHOSLUSM495S", "million", "w2"),
+    CatalogTemplate(
+        "eu_building_permits_yoy",
+        "Разрешения на строительство EA, г/г",
+        "eu",
+        "construction",
+        "monthly",
+        "eurostat",
+        "sts_cobp_m/M.I15.Y.PRCN.NS0030.EA20",
+        "%",
+        "w3",
+    ),
+    # Wave A — consumption
+    CatalogTemplate("us_consumer_sentiment", "Consumer sentiment (Michigan)", "us", "consumption", "monthly", "fred", "UMCSENT", "index", "w2"),
+    CatalogTemplate("us_durable_goods_orders", "Заказы на товары длит. пользования", "us", "consumption", "monthly", "fred", "DGORDER", "USD mn", "w2"),
+    CatalogTemplate("us_vehicle_sales", "Продажи легковых авто, США", "us", "consumption", "monthly", "fred", "TOTALSA", "million", "w2"),
+    # Wave A — commodities
+    CatalogTemplate("nat_gas_us", "Природный газ Henry Hub", "world", "commodities", "daily", "fred", "DHHNGSP", "USD/MMBtu", "w2"),
+    CatalogTemplate("gold_spot", "Золото (London fix)", "world", "commodities", "daily", "fred", "GOLDAMGBD228NLBM", "USD/oz", "w2"),
+    CatalogTemplate("copper_price", "Медь, мировая цена", "world", "commodities", "monthly", "fred", "PCOPPUSDM", "USD/mt", "w2"),
+    CatalogTemplate("wheat_price", "Пшеница, мировая цена", "world", "commodities", "monthly", "fred", "PWHEAMTUSDM", "USD/mt", "w2"),
+    # Wave A — industrial
+    CatalogTemplate("us_manufacturing_ip_yoy", "Manufacturing IP, г/г", "us", "industrial", "monthly", "fred", "IPMAN", "%", "w2"),
+    CatalogTemplate(
+        "eu_industrial_production_yoy",
+        "Промпроизводство EA, г/г",
+        "eu",
+        "industrial",
+        "monthly",
+        "eurostat",
+        "sts_inpr_m/M.I15.Y.PROD.NS0030.EA20",
+        "%",
+        "w3",
+    ),
+    # Wave C — RU / external / fiscal (World Bank)
+    CatalogTemplate("ru_ca_wb", "Сальдо текущего счёта % ВВП (WB)", "ru", "external", "annual", "world_bank", "BN.CAB.XOKA.GD.ZS/RU", "% GDP", "w3"),
+    CatalogTemplate("ru_debt_wb", "Госдолг % ВВП (WB)", "ru", "fiscal", "annual", "world_bank", "GC.DOD.TOTL.GD.ZS/RU", "% GDP", "w3"),
+    CatalogTemplate("us_trade_balance", "Trade balance, США", "us", "external", "monthly", "fred", "BOPGSTB", "USD bn", "w3"),
+    CatalogTemplate("us_ca_imf", "Current account % GDP, США", "us", "external", "annual", "imf", "BCA_NGDPD/USA", "% GDP", "w3"),
 ]
 
 WAVES = ("w1", "w2", "w3", "w4", "w5", "all")

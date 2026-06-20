@@ -46,8 +46,22 @@ CATEGORY_LABELS = {
     "fx": "Валюты",
     "labor": "Рынок труда",
     "industry": "Промышленность",
+    "industrial": "Промышленность",
     "equities": "Фондовый рынок",
     "commodities": "Сырьё",
+    "external": "Внешняя торговля",
+    "fiscal": "Госбюджет",
+    "consumption": "Потребление",
+    "construction": "Строительство",
+    "income": "Доходы",
+    "financial": "Финансы и стресс",
+    "credit": "Кредит",
+    "housing": "Жильё",
+    "investment": "Инвестиции",
+    "transport": "Транспорт",
+    "agriculture": "Сельское хозяйство",
+    "leading": "Опережающие индексы",
+    "sentiment": "Настроения",
 }
 
 
