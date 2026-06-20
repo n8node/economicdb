@@ -10,15 +10,30 @@ import {
   SOURCE_LABELS,
   fetchFacetLabels,
   fetchIndicator,
+  fetchIndicatorEvents,
+  fetchIndicatorRelated,
   fetchIndicatorSeries,
+  fetchIndicatorStats,
   loadIds,
   saveIds,
   toggleId,
   type FacetLabels,
   type IndicatorDetail,
+  type IndicatorEventItem,
+  type IndicatorRelatedItem,
   type IndicatorSeriesResponse,
-  type SeriesPoint,
+  type IndicatorStatsResponse,
 } from "@/lib/indicators";
+import {
+  eventDates,
+  exportSeriesCsv,
+  formatStatValue,
+  heroChipLabel,
+  normalizeSeries,
+  normalizeValue,
+  tableRowsWithDelta,
+  type ChartNormalizeMode,
+} from "@/lib/indicatorChart";
 
 type PeriodKey = "1Y" | "3Y" | "5Y" | "MAX";
 
@@ -42,21 +57,6 @@ function periodRange(key: PeriodKey): { from?: string; to: string } {
   return { from: formatDateInput(fromDate), to };
 }
 
-function formatPointValue(value: number, unit: string | null): string {
-  if (unit === "%") return `${value.toFixed(2).replace(".", ",")}%`;
-  return value.toLocaleString("ru-RU", { maximumFractionDigits: 4 });
-}
-
-function computeStats(points: SeriesPoint[]) {
-  if (!points.length) return null;
-  const values = points.map((p) => p.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
-  const change = values[values.length - 1] - values[0];
-  return { min, max, avg, change };
-}
-
 function DeltaBadge({ direction, value }: { direction: string; value: string | null }) {
   if (!value) return <span className="delta-badge flat">—</span>;
   return (
@@ -70,13 +70,19 @@ function DeltaBadge({ direction, value }: { direction: string; value: string | n
 export function IndicatorDetailView({ id }: { id: string }) {
   const [indicator, setIndicator] = useState<IndicatorDetail | null>(null);
   const [series, setSeries] = useState<IndicatorSeriesResponse | null>(null);
+  const [stats, setStats] = useState<IndicatorStatsResponse | null>(null);
+  const [related, setRelated] = useState<IndicatorRelatedItem[]>([]);
+  const [events, setEvents] = useState<IndicatorEventItem[]>([]);
   const [labels, setLabels] = useState<FacetLabels | null>(null);
   const [period, setPeriod] = useState<PeriodKey>("5Y");
+  const [normalize, setNormalize] = useState<ChartNormalizeMode>("absolute");
   const [loading, setLoading] = useState(true);
   const [seriesLoading, setSeriesLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [resetToken, setResetToken] = useState(0);
 
   useEffect(() => {
     setFavoriteIds(loadIds(FAVORITES_KEY));
@@ -86,14 +92,16 @@ export function IndicatorDetailView({ id }: { id: string }) {
   useEffect(() => {
     setLoading(true);
     setNotFound(false);
-    fetchIndicator(id)
-      .then((row) => {
+    Promise.all([fetchIndicator(id), fetchIndicatorRelated(id), fetchIndicatorEvents(id)])
+      .then(([row, rel, ev]) => {
         if (!row) {
           setNotFound(true);
           setIndicator(null);
           return;
         }
         setIndicator(row);
+        setRelated(rel);
+        setEvents(ev);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -103,10 +111,15 @@ export function IndicatorDetailView({ id }: { id: string }) {
     setSeriesLoading(true);
     try {
       const range = periodRange(period);
-      const data = await fetchIndicatorSeries(id, range);
-      setSeries(data);
+      const [seriesData, statsData] = await Promise.all([
+        fetchIndicatorSeries(id, range),
+        fetchIndicatorStats(id, range),
+      ]);
+      setSeries(seriesData);
+      setStats(statsData);
     } catch {
       setSeries(null);
+      setStats(null);
     } finally {
       setSeriesLoading(false);
     }
@@ -117,8 +130,17 @@ export function IndicatorDetailView({ id }: { id: string }) {
     void loadSeries();
   }, [indicator, loadSeries]);
 
-  const stats = useMemo(() => computeStats(series?.points || []), [series]);
-  const historyPoints = useMemo(() => [...(series?.points || [])].reverse().slice(0, 24), [series]);
+  const chartPoints = useMemo(
+    () => normalizeSeries(series?.points || [], normalize),
+    [series, normalize],
+  );
+  const tableRows = useMemo(() => tableRowsWithDelta(series?.points || []), [series]);
+  const heroChips = useMemo(
+    () => heroChipLabel(stats, indicator?.frequency || "monthly"),
+    [stats, indicator?.frequency],
+  );
+  const chartEvents = useMemo(() => eventDates(events), [events]);
+  const currentValue = series?.points.length ? series.points[series.points.length - 1].value : null;
 
   const toggleFavorite = () => {
     if (!indicator) return;
@@ -169,6 +191,13 @@ export function IndicatorDetailView({ id }: { id: string }) {
 
   const countryLabel = labels?.countries[indicator.country] || indicator.country.toUpperCase();
   const categoryLabel = labels?.categories[indicator.category] || indicator.category;
+  const unit = series?.unit || indicator.unit;
+  const chartNormalized = normalize !== "absolute";
+  const rawPoints = series?.points || [];
+  const normStat = (value: number | null | undefined) =>
+    value == null ? null : normalizeValue(value, rawPoints, normalize);
+  const displayStat = (value: number) =>
+    formatStatValue(normalizeValue(value, rawPoints, normalize), unit, normalize);
 
   return (
     <div className="content indicator-detail-page">
@@ -180,7 +209,13 @@ export function IndicatorDetailView({ id }: { id: string }) {
         <div className="detail-head-row">
           <div>
             <h1 style={{ margin: 0 }}>{indicator.name_ru}</h1>
-            <p className="meta">{indicator.id}</p>
+            <p className="meta">
+              {stats?.last_observed_at
+                ? `Последняя точка: ${formatDate(stats.last_observed_at)}`
+                : "Последняя точка: —"}
+              {" · "}
+              {SOURCE_LABELS[indicator.source] || indicator.source}
+            </p>
           </div>
           <div className="detail-actions">
             <button
@@ -193,8 +228,16 @@ export function IndicatorDetailView({ id }: { id: string }) {
             <button type="button" className="btn" onClick={addToCompare}>
               <i className="ti ti-plus" /> В сравнение
             </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => series && exportSeriesCsv(indicator.name_ru, series.points)}
+              disabled={!series?.points.length}
+            >
+              CSV
+            </button>
             <Link href="/app/compare" className="btn">
-              Открыть сравнение
+              Сравнение
             </Link>
           </div>
         </div>
@@ -211,56 +254,108 @@ export function IndicatorDetailView({ id }: { id: string }) {
         <div className="detail-kpi-row">
           <p className="detail-value">{indicator.last_value ?? "—"}</p>
           <DeltaBadge direction={indicator.delta_direction} value={indicator.last_change} />
-          <span className="detail-updated">Обновлено {formatDate(indicator.updated_at)}</span>
+          <span className="detail-updated">ETL: {formatDate(indicator.updated_at)}</span>
         </div>
+
+        {heroChips.length > 0 ? (
+          <div className="hero-chips">
+            {heroChips.map((chip) => (
+              <span key={chip} className="hero-chip">
+                {chip}
+              </span>
+            ))}
+          </div>
+        ) : null}
         {message ? <p className="meta" style={{ marginTop: 12 }}>{message}</p> : null}
       </div>
 
       <div className="detail-layout">
         <div>
           <section className="chart-card">
-            <div className="period-bar">
-              {PERIODS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`period-btn ${period === key ? "active" : ""}`}
-                  onClick={() => setPeriod(key)}
-                >
-                  {key === "MAX" ? "Макс." : key}
-                </button>
-              ))}
+            <div className="chart-toolbar">
+              <div className="period-bar">
+                {PERIODS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`period-btn ${period === key ? "active" : ""}`}
+                    onClick={() => setPeriod(key)}
+                  >
+                    {key === "MAX" ? "Макс." : key}
+                  </button>
+                ))}
+              </div>
+              <select
+                className="select-sort"
+                value={normalize}
+                onChange={(e) => setNormalize(e.target.value as ChartNormalizeMode)}
+              >
+                <option value="absolute">Абсолютные</option>
+                <option value="index">Индекс (100)</option>
+                <option value="change">Изменение %</option>
+              </select>
             </div>
             {seriesLoading ? (
               <div className="empty-chart">Загрузка графика…</div>
             ) : (
-              <IndicatorChart points={series?.points || []} unit={series?.unit || indicator.unit} name={indicator.name_ru} />
+              <IndicatorChart
+                points={chartPoints}
+                unit={unit}
+                name={indicator.name_ru}
+                avg={normStat(stats?.avg)}
+                min={normStat(stats?.min)}
+                max={normStat(stats?.max)}
+                current={normStat(currentValue)}
+                events={chartEvents}
+                normalized={chartNormalized}
+                onHoverIndex={setHoverIndex}
+                resetToken={resetToken}
+                onResetZoom={() => setResetToken((v) => v + 1)}
+              />
             )}
             {stats ? (
-              <div className="stats-row">
+              <div className="stats-grid">
                 <div className="stat-box">
                   <p className="stat-label">Мин.</p>
-                  <p className="stat-value">{formatPointValue(stats.min, indicator.unit)}</p>
+                  <p className="stat-value">{displayStat(stats.min)}</p>
                 </div>
                 <div className="stat-box">
                   <p className="stat-label">Макс.</p>
-                  <p className="stat-value">{formatPointValue(stats.max, indicator.unit)}</p>
+                  <p className="stat-value">{displayStat(stats.max)}</p>
                 </div>
                 <div className="stat-box">
                   <p className="stat-label">Среднее</p>
-                  <p className="stat-value">{formatPointValue(stats.avg, indicator.unit)}</p>
+                  <p className="stat-value">{displayStat(stats.avg)}</p>
+                </div>
+                <div className="stat-box">
+                  <p className="stat-label">Медиана</p>
+                  <p className="stat-value">{displayStat(stats.median)}</p>
                 </div>
                 <div className="stat-box">
                   <p className="stat-label">Изменение</p>
-                  <p className="stat-value">{formatPointValue(stats.change, indicator.unit)}</p>
+                  <p className="stat-value">{formatStatValue(stats.change, unit, "absolute")}</p>
+                </div>
+                <div className="stat-box">
+                  <p className="stat-label">CAGR</p>
+                  <p className="stat-value">
+                    {stats.cagr != null ? `${stats.cagr.toFixed(2).replace(".", ",")}%` : "—"}
+                  </p>
+                </div>
+                <div className="stat-box">
+                  <p className="stat-label">Волатильность</p>
+                  <p className="stat-value">{displayStat(stats.volatility)}</p>
+                </div>
+                <div className="stat-box">
+                  <p className="stat-label">Выше текущего</p>
+                  <p className="stat-value">{stats.pct_above_current}%</p>
                 </div>
               </div>
             ) : null}
           </section>
 
-          <details className="history-card">
+          <details className="history-card" open>
             <summary>Последние значения</summary>
-            {historyPoints.length === 0 ? (
+            {tableRows.length === 0 ? (
               <p className="meta" style={{ padding: "0 18px 14px" }}>
                 Нет данных за выбранный период
               </p>
@@ -270,47 +365,104 @@ export function IndicatorDetailView({ id }: { id: string }) {
                   <tr>
                     <th>Дата</th>
                     <th className="num">Значение</th>
+                    <th className="num">Δ к пред.</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {historyPoints.map((point) => (
-                    <tr key={point.date}>
-                      <td>{formatDate(point.date)}</td>
-                      <td className="num">{formatPointValue(point.value, indicator.unit)}</td>
-                    </tr>
-                  ))}
+                  {tableRows.map((row, idx) => {
+                    const sourceIndex = series ? series.points.length - 1 - idx : -1;
+                    const active = hoverIndex !== null && sourceIndex === hoverIndex;
+                    return (
+                      <tr key={row.date} className={active ? "active-row" : undefined}>
+                        <td>{formatDate(row.date)}</td>
+                        <td className="num">{formatStatValue(row.value, unit, "absolute")}</td>
+                        <td className="num">
+                          {row.delta == null ? "—" : formatStatValue(row.delta, unit, "absolute")}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
           </details>
         </div>
 
-        <aside className="meta-card">
-          <h2>О показателе</h2>
-          <div className="meta-row">
-            <span className="meta-key">Источник</span>
-            <span className="meta-val">{SOURCE_LABELS[indicator.source] || indicator.source}</span>
+        <aside className="sidebar-stack">
+          <div className="meta-card">
+            <h2>О показателе</h2>
+            <div className="meta-row">
+              <span className="meta-key">Источник</span>
+              <span className="meta-val">{SOURCE_LABELS[indicator.source] || indicator.source}</span>
+            </div>
+            <div className="meta-row">
+              <span className="meta-key">Единица</span>
+              <span className="meta-val">{indicator.unit || "—"}</span>
+            </div>
+            <div className="meta-row">
+              <span className="meta-key">Частота</span>
+              <span className="meta-val">{FREQ_LABELS[indicator.frequency] || indicator.frequency}</span>
+            </div>
+            <div className="meta-row">
+              <span className="meta-key">Страна</span>
+              <span className="meta-val">{countryLabel}</span>
+            </div>
+            <div className="meta-row">
+              <span className="meta-key">external_id</span>
+              <span className="meta-val">{indicator.external_id || "—"}</span>
+            </div>
+            {stats ? (
+              <>
+                <div className="meta-row">
+                  <span className="meta-key">Лучший</span>
+                  <span className="meta-val">
+                    {formatDate(stats.best.date)} · {formatStatValue(stats.best.value, unit, "absolute")}
+                  </span>
+                </div>
+                <div className="meta-row">
+                  <span className="meta-key">Худший</span>
+                  <span className="meta-val">
+                    {formatDate(stats.worst.date)} · {formatStatValue(stats.worst.value, unit, "absolute")}
+                  </span>
+                </div>
+              </>
+            ) : null}
+            <p className="source-note">
+              Источник: {SOURCE_LABELS[indicator.source] || indicator.source} · Обновлено:{" "}
+              {formatDate(indicator.updated_at)}
+            </p>
           </div>
-          <div className="meta-row">
-            <span className="meta-key">Единица</span>
-            <span className="meta-val">{indicator.unit || "—"}</span>
-          </div>
-          <div className="meta-row">
-            <span className="meta-key">Частота</span>
-            <span className="meta-val">{FREQ_LABELS[indicator.frequency] || indicator.frequency}</span>
-          </div>
-          <div className="meta-row">
-            <span className="meta-key">Страна</span>
-            <span className="meta-val">{countryLabel}</span>
-          </div>
-          <div className="meta-row">
-            <span className="meta-key">external_id</span>
-            <span className="meta-val">{indicator.external_id || "—"}</span>
-          </div>
-          <p className="source-note">
-            Источник: {SOURCE_LABELS[indicator.source] || indicator.source} · Обновлено:{" "}
-            {formatDate(indicator.updated_at)}
-          </p>
+
+          {related.length > 0 ? (
+            <div className="meta-card">
+              <h2>Похожие показатели</h2>
+              <div className="related-list">
+                {related.map((item) => (
+                  <Link key={item.id} href={`/app/indicators/${item.id}`} className="related-item">
+                    <span>{item.name_ru}</span>
+                    <span className="meta">{item.last_value || "—"}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {events.length > 0 ? (
+            <div className="meta-card">
+              <h2>События календаря</h2>
+              <div className="events-list">
+                {events.map((event) => (
+                  <div key={event.id} className="event-item">
+                    <p className="event-title">{event.title_ru}</p>
+                    <p className="meta">
+                      {formatDate(event.scheduled_at_msk)} · {event.importance}
+                      {event.actual ? ` · факт: ${event.actual}` : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </aside>
       </div>
     </div>

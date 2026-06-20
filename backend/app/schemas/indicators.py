@@ -53,3 +53,48 @@ class IndicatorSearchItem(BaseModel):
     name_ru: str
     country: str
     source: str
+
+
+class StatPoint(BaseModel):
+    date: date
+    value: float
+
+
+class IndicatorStatsResponse(BaseModel):
+    min: float
+    max: float
+    avg: float
+    median: float
+    change: float
+    change_pct: float | None = None
+    cagr: float | None = None
+    volatility: float
+    pct_above_current: float
+    best: StatPoint
+    worst: StatPoint
+    last_observed_at: date
+    mom_qoq: float | None = None
+    yoy: float | None = None
+    streak: int
+    streak_direction: str
+    change_direction: str
+
+
+class IndicatorRelatedItem(BaseModel):
+    id: str
+    name_ru: str
+    country: str
+    category: str
+    source: str
+    last_value: str | None = None
+    unit: str | None = None
+
+
+class IndicatorEventItem(BaseModel):
+    id: str
+    title_ru: str
+    scheduled_at_msk: datetime
+    importance: str
+    actual: str | None = None
+    forecast: str | None = None
+    previous: str | None = None

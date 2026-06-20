@@ -11,15 +11,22 @@ from app.analytics.series import (
     format_value,
     sparkline_values,
 )
+from app.analytics.indicator_stats import compute_indicator_stats
+from app.analytics.series import format_value
+from app.models.events import EconomicEvent
 from app.models.indicators import Indicator, IndicatorValue
 from app.schemas.indicators import (
     IndicatorDetail,
+    IndicatorEventItem,
     IndicatorFacets,
     IndicatorListItem,
     IndicatorListResponse,
+    IndicatorRelatedItem,
     IndicatorSearchItem,
     IndicatorSeriesResponse,
+    IndicatorStatsResponse,
     SeriesPoint,
+    StatPoint,
 )
 
 COUNTRY_LABELS = {
@@ -198,6 +205,115 @@ async def get_series(
     rows = await session.execute(query)
     points = [SeriesPoint(date=observed_at, value=float(value)) for observed_at, value in rows.all()]
     return IndicatorSeriesResponse(indicator_id=indicator_id, unit=indicator.unit, points=points)
+
+
+async def _load_series_points(
+    session: AsyncSession,
+    indicator_id: str,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> tuple[Indicator | None, list[tuple[date, Decimal]]]:
+    indicator = await session.get(Indicator, indicator_id)
+    if indicator is None or not indicator.enabled:
+        return None, []
+
+    query = (
+        select(IndicatorValue.observed_at, IndicatorValue.value)
+        .where(IndicatorValue.indicator_id == indicator_id)
+        .order_by(IndicatorValue.observed_at)
+    )
+    if date_from:
+        query = query.where(IndicatorValue.observed_at >= date_from)
+    if date_to:
+        query = query.where(IndicatorValue.observed_at <= date_to)
+    rows = await session.execute(query)
+    return indicator, [(observed_at, value) for observed_at, value in rows.all()]
+
+
+async def get_stats(
+    session: AsyncSession,
+    indicator_id: str,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> IndicatorStatsResponse | None:
+    indicator, raw_points = await _load_series_points(session, indicator_id, date_from, date_to)
+    if indicator is None:
+        return None
+    stats = compute_indicator_stats(raw_points, unit=indicator.unit, frequency=indicator.frequency)
+    if stats is None:
+        return None
+    return IndicatorStatsResponse(
+        min=stats["min"],
+        max=stats["max"],
+        avg=stats["avg"],
+        median=stats["median"],
+        change=stats["change"],
+        change_pct=stats["change_pct"],
+        cagr=stats["cagr"],
+        volatility=stats["volatility"],
+        pct_above_current=stats["pct_above_current"],
+        best=StatPoint(**stats["best"]),
+        worst=StatPoint(**stats["worst"]),
+        last_observed_at=stats["last_observed_at"],
+        mom_qoq=stats["mom_qoq"],
+        yoy=stats["yoy"],
+        streak=stats["streak"],
+        streak_direction=stats["streak_direction"],
+        change_direction=stats["change_direction"],
+    )
+
+
+async def get_related(session: AsyncSession, indicator_id: str, limit: int = 5) -> list[IndicatorRelatedItem]:
+    row = await session.get(Indicator, indicator_id)
+    if row is None or not row.enabled:
+        return []
+    rows = await session.scalars(
+        select(Indicator)
+        .where(
+            Indicator.enabled.is_(True),
+            Indicator.id != indicator_id,
+            Indicator.country == row.country,
+            Indicator.category == row.category,
+        )
+        .order_by(Indicator.name_ru)
+        .limit(limit)
+    )
+    return [
+        IndicatorRelatedItem(
+            id=item.id,
+            name_ru=item.name_ru,
+            country=item.country,
+            category=item.category,
+            source=item.source,
+            last_value=format_value(item.last_value, item.unit),
+            unit=item.unit,
+        )
+        for item in rows.all()
+    ]
+
+
+async def get_events(session: AsyncSession, indicator_id: str, limit: int = 10) -> list[IndicatorEventItem]:
+    indicator = await session.get(Indicator, indicator_id)
+    if indicator is None or not indicator.enabled:
+        return []
+    rows = await session.scalars(
+        select(EconomicEvent)
+        .where(EconomicEvent.linked_indicator_id == indicator_id)
+        .order_by(EconomicEvent.scheduled_at_msk.desc())
+        .limit(limit)
+    )
+    return [
+        IndicatorEventItem(
+            id=event.id,
+            title_ru=event.title_ru,
+            scheduled_at_msk=event.scheduled_at_msk,
+            importance=event.importance,
+            actual=str(event.actual) if event.actual is not None else None,
+            forecast=str(event.forecast) if event.forecast is not None else None,
+            previous=str(event.previous) if event.previous is not None else None,
+        )
+        for event in rows.all()
+    ]
 
 
 async def search_indicators(session: AsyncSession, q: str, limit: int = 10) -> list[IndicatorSearchItem]:

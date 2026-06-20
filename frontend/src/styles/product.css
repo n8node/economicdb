@@ -242,7 +242,9 @@ button{ font-family: inherit; cursor: pointer; }
 
 .content{
   padding: 24px 28px 60px;
-  max-width: 1280px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
 }
 
 .page-head{

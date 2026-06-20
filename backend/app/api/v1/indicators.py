@@ -7,10 +7,13 @@ from app.db import SessionLocal
 from app.repositories import indicators as repo
 from app.schemas.indicators import (
     IndicatorDetail,
+    IndicatorEventItem,
     IndicatorFacets,
     IndicatorListResponse,
+    IndicatorRelatedItem,
     IndicatorSearchItem,
     IndicatorSeriesResponse,
+    IndicatorStatsResponse,
 )
 
 router = APIRouter(prefix="/indicators", tags=["indicators"])
@@ -86,3 +89,34 @@ async def get_indicator_series(
     if series is None:
         raise HTTPException(status_code=404, detail="indicator_not_found")
     return series
+
+
+@router.get("/{indicator_id}/stats", response_model=IndicatorStatsResponse)
+async def get_indicator_stats(
+    indicator_id: str,
+    date_from: date | None = Query(default=None, alias="from"),
+    date_to: date | None = Query(default=None, alias="to"),
+    session: AsyncSession = Depends(get_db),
+) -> IndicatorStatsResponse:
+    stats = await repo.get_stats(session, indicator_id, date_from, date_to)
+    if stats is None:
+        raise HTTPException(status_code=404, detail="indicator_not_found")
+    return stats
+
+
+@router.get("/{indicator_id}/related", response_model=list[IndicatorRelatedItem])
+async def get_indicator_related(
+    indicator_id: str,
+    limit: int = Query(default=5, ge=1, le=10),
+    session: AsyncSession = Depends(get_db),
+) -> list[IndicatorRelatedItem]:
+    return await repo.get_related(session, indicator_id, limit=limit)
+
+
+@router.get("/{indicator_id}/events", response_model=list[IndicatorEventItem])
+async def get_indicator_events(
+    indicator_id: str,
+    limit: int = Query(default=10, ge=1, le=20),
+    session: AsyncSession = Depends(get_db),
+) -> list[IndicatorEventItem]:
+    return await repo.get_events(session, indicator_id, limit=limit)

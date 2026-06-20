@@ -30,6 +30,46 @@ export type IndicatorSeriesResponse = {
   points: SeriesPoint[];
 };
 
+export type IndicatorStatsResponse = {
+  min: number;
+  max: number;
+  avg: number;
+  median: number;
+  change: number;
+  change_pct: number | null;
+  cagr: number | null;
+  volatility: number;
+  pct_above_current: number;
+  best: SeriesPoint;
+  worst: SeriesPoint;
+  last_observed_at: string;
+  mom_qoq: number | null;
+  yoy: number | null;
+  streak: number;
+  streak_direction: string;
+  change_direction: string;
+};
+
+export type IndicatorRelatedItem = {
+  id: string;
+  name_ru: string;
+  country: string;
+  category: string;
+  source: string;
+  last_value: string | null;
+  unit: string | null;
+};
+
+export type IndicatorEventItem = {
+  id: string;
+  title_ru: string;
+  scheduled_at_msk: string;
+  importance: string;
+  actual: string | null;
+  forecast: string | null;
+  previous: string | null;
+};
+
 export type IndicatorListResponse = {
   items: IndicatorListItem[];
   total: number;
@@ -111,6 +151,36 @@ export async function fetchIndicatorSeries(
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`API ${response.status}`);
   return response.json() as Promise<IndicatorSeriesResponse>;
+}
+
+async function fetchIndicatorSubresource<T>(id: string, suffix: string, query = ""): Promise<T | null> {
+  const base = getApiBase();
+  const url = `${base.replace(/\/$/, "")}/indicators/${encodeURIComponent(id)}/${suffix}${query}`;
+  const response = await fetch(url, { cache: "no-store" });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`API ${response.status}`);
+  return response.json() as Promise<T>;
+}
+
+export async function fetchIndicatorStats(
+  id: string,
+  params: { from?: string; to?: string } = {},
+): Promise<IndicatorStatsResponse | null> {
+  const search = new URLSearchParams();
+  if (params.from) search.set("from", params.from);
+  if (params.to) search.set("to", params.to);
+  const qs = search.toString();
+  return fetchIndicatorSubresource<IndicatorStatsResponse>(id, "stats", qs ? `?${qs}` : "");
+}
+
+export async function fetchIndicatorRelated(id: string): Promise<IndicatorRelatedItem[]> {
+  const data = await fetchIndicatorSubresource<IndicatorRelatedItem[]>(id, "related");
+  return data || [];
+}
+
+export async function fetchIndicatorEvents(id: string): Promise<IndicatorEventItem[]> {
+  const data = await fetchIndicatorSubresource<IndicatorEventItem[]>(id, "events");
+  return data || [];
 }
 
 export const SOURCE_LABELS: Record<string, string> = {
