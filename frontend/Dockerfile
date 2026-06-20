@@ -20,6 +20,7 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static /opt/static-staging
+COPY --from=builder /app/public ./public
 COPY docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
     && STATIC_COUNT="$(find /opt/static-staging -type f | wc -l | tr -d ' ')" \

@@ -71,6 +71,16 @@ server {
         access_log off;
     }
 
+    location = /macro-hard-navigation.js {
+        set $frontend_upstream http://frontend:3000;
+        proxy_pass $frontend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+    }
+
     location /app/_next/static/ {
         rewrite ^/app/_next/static/(.*)$ /_next/static/$1 last;
     }
