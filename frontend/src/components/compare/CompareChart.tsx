@@ -4,6 +4,12 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import uPlot, { type AlignedData, type Series } from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { SERIES_COLORS, type CompareSeriesResponse } from "@/lib/compare";
+import {
+  buildBrushOptions,
+  createBrushSyncKey,
+  mainChartSyncCursor,
+  syncBrushSelect,
+} from "@/lib/uplotBrush";
 
 function toUnixDay(value: string): number {
   const text = value.slice(0, 10);
@@ -63,7 +69,7 @@ export function CompareChart({
   const chartRef = useRef<uPlot | null>(null);
   const brushChartRef = useRef<uPlot | null>(null);
   const initialXRef = useRef<{ min: number; max: number } | null>(null);
-  const zoomXRef = useRef<{ min: number; max: number } | null>(null);
+  const syncKeyRef = useRef(createBrushSyncKey(`compare-${Math.random().toString(36).slice(2, 10)}`));
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   const visibleSeries = useMemo(
@@ -89,45 +95,15 @@ export function CompareChart({
     return data.labels[hoverIdx] || null;
   }, [data, hoverIdx]);
 
-  const drawBrushSelection = (u: uPlot) => {
-    const full = initialXRef.current;
-    const zoom = zoomXRef.current;
-    if (!full || !zoom) return;
-
-    const { ctx } = u;
-    const { left, top, width, height } = u.bbox;
-    const selMin = u.valToPos(zoom.min, "x", true);
-    const selMax = u.valToPos(zoom.max, "x", true);
-    const x1 = Math.max(left, Math.min(selMin, selMax));
-    const x2 = Math.min(left + width, Math.max(selMin, selMax));
-
-    ctx.save();
-    ctx.fillStyle = "rgba(20, 24, 31, 0.07)";
-    if (x1 > left) ctx.fillRect(left, top, x1 - left, height);
-    if (x2 < left + width) ctx.fillRect(x2, top, left + width - x2, height);
-    ctx.fillStyle = "rgba(27, 117, 97, 0.10)";
-    ctx.fillRect(x1, top, Math.max(x2 - x1, 1), height);
-    ctx.strokeStyle = "rgba(27, 117, 97, 0.55)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x1, top, Math.max(x2 - x1, 1), height);
-    ctx.restore();
-  };
-
-  const syncZoomFromMain = (u: uPlot) => {
-    const { min, max } = u.scales.x;
-    if (min == null || max == null) return;
-    zoomXRef.current = { min, max };
-    brushChartRef.current?.redraw();
-  };
-
   useLayoutEffect(() => {
     if (!hostRef.current || !data || visibleSeries.length === 0) return;
 
     const host = hostRef.current;
+    const syncKey = syncKeyRef.current;
     const useDates = data.dates.length > 0;
     const xs = useDates ? data.dates.map(toUnixDay) : data.labels.map((_, i) => i);
-    initialXRef.current = { min: xs[0], max: xs[xs.length - 1] };
-    zoomXRef.current = { ...initialXRef.current };
+    const fullRange = { min: xs[0], max: xs[xs.length - 1] };
+    initialXRef.current = fullRange;
 
     const seriesList: Series[] = [
       {},
@@ -170,7 +146,7 @@ export function CompareChart({
           {
             width: mainWidth,
             height: 360,
-            scales: { x: { time: useDates } },
+            scales: { x: { time: useDates }, y: { auto: true } },
             series: seriesList,
             legend: { show: false },
             axes: [
@@ -187,13 +163,7 @@ export function CompareChart({
                 values: (_u, vals) => vals.map((v) => formatAxisValue(Number(v), normalized)),
               },
             ],
-            cursor: {
-              show: true,
-              x: true,
-              y: false,
-              points: { show: false },
-              drag: { setScale: true, x: true, y: false },
-            },
+            cursor: mainChartSyncCursor(syncKey),
             hooks: {
               setCursor: [
                 (u) => {
@@ -202,7 +172,10 @@ export function CompareChart({
               ],
               setScale: [
                 (u, scaleKey) => {
-                  if (scaleKey === "x") syncZoomFromMain(u);
+                  if (scaleKey !== "x" || !brushChartRef.current) return;
+                  const { min, max } = u.scales.x;
+                  if (min == null || max == null) return;
+                  syncBrushSelect(brushChartRef.current, min, max);
                 },
               ],
             },
@@ -221,53 +194,27 @@ export function CompareChart({
       const brushWidth = resolveHostWidth(brushHost, host);
       if (brushWidth < 20) return;
 
+      const mainX = chartRef.current.scales.x;
+      const selectRange =
+        mainX.min != null && mainX.max != null ? { min: mainX.min, max: mainX.max } : fullRange;
+
       if (!brushChartRef.current) {
         brushChartRef.current = new uPlot(
-          {
+          buildBrushOptions({
             width: brushWidth,
-            height: 64,
-            padding: [4, 8, 0, 8],
-            scales: { x: { time: useDates } },
-            legend: { show: false },
+            syncKey,
+            useDates,
             series: brushSeries,
-            axes: [
-              {
-                stroke: "#8b92a0",
-                grid: { show: false },
-                ticks: { show: false },
-                size: 18,
-                values: (_u, vals) => vals.map((v) => formatBrushYear(Number(v), useDates)),
-              },
-              { show: false },
-            ],
-            cursor: {
-              show: true,
-              x: true,
-              y: false,
-              points: { show: false },
-              drag: { setScale: true, x: true, y: false },
-            },
-            hooks: {
-              draw: [drawBrushSelection],
-              setScale: [
-                (u, scaleKey) => {
-                  if (scaleKey !== "x" || !chartRef.current) return;
-                  const { min, max } = u.scales.x;
-                  if (min == null || max == null) return;
-                  zoomXRef.current = { min, max };
-                  chartRef.current.setScale("x", { min, max });
-                  u.redraw();
-                },
-              ],
-            },
-          },
+            formatX: (value) => formatBrushYear(value, useDates),
+            initialSelect: selectRange,
+          }),
           seriesData,
           brushHost,
         );
       } else {
-        brushChartRef.current.setSize({ width: brushWidth, height: 64 });
+        brushChartRef.current.setSize({ width: brushWidth, height: 72 });
         brushChartRef.current.setData(seriesData);
-        brushChartRef.current.redraw();
+        syncBrushSelect(brushChartRef.current, selectRange.min, selectRange.max);
       }
     };
 
@@ -288,10 +235,10 @@ export function CompareChart({
 
   useLayoutEffect(() => {
     if (!initialXRef.current) return;
-    zoomXRef.current = { ...initialXRef.current };
     chartRef.current?.setScale("x", initialXRef.current);
-    brushChartRef.current?.setScale("x", initialXRef.current);
-    brushChartRef.current?.redraw();
+    if (brushChartRef.current && initialXRef.current) {
+      syncBrushSelect(brushChartRef.current, initialXRef.current.min, initialXRef.current.max);
+    }
   }, [resetToken]);
 
   if (!data || data.series.length === 0) {
@@ -324,9 +271,9 @@ export function CompareChart({
           onClick={() => {
             if (chartRef.current && initialXRef.current) {
               chartRef.current.setScale("x", initialXRef.current);
-              zoomXRef.current = { ...initialXRef.current };
-              brushChartRef.current?.setScale("x", initialXRef.current);
-              brushChartRef.current?.redraw();
+              if (brushChartRef.current) {
+                syncBrushSelect(brushChartRef.current, initialXRef.current.min, initialXRef.current.max);
+              }
             }
             onResetZoom?.();
           }}
