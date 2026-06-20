@@ -10,6 +10,7 @@ import {
   mainChartSyncCursor,
   syncBrushSelect,
 } from "@/lib/uplotBrush";
+import { createYAxisSize } from "@/lib/uplotAxis";
 
 function toUnixDay(value: string): number {
   const text = value.slice(0, 10);
@@ -130,6 +131,12 @@ export function CompareChart({
       })),
     ];
 
+    const allYValues = visibleSeries.flatMap((s) =>
+      s.values.filter((value): value is number => value !== null),
+    );
+    const formatY = (value: number) => formatAxisValue(value, normalized);
+    const yAxisSize = createYAxisSize(formatY, allYValues);
+
     const destroyCharts = () => {
       chartRef.current?.destroy();
       chartRef.current = null;
@@ -160,7 +167,9 @@ export function CompareChart({
               {
                 stroke: "#8b92a0",
                 grid: { show: true, stroke: "rgba(228,231,236,0.8)" },
-                values: (_u, vals) => vals.map((v) => formatAxisValue(Number(v), normalized)),
+                values: (_u, vals) => vals.map((v) => formatY(Number(v))),
+                size: yAxisSize,
+                gap: 8,
               },
             ],
             cursor: mainChartSyncCursor(syncKey),

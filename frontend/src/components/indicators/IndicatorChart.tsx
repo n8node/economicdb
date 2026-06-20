@@ -11,6 +11,7 @@ import {
   mainChartSyncCursor,
   syncBrushSelect,
 } from "@/lib/uplotBrush";
+import { createYAxisSize } from "@/lib/uplotAxis";
 
 function toUnixDay(isoDate: string): number {
   return Math.floor(new Date(`${isoDate.slice(0, 10)}T00:00:00Z`).getTime() / 1000);
@@ -85,6 +86,8 @@ export function IndicatorChart({
 
     const data: AlignedData = [xs, ys];
     const showBrush = points.length >= 8;
+    const formatY = (value: number) => formatAxisValue(value, unit, normalized);
+    const yAxisSize = createYAxisSize(formatY, ys);
 
     const destroyCharts = () => {
       mainRef.current?.destroy();
@@ -109,7 +112,9 @@ export function IndicatorChart({
             {
               stroke: "#8b92a0",
               grid: { show: true, stroke: "rgba(228,231,236,0.8)" },
-              values: (_u, vals) => vals.map((v) => formatAxisValue(Number(v), unit, normalized)),
+              values: (_u, vals) => vals.map((v) => formatY(Number(v))),
+              size: yAxisSize,
+              gap: 8,
             },
           ],
           cursor: mainChartSyncCursor(syncKey),
