@@ -58,6 +58,7 @@ export function createYAxisSize(
 ): (self: uPlot, values: string[], axisIdx: number, cycleNum: number) => number {
   const baseline = yAxisSizeFromSeries(seriesValues, format);
   return (_u, values) => {
+    if (!values?.length) return baseline;
     const numeric = values.map((value) => Number(value));
     return Math.max(baseline, yAxisSizeFromValues(numeric, format));
   };
