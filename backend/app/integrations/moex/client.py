@@ -181,12 +181,9 @@ async def resolve_futures_candidates(
     market: str,
     asset_or_secid: str,
     *,
-    limit: int = 5,
+    limit: int = 12,
 ) -> list[str]:
     primary = await resolve_futures_security(engine, market, asset_or_secid)
-    if primary == asset_or_secid:
-        return [primary]
-
     url = f"{MOEX_ISS_BASE}/engines/{engine}/markets/{market}/securities.json"
     payload = await _http_get_json(url, {"iss.meta": "off"})
     table = payload.get("securities", {})
@@ -240,6 +237,7 @@ async def fetch_history_series(
     if engine == "futures":
         securities = await resolve_futures_candidates(engine, market, security)
 
+    merged: dict[date, Decimal] = {}
     last_error: MoexError | None = None
     for candidate in securities:
         try:
@@ -254,11 +252,16 @@ async def fetch_history_series(
         except MoexError as exc:
             last_error = exc
             continue
+        for observed, value in series:
+            merged.setdefault(observed, value)
+
+    series = sorted(merged.items(), key=lambda item: item[0])
+    if series:
         logger.info(
             "moex_history_loaded",
             engine=engine,
             market=market,
-            security=candidate,
+            securities=securities,
             asset_or_secid=security,
             points=len(series),
             from_date=from_date.isoformat(),

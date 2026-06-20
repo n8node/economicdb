@@ -546,6 +546,35 @@ async def fetch_international_reserves_series(
     return series
 
 
+_MORTGAGE_MONTH_MAP = {
+    "01": 1,
+    "02": 2,
+    "03": 3,
+    "04": 4,
+    "05": 5,
+    "06": 6,
+    "07": 7,
+    "08": 8,
+    "09": 9,
+    "10": 10,
+    "11": 11,
+    "12": 12,
+}
+
+
+def _parse_mortgage_category_month(category: str) -> date | None:
+    parts = category.split(".")
+    if len(parts) != 3:
+        return None
+    month_text, year_text = parts[1], parts[2]
+    if not month_text.isdigit() or not year_text.isdigit():
+        return None
+    month = int(month_text)
+    if month < 1 or month > 12:
+        return None
+    return date(int(year_text), month, 1)
+
+
 def _parse_mortgage_rate_html(html: str) -> list[tuple[date, Decimal]]:
     match = re.search(
         r'"categories"\s*:\s*\[(?P<categories>[^\]]+)\].*?"name"\s*:\s*"ставка, %".*?"data"\s*:\s*\[(?P<data>[^\]]+)\]',
@@ -560,35 +589,30 @@ def _parse_mortgage_rate_html(html: str) -> list[tuple[date, Decimal]]:
     if len(categories) != len(raw_values):
         raise CbrError("Некорректный ряд ипотечной ставки на странице ЦБ", code="cbr_parse_error")
 
-    month_map = {
-        "01": 1,
-        "02": 2,
-        "03": 3,
-        "04": 4,
-        "05": 5,
-        "06": 6,
-        "07": 7,
-        "08": 8,
-        "09": 9,
-        "10": 10,
-        "11": 11,
-        "12": 12,
-    }
-    points: list[tuple[date, Decimal]] = []
+    monthly_values: dict[date, list[Decimal]] = {}
     for category, raw_value in zip(categories, raw_values, strict=True):
-        parts = category.split(".")
-        if len(parts) != 3:
+        observed = _parse_mortgage_category_month(category)
+        if observed is None:
+            parts = category.split(".")
+            if len(parts) == 3:
+                month = _MORTGAGE_MONTH_MAP.get(parts[0])
+                year_text = parts[2]
+                if month is not None and year_text.isdigit():
+                    observed = date(int(year_text), month, 1)
+        if observed is None:
             continue
-        month = month_map.get(parts[0])
-        year_text = parts[2]
-        if month is None or not year_text.isdigit():
-            continue
-        observed = date(int(year_text), month, 1)
         value = _parse_decimal(raw_value)
         if value is None:
             continue
-        points.append((observed, value))
-    return sorted(points, key=lambda item: item[0])
+        monthly_values.setdefault(observed, []).append(value)
+
+    points: list[tuple[date, Decimal]] = []
+    for observed, values in sorted(monthly_values.items(), key=lambda item: item[0]):
+        average = sum(values, Decimal("0")) / Decimal(len(values))
+        points.append((observed, average.quantize(Decimal("0.01"))))
+    if not points:
+        raise CbrError("Не удалось найти ряд ипотечной ставки на странице ЦБ", code="cbr_parse_error")
+    return points
 
 
 async def fetch_mortgage_rate_series(

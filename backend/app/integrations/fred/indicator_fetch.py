@@ -49,6 +49,17 @@ async def fetch_indicator_series(
     transform = fred_transform_for(indicator)
     series = apply_transform(transform, raw)
     series = [(observed, value) for observed, value in series if observed <= to_date]
+    if not series and indicator.id == "gold_spot" and series_id == "GOLDPMGBD228NLBM":
+        fallback_id = "GOLDAMGBD228NLBM"
+        raw = await fetch_observations(
+            api_key,
+            fallback_id,
+            observation_start=from_date.isoformat(),
+        )
+        series = apply_transform(transform, raw)
+        series = [(observed, value) for observed, value in series if observed <= to_date]
+        if series:
+            return series, fallback_id
     if not series:
         raise FredError(f"Пустой ряд FRED {series_id}", code="fred_empty_series")
     return series, series_id
