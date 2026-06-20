@@ -10,6 +10,10 @@ import structlog
 logger = structlog.get_logger()
 
 IMF_DATAMAPPER_BASE = "https://www.imf.org/external/datamapper/api/v1"
+IMF_COUNTRY_ALIASES = {
+    "WLD": "WEOWORLD",
+    "G7": "MAE",
+}
 DEFAULT_FROM_DATE = date(2020, 1, 1)
 HTTP_HEADERS = {
     "User-Agent": "economicdb/0.1 (+https://economicdb.com)",
@@ -121,6 +125,11 @@ async def _http_get_json(url: str) -> dict:
     raise ImfError(f"Не удалось загрузить IMF DataMapper ({'; '.join(errors)})", code="imf_network_error")
 
 
+def resolve_imf_country_code(country_code: str) -> str:
+    normalized = country_code.strip().upper()
+    return IMF_COUNTRY_ALIASES.get(normalized, normalized)
+
+
 async def fetch_gdp_yoy_series(
     indicator_code: str,
     country_code: str,
@@ -129,12 +138,13 @@ async def fetch_gdp_yoy_series(
     to_date: date | None = None,
 ) -> list[tuple[date, Decimal]]:
     end = to_date or datetime.now(timezone.utc).date()
-    url = _build_url(indicator_code, country_code, from_date=from_date, to_date=end)
+    resolved_country = resolve_imf_country_code(country_code)
+    url = _build_url(indicator_code, resolved_country, from_date=from_date, to_date=end)
     payload = await _http_get_json(url)
     series = _parse_datamapper_json(
         payload,
         indicator_code=indicator_code,
-        country_code=country_code,
+        country_code=resolved_country,
         from_date=from_date,
         to_date=end,
     )

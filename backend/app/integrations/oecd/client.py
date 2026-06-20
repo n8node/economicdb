@@ -16,8 +16,8 @@ logger = structlog.get_logger()
 OECD_SDMX_BASE = "https://sdmx.oecd.org/public/rest/data"
 OECD_DATAFLOWS = {
     "HICP": "OECD.SDD.TPS,DSD_PRICES@DF_PRICES_HICP,1.0",
-    "CLI": "OECD.SDD.STES,DSD_STES@DF_CLI,1.0",
-    "BTS": "OECD.SDD.STES,DSD_STES@DF_BTS,1.0",
+    "CLI": "OECD.SDD.STES,DSD_STES@DF_CLI,4.1",
+    "BTS": "OECD.SDD.STES,DSD_STES@DF_BTS,4.0",
 }
 DEFAULT_FROM_DATE = date(2020, 1, 1)
 HTTP_HEADERS = {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.integrations.cbr.indicator_fetch import CBR_SOAP_SERIES
+from app.integrations.cbr.indicator_fetch import CBR_HTML_SERIES, CBR_SOAP_SERIES
 from app.integrations.rosstat.indicator_fetch import FEDSTAT_CONFIG, parse_fedstat_config_key
 from app.models.indicators import Indicator
 
@@ -23,6 +23,8 @@ def is_sync_ready(indicator: Indicator) -> bool:
         if external_id == "KeyRate":
             return True
         if external_id.startswith("R") and len(external_id) in CBR_FX_EXTERNAL_ID_LENGTHS:
+            return True
+        if external_id in CBR_HTML_SERIES:
             return True
         return external_id in CBR_SOAP_SERIES
     if indicator.source == "rosstat":

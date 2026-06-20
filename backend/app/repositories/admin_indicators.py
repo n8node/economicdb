@@ -16,6 +16,9 @@ async def list_admin_indicators(
     country: str | None = None,
     source: str | None = None,
     provider_id: str | None = None,
+    has_data: bool | None = None,
+    enabled: bool | None = None,
+    sync_ready: bool | None = None,
 ) -> list[dict]:
     stmt = select(Indicator).order_by(Indicator.country, Indicator.category, Indicator.id)
     if country:
@@ -26,6 +29,8 @@ async def list_admin_indicators(
         sources = sources_for_provider(provider_id)
         if sources:
             stmt = stmt.where(Indicator.source.in_(sources))
+    if enabled is not None:
+        stmt = stmt.where(Indicator.enabled.is_(enabled))
 
     indicators = list((await session.scalars(stmt)).all())
     if not indicators:
@@ -39,7 +44,7 @@ async def list_admin_indicators(
     )
     counts = {row[0]: row[1] for row in (await session.execute(counts_stmt)).all()}
 
-    return [
+    rows = [
         {
             "id": item.id,
             "name_ru": item.name_ru,
@@ -58,6 +63,12 @@ async def list_admin_indicators(
         }
         for item in indicators
     ]
+
+    if has_data is not None:
+        rows = [row for row in rows if row["has_data"] is has_data]
+    if sync_ready is not None:
+        rows = [row for row in rows if row["sync_ready"] is sync_ready]
+    return rows
 
 
 async def create_indicator(session: AsyncSession, payload: AdminIndicatorCreate) -> Indicator:
@@ -101,6 +112,28 @@ async def update_indicator(
     await session.commit()
     await session.refresh(row)
     return row
+
+
+async def bulk_update_indicators(
+    session: AsyncSession,
+    *,
+    ids: list[str],
+    enabled: bool | None,
+) -> tuple[list[str], list[str]]:
+    if enabled is None:
+        return [], ids
+
+    updated: list[str] = []
+    skipped: list[str] = []
+    for indicator_id in ids:
+        row = await session.get(Indicator, indicator_id)
+        if row is None:
+            skipped.append(indicator_id)
+            continue
+        row.enabled = enabled
+        updated.append(indicator_id)
+    await session.commit()
+    return updated, skipped
 
 
 async def import_templates(

@@ -10,7 +10,7 @@ from typing import Iterable
 import httpx
 import structlog
 
-from app.integrations.rosstat.client import (
+from app.integrations.ecb_eurostat.transforms import yoy_percent_from_index
     DEFAULT_FROM_DATE,
     HTTP_HEADERS,
     HTTP_RETRIES,
@@ -69,6 +69,8 @@ def _fedstat_headers(indicator_id: str) -> dict[str, str]:
 def _transform_value(value: Decimal, transform: str) -> Decimal:
     if transform == "index_yoy":
         return (value - Decimal("100")).quantize(Decimal("0.01"))
+    if transform == "volume_index_yoy":
+        return value
     return value
 
 
@@ -165,6 +167,8 @@ def parse_fedstat_sdmx_series(
             points.append((observed, _transform_value(raw_value, transform)))
 
     series = sorted(points, key=lambda item: item[0])
+    if transform == "volume_index_yoy":
+        series = yoy_percent_from_index(series, quarterly=True)
     if not series:
         logger.warning(
             "fedstat_series_empty",

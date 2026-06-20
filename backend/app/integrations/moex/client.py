@@ -127,6 +127,105 @@ async def _http_get_json(url: str, params: dict[str, str | int]) -> dict:
     raise MoexError(f"Не удалось загрузить MOEX ISS ({'; '.join(errors)})", code="moex_network_error")
 
 
+async def resolve_futures_security(
+    engine: str,
+    market: str,
+    asset_or_secid: str,
+) -> str:
+    """Map root asset codes (BR, GOLD) to the most liquid FORTS contract."""
+    if len(asset_or_secid) > 4 or any(ch.isdigit() for ch in asset_or_secid[-2:]):
+        return asset_or_secid
+
+    url = f"{MOEX_ISS_BASE}/engines/{engine}/markets/{market}/securities.json"
+    payload = await _http_get_json(url, {"iss.meta": "off"})
+    table = payload.get("securities", {})
+    columns = table.get("columns") if isinstance(table, dict) else None
+    rows = table.get("data") if isinstance(table, dict) else None
+    if not isinstance(columns, list) or not isinstance(rows, list):
+        raise MoexError("Не удалось прочитать список фьючерсов MOEX", code="moex_parse_error")
+
+    col_index = {name: idx for idx, name in enumerate(columns)}
+    asset_idx = col_index.get("ASSETCODE")
+    secid_idx = col_index.get("SECID")
+    oi_idx = col_index.get("OPENPOSITION")
+    if asset_idx is None or secid_idx is None:
+        raise MoexError("Некорректный формат списка фьючерсов MOEX", code="moex_parse_error")
+
+    target = asset_or_secid.upper()
+    candidates: list[tuple[int, str]] = []
+    for row in rows:
+        if not isinstance(row, list) or len(row) <= max(asset_idx, secid_idx):
+            continue
+        asset_code = str(row[asset_idx] or "").upper()
+        if asset_code != target:
+            continue
+        secid = str(row[secid_idx] or "").strip()
+        if not secid:
+            continue
+        open_interest = 0
+        if oi_idx is not None and len(row) > oi_idx and row[oi_idx] is not None:
+            try:
+                open_interest = int(row[oi_idx])
+            except (TypeError, ValueError):
+                open_interest = 0
+        candidates.append((open_interest, secid))
+
+    if not candidates:
+        raise MoexError(f"Не найден фьючерс MOEX для {asset_or_secid}", code="moex_parse_error")
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return candidates[0][1]
+
+
+async def resolve_futures_candidates(
+    engine: str,
+    market: str,
+    asset_or_secid: str,
+    *,
+    limit: int = 5,
+) -> list[str]:
+    primary = await resolve_futures_security(engine, market, asset_or_secid)
+    if primary == asset_or_secid:
+        return [primary]
+
+    url = f"{MOEX_ISS_BASE}/engines/{engine}/markets/{market}/securities.json"
+    payload = await _http_get_json(url, {"iss.meta": "off"})
+    table = payload.get("securities", {})
+    columns = table.get("columns") if isinstance(table, dict) else None
+    rows = table.get("data") if isinstance(table, dict) else None
+    if not isinstance(columns, list) or not isinstance(rows, list):
+        return [primary]
+
+    col_index = {name: idx for idx, name in enumerate(columns)}
+    asset_idx = col_index.get("ASSETCODE")
+    secid_idx = col_index.get("SECID")
+    oi_idx = col_index.get("OPENPOSITION")
+    if asset_idx is None or secid_idx is None:
+        return [primary]
+
+    target = asset_or_secid.upper()
+    candidates: list[tuple[int, str]] = []
+    for row in rows:
+        if not isinstance(row, list) or len(row) <= max(asset_idx, secid_idx):
+            continue
+        if str(row[asset_idx] or "").upper() != target:
+            continue
+        secid = str(row[secid_idx] or "").strip()
+        if not secid:
+            continue
+        open_interest = 0
+        if oi_idx is not None and len(row) > oi_idx and row[oi_idx] is not None:
+            try:
+                open_interest = int(row[oi_idx])
+            except (TypeError, ValueError):
+                open_interest = 0
+        candidates.append((open_interest, secid))
+
+    ordered = [secid for _, secid in sorted(candidates, key=lambda item: item[0], reverse=True)]
+    if primary not in ordered:
+        ordered.insert(0, primary)
+    return ordered[:limit] or [primary]
+
+
 async def fetch_history_series(
     engine: str,
     market: str,
@@ -137,14 +236,58 @@ async def fetch_history_series(
     to_date: date | None = None,
 ) -> list[tuple[date, Decimal]]:
     end = to_date or datetime.now(timezone.utc).date()
-    url = f"{MOEX_ISS_BASE}/history/engines/{engine}/markets/{market}/securities/{security}.json"
+    securities = [security]
+    if engine == "futures":
+        securities = await resolve_futures_candidates(engine, market, security)
+
+    last_error: MoexError | None = None
+    for candidate in securities:
+        try:
+            series = await _fetch_history_for_security(
+                engine,
+                market,
+                candidate,
+                value_column=value_column,
+                from_date=from_date,
+                to_date=end,
+            )
+        except MoexError as exc:
+            last_error = exc
+            continue
+        logger.info(
+            "moex_history_loaded",
+            engine=engine,
+            market=market,
+            security=candidate,
+            asset_or_secid=security,
+            points=len(series),
+            from_date=from_date.isoformat(),
+            to_date=end.isoformat(),
+        )
+        return series
+
+    if last_error is not None:
+        raise last_error
+    raise MoexError("Не удалось получить ряд MOEX", code="moex_parse_error")
+
+
+async def _fetch_history_for_security(
+    engine: str,
+    market: str,
+    resolved_security: str,
+    *,
+    value_column: str,
+    from_date: date,
+    to_date: date,
+) -> list[tuple[date, Decimal]]:
+    url = f"{MOEX_ISS_BASE}/history/engines/{engine}/markets/{market}/securities/{resolved_security}.json"
     merged: dict[date, Decimal] = {}
     start = 0
 
     while True:
         params = {
             "from": from_date.isoformat(),
-            "till": end.isoformat(),
+            "till": to_date.isoformat(),
             "iss.meta": "off",
             "start": start,
         }
@@ -153,7 +296,7 @@ async def fetch_history_series(
             payload,
             value_column=value_column,
             from_date=from_date,
-            to_date=end,
+            to_date=to_date,
         )
         for observed, value in page_points:
             merged[observed] = value
@@ -164,15 +307,6 @@ async def fetch_history_series(
     series = sorted(merged.items(), key=lambda item: item[0])
     if not series:
         raise MoexError("Не удалось получить ряд MOEX", code="moex_parse_error")
-    logger.info(
-        "moex_history_loaded",
-        engine=engine,
-        market=market,
-        security=security,
-        points=len(series),
-        from_date=from_date.isoformat(),
-        to_date=end.isoformat(),
-    )
     return series
 
 

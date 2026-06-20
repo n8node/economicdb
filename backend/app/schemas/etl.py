@@ -84,6 +84,16 @@ class AdminIndicatorUpdate(BaseModel):
     enabled: bool | None = None
 
 
+class AdminIndicatorBulkUpdate(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=200)
+    enabled: bool | None = None
+
+
+class AdminIndicatorBulkResult(BaseModel):
+    updated: list[str]
+    skipped: list[str] = Field(default_factory=list)
+
+
 class CatalogTemplateItem(BaseModel):
     id: str
     name_ru: str

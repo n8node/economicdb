@@ -66,6 +66,10 @@ FEDSTAT_CONFIG: dict[str, FedstatConfig] = {
         series_key={"s_OKATO": "643", "s_POK": "30"},
         transform="index_yoy",
     ),
+    "31077": FedstatConfig(
+        series_key={"s_OKATO": "643", "s_POK": "21"},
+        transform="volume_index_yoy",
+    ),
     "57609": FedstatConfig(
         series_key={
             "s_OKATO": "643004.АГ",

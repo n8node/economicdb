@@ -7,6 +7,7 @@ from app.integrations.ecb_eurostat.client import (
     fetch_ecb_series_by_key,
     fetch_eurostat_series_by_key,
 )
+from app.integrations.ecb_eurostat.transforms import external_id_needs_index_yoy, yoy_percent_from_index
 from app.models.indicators import Indicator
 
 
@@ -24,6 +25,9 @@ async def fetch_indicator_series(
         series = await fetch_ecb_series_by_key(external_id, from_date=from_date, to_date=to_date)
     elif indicator.source == "eurostat":
         series = await fetch_eurostat_series_by_key(external_id, from_date=from_date, to_date=to_date)
+        if external_id_needs_index_yoy(external_id):
+            quarterly = indicator.frequency == "quarterly" or "/Q." in f"/{external_id.split('/', 1)[-1]}"
+            series = yoy_percent_from_index(series, quarterly=quarterly)
     else:
         raise EcbEurostatError(f"Неизвестный источник {indicator.source}", code="ecb_eurostat_bad_source")
 

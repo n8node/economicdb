@@ -7,6 +7,7 @@ from app.integrations.cbr.client import (
     fetch_international_reserves_series,
     fetch_key_rate_series,
     fetch_m2_series,
+    fetch_mortgage_rate_series,
     fetch_usd_rub_series,
 )
 from app.models.indicators import Indicator
@@ -17,6 +18,7 @@ CBR_SOAP_SERIES = frozenset(
         "SOAP:MoneySupply/M2",
     }
 )
+CBR_HTML_SERIES = frozenset({"HTML:MortgageRateAverage"})
 
 
 async def fetch_indicator_series(
@@ -47,6 +49,10 @@ async def fetch_indicator_series(
 
     if external_id == "SOAP:MoneySupply/M2":
         series = await fetch_m2_series(from_date=from_date, to_date=to_date)
+        return series, external_id
+
+    if external_id == "HTML:MortgageRateAverage":
+        series = await fetch_mortgage_rate_series(from_date=from_date, to_date=to_date)
         return series, external_id
 
     raise CbrError(f"Неизвестный external_id ЦБ: {external_id}", code="cbr_unknown_external_id")

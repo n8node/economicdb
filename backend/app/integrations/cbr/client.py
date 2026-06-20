@@ -20,6 +20,7 @@ CBR_XML_DYNAMIC_URLS = (
 CBR_KEY_RATE_URL = f"{CBR_BASE_URL}/hd_base/KeyRate/"
 CBR_MRRF_URL = f"{CBR_BASE_URL}/hd_base/mrrf/mrrf_m/"
 CBR_MONETARY_AGG_URL = f"{CBR_BASE_URL}/statistics/macro_itm/dkfs/monetary_agg/"
+CBR_MORTGAGE_RATE_URL = f"{CBR_BASE_URL}/statistics/avgprocstav/"
 CBR_SOAP_URLS = (
     "http://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx",
     f"{CBR_BASE_URL}/DailyInfoWebServ/DailyInfo.asmx",
@@ -543,6 +544,65 @@ async def fetch_international_reserves_series(
     if not series:
         raise CbrError("Не удалось получить международные резервы ЦБ", code="cbr_parse_error")
     return series
+
+
+def _parse_mortgage_rate_html(html: str) -> list[tuple[date, Decimal]]:
+    match = re.search(
+        r'"categories"\s*:\s*\[(?P<categories>[^\]]+)\].*?"name"\s*:\s*"ставка, %".*?"data"\s*:\s*\[(?P<data>[^\]]+)\]',
+        html,
+        flags=re.DOTALL,
+    )
+    if not match:
+        raise CbrError("Не удалось найти ряд ипотечной ставки на странице ЦБ", code="cbr_parse_error")
+
+    categories = re.findall(r'"([^"]+)"', match.group("categories"))
+    raw_values = [item.strip() for item in match.group("data").split(",") if item.strip()]
+    if len(categories) != len(raw_values):
+        raise CbrError("Некорректный ряд ипотечной ставки на странице ЦБ", code="cbr_parse_error")
+
+    month_map = {
+        "01": 1,
+        "02": 2,
+        "03": 3,
+        "04": 4,
+        "05": 5,
+        "06": 6,
+        "07": 7,
+        "08": 8,
+        "09": 9,
+        "10": 10,
+        "11": 11,
+        "12": 12,
+    }
+    points: list[tuple[date, Decimal]] = []
+    for category, raw_value in zip(categories, raw_values, strict=True):
+        parts = category.split(".")
+        if len(parts) != 3:
+            continue
+        month = month_map.get(parts[0])
+        year_text = parts[2]
+        if month is None or not year_text.isdigit():
+            continue
+        observed = date(int(year_text), month, 1)
+        value = _parse_decimal(raw_value)
+        if value is None:
+            continue
+        points.append((observed, value))
+    return sorted(points, key=lambda item: item[0])
+
+
+async def fetch_mortgage_rate_series(
+    *,
+    from_date: date = DEFAULT_FROM_DATE,
+    to_date: date | None = None,
+) -> list[tuple[date, Decimal]]:
+    html = await _http_get(CBR_MORTGAGE_RATE_URL, encoding="utf-8")
+    series = _parse_mortgage_rate_html(html)
+    end = to_date or datetime.now(timezone.utc).date()
+    filtered = [(observed, value) for observed, value in series if from_date <= observed <= end]
+    if not filtered:
+        raise CbrError("Не удалось получить среднюю ипотечную ставку ЦБ", code="cbr_parse_error")
+    return filtered
 
 
 async def fetch_m2_series(

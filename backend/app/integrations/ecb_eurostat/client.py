@@ -184,11 +184,15 @@ def _format_eurostat_end_period(end: date, *, quarterly: bool) -> str:
     return _format_period(end)
 
 
+def _parse_ecb_period(raw: str) -> date | None:
+    return _parse_month_period(raw) or _parse_day_period(raw)
+
+
 def _parse_ecb_csv(text: str) -> list[tuple[date, Decimal]]:
     reader = csv.DictReader(io.StringIO(text))
     points: list[tuple[date, Decimal]] = []
     for row in reader:
-        observed = _parse_day_period(row.get("TIME_PERIOD", ""))
+        observed = _parse_ecb_period(row.get("TIME_PERIOD", ""))
         value = _parse_decimal(row.get("OBS_VALUE", ""))
         if observed is None or value is None:
             continue
@@ -212,10 +216,11 @@ async def fetch_ecb_series_by_key(
         csv_text = await _http_get(url)
         if csv_text is None:
             continue
-        for observed, value in _aggregate_daily_to_monthly(_parse_ecb_csv(csv_text)):
-            if observed < from_date.replace(day=1) or observed > end:
+        for observed, value in _parse_ecb_csv(csv_text):
+            month_start = date(observed.year, observed.month, 1)
+            if month_start < from_date.replace(day=1) or month_start > end:
                 continue
-            merged[observed] = value
+            merged[month_start] = value
     series = sorted(merged.items(), key=lambda item: item[0])
     if not series:
         raise EcbEurostatError(f"Не удалось получить ряд ECB {series_key}", code="ecb_eurostat_parse_error")

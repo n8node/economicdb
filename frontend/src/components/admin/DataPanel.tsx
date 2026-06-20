@@ -74,6 +74,24 @@ const WAVES = [
   { value: "all", label: "Все шаблоны" },
 ];
 
+const DATA_FILTERS = [
+  { value: "", label: "Все данные" },
+  { value: "yes", label: "Есть данные" },
+  { value: "no", label: "Без данных" },
+];
+
+const ENABLED_FILTERS = [
+  { value: "", label: "Все статусы" },
+  { value: "yes", label: "Включены" },
+  { value: "no", label: "Скрыты" },
+];
+
+const ETL_FILTERS = [
+  { value: "", label: "Все ETL" },
+  { value: "yes", label: "Парсер готов" },
+  { value: "no", label: "Без парсера" },
+];
+
 export function DataPanel() {
   const [tab, setTab] = useState<Tab>("sync");
   const [message, setMessage] = useState("");
@@ -85,6 +103,9 @@ export function DataPanel() {
 
   const [providerId, setProviderId] = useState("cbr");
   const [country, setCountry] = useState("");
+  const [filterHasData, setFilterHasData] = useState("");
+  const [filterEnabled, setFilterEnabled] = useState("");
+  const [filterSyncReady, setFilterSyncReady] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -103,10 +124,16 @@ export function DataPanel() {
     const params = new URLSearchParams();
     if (providerId) params.set("provider_id", providerId);
     if (country) params.set("country", country);
+    if (filterHasData === "yes") params.set("has_data", "true");
+    if (filterHasData === "no") params.set("has_data", "false");
+    if (filterEnabled === "yes") params.set("enabled", "true");
+    if (filterEnabled === "no") params.set("enabled", "false");
+    if (filterSyncReady === "yes") params.set("sync_ready", "true");
+    if (filterSyncReady === "no") params.set("sync_ready", "false");
     const data = await adminAuthFetch<Indicator[]>(`/admin/indicators?${params.toString()}`);
     setIndicators(data);
     setSelectedIds((prev) => prev.filter((id) => data.some((item) => item.id === id)));
-  }, [providerId, country]);
+  }, [providerId, country, filterHasData, filterEnabled, filterSyncReady]);
 
   const loadTemplates = useCallback(async () => {
     const data = await adminAuthFetch<Template[]>(`/admin/indicators/templates?wave=${wave}`);
@@ -153,6 +180,18 @@ export function DataPanel() {
     }),
     [providerId, country, selectedIds, dateFrom, dateTo],
   );
+
+  const visibleIds = useMemo(() => indicators.map((item) => item.id), [indicators]);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+
+  function toggleSelectAll() {
+    if (allVisibleSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+      return;
+    }
+    setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+  }
 
   async function runPreview() {
     setBusy(true);
@@ -247,6 +286,34 @@ export function DataPanel() {
       setMessage(enabled ? "Показатель снова виден в продукте" : "Показатель скрыт из продукта");
     } catch {
       setMessage("Не удалось изменить видимость показателя");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function bulkSetEnabled(enabled: boolean) {
+    if (!selectedIds.length) {
+      setMessage("Выберите хотя бы один показатель");
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await adminAuthFetch<{ updated: string[]; skipped: string[] }>(
+        "/admin/indicators/bulk",
+        {
+          method: "PATCH",
+          body: JSON.stringify({ ids: selectedIds, enabled }),
+        },
+      );
+      await loadIndicators();
+      setMessage(
+        `${enabled ? "Включено" : "Скрыто"}: ${result.updated.length}${
+          result.skipped.length ? ` · пропущено: ${result.skipped.length}` : ""
+        }`,
+      );
+    } catch {
+      setMessage("Не удалось выполнить массовое действие");
     } finally {
       setBusy(false);
     }
@@ -360,11 +427,96 @@ export function DataPanel() {
           </section>
 
           <section className="admin-panel">
-            <h2>Показатели ({selectedIds.length} выбрано)</h2>
+            <h2>Показатели ({selectedIds.length} выбрано · {indicators.length} в списке)</h2>
+            <div className="admin-form-row" style={{ marginBottom: 12 }}>
+              <label>
+                Данные
+                <select
+                  className="admin-input"
+                  value={filterHasData}
+                  onChange={(event) => setFilterHasData(event.target.value)}
+                >
+                  {DATA_FILTERS.map((item) => (
+                    <option key={item.value || "all-data"} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                В продукте
+                <select
+                  className="admin-input"
+                  value={filterEnabled}
+                  onChange={(event) => setFilterEnabled(event.target.value)}
+                >
+                  {ENABLED_FILTERS.map((item) => (
+                    <option key={item.value || "all-enabled"} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                ETL
+                <select
+                  className="admin-input"
+                  value={filterSyncReady}
+                  onChange={(event) => setFilterSyncReady(event.target.value)}
+                >
+                  {ETL_FILTERS.map((item) => (
+                    <option key={item.value || "all-etl"} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+              <button
+                type="button"
+                className="admin-btn"
+                disabled={busy || !selectedIds.length}
+                onClick={() => bulkSetEnabled(true)}
+              >
+                Включить выбранные
+              </button>
+              <button
+                type="button"
+                className="admin-btn"
+                disabled={busy || !selectedIds.length}
+                onClick={() => bulkSetEnabled(false)}
+              >
+                Скрыть выбранные
+              </button>
+              <button
+                type="button"
+                className="admin-btn"
+                disabled={busy || !selectedIds.length}
+                onClick={runPreview}
+              >
+                Предпросмотр выбранных
+              </button>
+              <button
+                type="button"
+                className="admin-btn primary"
+                disabled={busy || !selectedIds.length}
+                onClick={runSync}
+              >
+                Загрузить выбранные
+              </button>
+            </div>
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th />
+                  <th>
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleSelectAll}
+                      aria-label="Выбрать все видимые показатели"
+                    />
+                  </th>
                   <th>ID</th>
                   <th>Название</th>
                   <th>Страна</th>
