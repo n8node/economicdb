@@ -67,6 +67,7 @@ export function IndicatorsView() {
   const [items, setItems] = useState<IndicatorListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<"table" | "cards">("table");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<IndicatorFilters["sort"]>("name");
@@ -85,14 +86,17 @@ export function IndicatorsView() {
   useEffect(() => {
     setFavoriteIds(loadIds(FAVORITES_KEY));
     setCompareIds(loadIds(COMPARE_KEY));
-    Promise.all([fetchIndicatorFacets(), fetchFacetLabels()]).then(([f, l]) => {
-      setFacets(f);
-      setLabels(l);
-    });
+    Promise.all([fetchIndicatorFacets(), fetchFacetLabels()])
+      .then(([f, l]) => {
+        setFacets(f);
+        setLabels(l);
+      })
+      .catch(() => undefined);
   }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetchIndicators({
         q: search || undefined,
@@ -105,13 +109,17 @@ export function IndicatorsView() {
         page,
         page_size: pageSize,
       });
-      let list = res.items;
+      let list = res.items ?? [];
       if (favoritesOnly) {
         const fav = loadIds(FAVORITES_KEY);
         list = list.filter((i) => fav.includes(i.id));
       }
       setItems(list);
-      setTotal(favoritesOnly ? list.length : res.total);
+      setTotal(favoritesOnly ? list.length : (res.total ?? list.length));
+    } catch {
+      setItems([]);
+      setTotal(0);
+      setLoadError("Не удалось загрузить каталог. Проверьте, что backend доступен, и нажмите «Повторить».");
     } finally {
       setLoading(false);
     }
@@ -343,7 +351,7 @@ export function IndicatorsView() {
                     )}
                   </div>
                   <div className="filter-dropdown-options">
-                    {Object.entries(group.options).map(([key, count]) =>
+                    {Object.entries(group.options ?? {}).map(([key, count]) =>
                       renderFilterCheckboxRow(group.group, key, optionLabel(group, key), count),
                     )}
                   </div>
@@ -404,7 +412,14 @@ export function IndicatorsView() {
             </div>
           )}
 
-          {loading ? (
+          {loadError ? (
+            <div className="card card-pad empty-state">
+              <p>{loadError}</p>
+              <button type="button" className="btn primary" onClick={() => void load()}>
+                Повторить
+              </button>
+            </div>
+          ) : loading ? (
             <div className="card card-pad">
               <p className="meta">Загрузка…</p>
             </div>
@@ -512,7 +527,7 @@ export function IndicatorsView() {
                   </div>
                   <p className="value-cell card-value">{row.last_value ?? "—"}</p>
                   <DeltaBadge direction={row.delta_direction} value={row.last_change} />
-                  <MiniSparkline values={row.sparkline} width={240} height={36} />
+                  <MiniSparkline values={row.sparkline ?? []} width={240} height={36} />
                   <div className="card-meta">
                     <MetaTags country={row.country} source={row.source} />
                   </div>

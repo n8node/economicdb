@@ -75,7 +75,7 @@ export function IndicatorRowPreview({
         <p className="preview-title">{item.name_ru}</p>
         <p className="preview-desc">{description}</p>
         <div className="preview-chart">
-          <MiniSparkline values={item.sparkline} width={300} height={52} filled />
+          <MiniSparkline values={item.sparkline ?? []} width={300} height={52} filled />
         </div>
         <div className="preview-kpi">
           <span className="preview-value">{item.last_value ?? "—"}</span>
