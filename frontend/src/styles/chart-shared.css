@@ -32,7 +32,20 @@
 .chart-tooltip-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .chart-reset-btn{ font-size:12px; padding:5px 10px; flex-shrink:0; }
 .indicator-chart-host{ width:100%; min-height:320px; }
-.indicator-brush-host{ width:100%; margin-top:8px; opacity:.85; }
+.chart-brush-panel{
+  margin-top:12px; padding:10px 12px 8px;
+  background:var(--bg-muted); border:1px solid var(--border-subtle); border-radius:var(--radius-md);
+}
+.chart-brush-head{
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  flex-wrap:wrap; margin-bottom:6px;
+}
+.chart-brush-label{ font-size:12px; font-weight:600; color:var(--text-secondary); }
+.chart-brush-hint{ font-size:11.5px; color:var(--text-tertiary); }
+.chart-brush-host{ width:100%; min-height:64px; }
+.chart-footnote{
+  margin:10px 0 0; text-align:right; font-size:12px; color:var(--text-tertiary);
+}
 .empty-chart{
   min-height:280px; display:flex; align-items:center; justify-content:center; color:var(--text-tertiary);
 }

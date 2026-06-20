@@ -28,9 +28,6 @@
   width:100%;
   margin:0;
 }
-.compare-page .axis-note{
-  text-align:right; font-size:12px; color:var(--text-tertiary); margin:8px 0 0;
-}
 
 .compare-page .panel-title{ margin:0; font-weight:600; font-size:14px; }
 .compare-page .series-panel{

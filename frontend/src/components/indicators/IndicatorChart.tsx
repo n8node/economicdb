@@ -16,6 +16,10 @@ function formatAxisValue(value: number, unit: string | null, normalized: boolean
   return value.toLocaleString("ru-RU", { maximumFractionDigits: 2 });
 }
 
+function formatBrushYear(value: number): string {
+  return new Date(value * 1000).getFullYear().toString();
+}
+
 type ChartEvent = { date: string; title: string };
 
 export function IndicatorChart({
@@ -50,7 +54,30 @@ export function IndicatorChart({
   const mainRef = useRef<uPlot | null>(null);
   const brushChartRef = useRef<uPlot | null>(null);
   const initialXRef = useRef<{ min: number; max: number } | null>(null);
+  const zoomXRef = useRef<{ min: number; max: number } | null>(null);
   const [hover, setHover] = useState<ChartHoverPoint | null>(null);
+
+  const drawBrushSelection = (u: uPlot) => {
+    const full = initialXRef.current;
+    const zoom = zoomXRef.current;
+    if (!full || !zoom) return;
+    const { ctx } = u;
+    const { left, top, width, height } = u.bbox;
+    const selMin = u.valToPos(zoom.min, "x", true);
+    const selMax = u.valToPos(zoom.max, "x", true);
+    const x1 = Math.max(left, Math.min(selMin, selMax));
+    const x2 = Math.min(left + width, Math.max(selMin, selMax));
+    ctx.save();
+    ctx.fillStyle = "rgba(20, 24, 31, 0.07)";
+    if (x1 > left) ctx.fillRect(left, top, x1 - left, height);
+    if (x2 < left + width) ctx.fillRect(x2, top, left + width - x2, height);
+    ctx.fillStyle = "rgba(27, 117, 97, 0.10)";
+    ctx.fillRect(x1, top, Math.max(x2 - x1, 1), height);
+    ctx.strokeStyle = "rgba(27, 117, 97, 0.55)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x1, top, Math.max(x2 - x1, 1), height);
+    ctx.restore();
+  };
 
   useEffect(() => {
     if (!hostRef.current || points.length === 0) return;
@@ -58,6 +85,7 @@ export function IndicatorChart({
     const xs = points.map((p) => toUnixDay(p.date));
     const ys = points.map((p) => p.value);
     initialXRef.current = { min: xs[0], max: xs[xs.length - 1] };
+    zoomXRef.current = { ...initialXRef.current };
 
     const series: Series[] = [
       {},
@@ -88,6 +116,7 @@ export function IndicatorChart({
         show: true,
         x: true,
         y: false,
+        points: { show: false },
         drag: { setScale: true, x: true, y: false },
       },
       hooks: {
@@ -144,6 +173,15 @@ export function IndicatorChart({
             setHover(buildHoverPoint(points, idx));
           },
         ],
+        setScale: [
+          (u, scaleKey) => {
+            if (scaleKey !== "x") return;
+            const { min: xMin, max: xMax } = u.scales.x;
+            if (xMin == null || xMax == null) return;
+            zoomXRef.current = { min: xMin, max: xMax };
+            brushChartRef.current?.redraw();
+          },
+        ],
       },
     };
 
@@ -165,40 +203,72 @@ export function IndicatorChart({
 
   useEffect(() => {
     if (!brushRef.current || points.length < 8) return;
+    const brushHost = brushRef.current;
     const xs = points.map((p) => toUnixDay(p.date));
     const ys = points.map((p) => p.value);
-    brushChartRef.current?.destroy();
-    brushChartRef.current = new uPlot(
-      {
-        width: brushRef.current.clientWidth,
-        height: 56,
-        scales: { x: { time: true } },
-        series: [{}, { stroke: "#1B7561", width: 1, points: { show: false } }],
-        axes: [{ show: false }, { show: false }],
-        cursor: { show: true, x: true, y: false, drag: { setScale: true, x: true, y: false } },
-        hooks: {
-          setScale: [
-            (u, scaleKey) => {
-              if (scaleKey !== "x" || !mainRef.current) return;
-              const { min, max } = u.scales.x;
-              if (min == null || max == null) return;
-              mainRef.current.setScale("x", { min, max });
+
+    const ensureBrush = () => {
+      const width = brushHost.clientWidth;
+      if (width < 20) return;
+      if (brushChartRef.current) {
+        brushChartRef.current.setSize({ width, height: 64 });
+        brushChartRef.current.redraw();
+        return;
+      }
+      brushChartRef.current = new uPlot(
+        {
+          width,
+          height: 64,
+          padding: [4, 8, 0, 8],
+          scales: { x: { time: true } },
+          legend: { show: false },
+          series: [{}, { stroke: "#1B7561", width: 1.5, points: { show: false } }],
+          axes: [
+            {
+              stroke: "#8b92a0",
+              grid: { show: false },
+              ticks: { show: false },
+              size: 18,
+              values: (_u, vals) => vals.map((v) => formatBrushYear(Number(v))),
             },
+            { show: false },
           ],
+          cursor: { show: true, x: true, y: false, points: { show: false }, drag: { setScale: true, x: true, y: false } },
+          hooks: {
+            draw: [drawBrushSelection],
+            setScale: [
+              (u, scaleKey) => {
+                if (scaleKey !== "x" || !mainRef.current) return;
+                const { min, max } = u.scales.x;
+                if (min == null || max == null) return;
+                zoomXRef.current = { min, max };
+                mainRef.current.setScale("x", { min, max });
+                u.redraw();
+              },
+            ],
+          },
         },
-      },
-      [xs, ys],
-      brushRef.current,
-    );
+        [xs, ys],
+        brushHost,
+      );
+    };
+
+    ensureBrush();
+    const observer = new ResizeObserver(ensureBrush);
+    observer.observe(brushHost);
     return () => {
+      observer.disconnect();
       brushChartRef.current?.destroy();
       brushChartRef.current = null;
     };
   }, [points]);
 
   useEffect(() => {
-    if (!mainRef.current || !initialXRef.current) return;
-    mainRef.current.setScale("x", initialXRef.current);
+    if (!initialXRef.current) return;
+    zoomXRef.current = { ...initialXRef.current };
+    mainRef.current?.setScale("x", initialXRef.current);
+    brushChartRef.current?.setScale("x", initialXRef.current);
+    brushChartRef.current?.redraw();
   }, [resetToken]);
 
   if (points.length === 0) {
@@ -228,6 +298,9 @@ export function IndicatorChart({
           onClick={() => {
             if (mainRef.current && initialXRef.current) {
               mainRef.current.setScale("x", initialXRef.current);
+              zoomXRef.current = { ...initialXRef.current };
+              brushChartRef.current?.setScale("x", initialXRef.current);
+              brushChartRef.current?.redraw();
             }
             onResetZoom?.();
           }}
@@ -236,7 +309,15 @@ export function IndicatorChart({
         </button>
       </div>
       <div className="indicator-chart-host" ref={hostRef} />
-      {points.length >= 8 ? <div className="indicator-brush-host" ref={brushRef} /> : null}
+      {points.length >= 8 ? (
+        <div className="chart-brush-panel">
+          <div className="chart-brush-head">
+            <span className="chart-brush-label">Масштаб по времени</span>
+            <span className="chart-brush-hint">Выделите диапазон — основной график обновится</span>
+          </div>
+          <div className="chart-brush-host" ref={brushRef} />
+        </div>
+      ) : null}
     </div>
   );
 }
