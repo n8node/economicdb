@@ -11,6 +11,7 @@ import httpx
 import structlog
 
 from app.integrations.ecb_eurostat.transforms import yoy_percent_from_index
+from app.integrations.rosstat.client import (
     DEFAULT_FROM_DATE,
     HTTP_HEADERS,
     HTTP_RETRIES,
