@@ -37,6 +37,7 @@ import {
   tableRowsWithDelta,
   type ChartNormalizeMode,
 } from "@/lib/indicatorChart";
+import { buildIndicatorDetailExplanation } from "@/lib/indicatorPreview";
 
 type PeriodKey = "1Y" | "3Y" | "5Y" | "MAX";
 
@@ -199,6 +200,12 @@ export function IndicatorDetailView({ id }: { id: string }) {
 
   const countryLabel = labels?.countries[indicator.country] || indicator.country.toUpperCase();
   const categoryLabel = labels?.categories[indicator.category] || indicator.category;
+  const sourceLabel = SOURCE_LABELS[indicator.source] || indicator.source;
+  const explanation = buildIndicatorDetailExplanation(indicator, {
+    categoryLabel,
+    countryLabel,
+    sourceLabel,
+  });
   const unit = series?.unit || indicator.unit;
   const chartNormalized = normalize !== "absolute";
   const rawPoints = series?.points || [];
@@ -394,7 +401,7 @@ export function IndicatorDetailView({ id }: { id: string }) {
         </div>
 
         <aside className="sidebar-stack">
-          <div className="meta-card">
+          <div className="meta-card meta-card-primary">
             <h2>О показателе</h2>
             <div className="meta-row">
               <span className="meta-key">Источник</span>
@@ -411,10 +418,6 @@ export function IndicatorDetailView({ id }: { id: string }) {
             <div className="meta-row">
               <span className="meta-key">Страна</span>
               <span className="meta-val">{countryLabel}</span>
-            </div>
-            <div className="meta-row">
-              <span className="meta-key">external_id</span>
-              <span className="meta-val">{indicator.external_id || "—"}</span>
             </div>
             {stats ? (
               <>
@@ -440,6 +443,16 @@ export function IndicatorDetailView({ id }: { id: string }) {
               Источник: {SOURCE_LABELS[indicator.source] || indicator.source} · Обновлено:{" "}
               {formatDate(indicator.updated_at)}
             </p>
+          </div>
+
+          <div className="meta-card explain-card">
+            <h2>Что означает показатель</h2>
+            <p className="explain-lead">{explanation.lead}</p>
+            {explanation.paragraphs.map((paragraph) => (
+              <p key={paragraph} className="explain-text">
+                {paragraph}
+              </p>
+            ))}
           </div>
 
           {related.length > 0 ? (
