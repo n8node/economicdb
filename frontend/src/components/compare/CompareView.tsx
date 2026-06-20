@@ -6,11 +6,12 @@ import { MetaTags, SourceTag } from "@/components/ui/MetaTags";
 import { CompareChart } from "./CompareChart";
 import { COMPARE_KEY, loadIds, saveIds } from "@/lib/indicators";
 import {
-  SERIES_COLORS,
   exportCompareCsv,
   fetchComparePresets,
   fetchCompareSeries,
+  MAX_COMPARE_SERIES,
   periodToFrom,
+  SERIES_COLORS,
   type ComparePreset,
   type CompareSeriesResponse,
 } from "@/lib/compare";
@@ -59,7 +60,7 @@ export function CompareView() {
       setPresets(p);
       const stored = loadIds(COMPARE_KEY);
       if (stored.length) {
-        setIndicatorIds(stored.slice(0, 6));
+        setIndicatorIds(stored.slice(0, MAX_COMPARE_SERIES));
       } else {
         const rates = p.find((x) => x.key === "rates") || p[0];
         if (rates) setIndicatorIds(rates.indicator_ids);
@@ -100,6 +101,8 @@ export function CompareView() {
     });
   };
 
+  const compareFull = indicatorIds.length >= MAX_COMPARE_SERIES;
+
   const summaryText = useMemo(() => {
     const periodLabel = period === "MAX" ? "макс." : period;
     return `${indicatorIds.length} серий · период: ${periodLabel} · режим: ${NORMALIZE_LABELS[normalize]}`;
@@ -110,7 +113,7 @@ export function CompareView() {
       <div className="page-head">
         <div>
           <h1>Сравнение</h1>
-          <p className="meta">До 6 серий · presets · absolute / index(100) / change%</p>
+          <p className="meta">До {MAX_COMPARE_SERIES} серий · presets · absolute / index(100) / change%</p>
         </div>
         <div className="page-head-actions">
           <button
@@ -252,7 +255,9 @@ export function CompareView() {
 
         <aside className="series-panel card">
           <div className="series-panel-head card-pad">
-            <p className="panel-title">Серии ({indicatorIds.length}/6)</p>
+            <p className="panel-title">
+              Серии ({indicatorIds.length}/{MAX_COMPARE_SERIES})
+            </p>
           </div>
           <div className="series-list">
             {data?.series.map((s, idx) => {
@@ -308,9 +313,20 @@ export function CompareView() {
               <i className="ti ti-info-circle" />
               На графике потяните мышью для zoom. Скрытые серии остаются в таблице.
             </p>
-            <Link href="/app/indicators" className="catalog-link">
-              <i className="ti ti-plus" /> Добавить из каталога
-            </Link>
+            {compareFull ? (
+              <span className="catalog-link is-disabled" aria-disabled="true">
+                <i className="ti ti-plus" /> Добавить из каталога
+              </span>
+            ) : (
+              <Link href="/app/indicators" className="catalog-link">
+                <i className="ti ti-plus" /> Добавить из каталога
+              </Link>
+            )}
+            {compareFull ? (
+              <p className="catalog-limit-note">
+                Достигнут лимит — не более {MAX_COMPARE_SERIES} серий. Удалите серию, чтобы добавить новую.
+              </p>
+            ) : null}
           </div>
         </aside>
       </div>

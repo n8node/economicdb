@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class CompareSeriesRequest(BaseModel):
-    indicator_ids: list[str] = Field(min_length=1, max_length=6)
+    indicator_ids: list[str] = Field(min_length=1, max_length=12)
     date_from: date | None = None
     date_to: date | None = None
     normalize: str = Field(default="absolute", pattern="^(absolute|index|change)$")

@@ -54,7 +54,22 @@ export async function fetchCompareSeries(body: CompareRequest): Promise<CompareS
   });
 }
 
-export const SERIES_COLORS = ["#1B7561", "#2B5A98", "#9A5B26", "#A33C53", "#6B4A9E", "#92701A"];
+export const MAX_COMPARE_SERIES = 12;
+
+export const SERIES_COLORS = [
+  "#1B7561",
+  "#2B5A98",
+  "#9A5B26",
+  "#A33C53",
+  "#6B4A9E",
+  "#92701A",
+  "#0E6655",
+  "#154360",
+  "#784212",
+  "#7B241C",
+  "#4A235A",
+  "#566573",
+];
 
 export function periodToFrom(period: string): string | undefined {
   const end = new Date();

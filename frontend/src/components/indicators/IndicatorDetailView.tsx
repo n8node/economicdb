@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MetaTags } from "@/components/ui/MetaTags";
 import { IndicatorChart } from "./IndicatorChart";
+import { MAX_COMPARE_SERIES } from "@/lib/compare";
 import {
   COMPARE_KEY,
   FAVORITES_KEY,
@@ -155,8 +156,8 @@ export function IndicatorDetailView({ id }: { id: string }) {
       setMessage("Показатель уже в сравнении");
       return;
     }
-    if (current.length >= 6) {
-      setMessage("В сравнении не более 6 показателей");
+    if (current.length >= MAX_COMPARE_SERIES) {
+      setMessage(`В сравнении не более ${MAX_COMPARE_SERIES} показателей`);
       return;
     }
     saveIds(COMPARE_KEY, [...current, indicator.id]);

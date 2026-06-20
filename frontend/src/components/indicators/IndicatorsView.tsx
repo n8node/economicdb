@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MetaTags } from "@/components/ui/MetaTags";
 import { MiniSparkline } from "./MiniSparkline";
+import { MAX_COMPARE_SERIES } from "@/lib/compare";
 import {
   COMPARE_KEY,
   FAVORITES_KEY,
@@ -158,7 +159,7 @@ export function IndicatorsView() {
 
   const addToCompare = (id: string) => {
     const current = loadIds(COMPARE_KEY);
-    if (current.includes(id) || current.length >= 6) return;
+    if (current.includes(id) || current.length >= MAX_COMPARE_SERIES) return;
     saveIds(COMPARE_KEY, [...current, id]);
   };
 
@@ -172,7 +173,7 @@ export function IndicatorsView() {
 
   const bulkCompare = () => {
     const current = loadIds(COMPARE_KEY);
-    const merged = [...new Set([...current, ...selected])].slice(0, 6);
+    const merged = [...new Set([...current, ...selected])].slice(0, MAX_COMPARE_SERIES);
     saveIds(COMPARE_KEY, merged);
     window.location.href = "/app/compare";
   };
