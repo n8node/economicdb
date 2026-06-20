@@ -32,12 +32,12 @@ export function FavoritesView() {
       ) : (
         <div className="fav-grid">
           {items.map((item) => (
-            <div key={item.id} className="fav-card card card-pad">
+            <Link key={item.id} href={`/app/indicators/${item.id}`} className="fav-card card card-pad">
               <p className="fav-label">{item.name_ru}</p>
               <p className="fav-value">{item.last_value}</p>
               <span className={`delta ${item.delta_direction}`}>{item.last_change}</span>
               <span className={`source-tag ${item.source}`}>{SOURCE_LABELS[item.source] || item.source}</span>
-            </div>
+            </Link>
           ))}
         </div>
       )}

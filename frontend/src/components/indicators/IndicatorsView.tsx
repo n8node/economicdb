@@ -343,9 +343,9 @@ export function IndicatorsView() {
                         <input type="checkbox" checked={selected.includes(row.id)} onChange={() => toggleSelect(row.id)} />
                       </td>
                       <td>
-                        <span className="indicator-name" title={row.name_ru}>
+                        <Link href={`/app/indicators/${row.id}`} className="indicator-name" title={row.name_ru}>
                           {row.name_ru}
-                        </span>
+                        </Link>
                       </td>
                       <td>
                         <span className="country-flag">{row.country.toUpperCase()}</span>
@@ -386,7 +386,9 @@ export function IndicatorsView() {
               {items.map((row) => (
                 <div key={row.id} className="indicator-card card card-pad">
                   <div className="indicator-card-head">
-                    <span className="indicator-name">{row.name_ru}</span>
+                    <Link href={`/app/indicators/${row.id}`} className="indicator-name">
+                      {row.name_ru}
+                    </Link>
                     <button
                       type="button"
                       className={`row-icon-btn star ${favoriteIds.includes(row.id) ? "active" : ""}`}

@@ -47,7 +47,8 @@
 .indicators-page .data-table tr.row:hover{ background:var(--bg-muted); }
 .indicators-page .data-table tr.row.selected{ background:var(--primary-50); }
 .indicators-page .data-table .num{ text-align:right; }
-.indicators-page .indicator-name{ font-weight:500; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+.indicators-page .indicator-name{ font-weight:500; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; color:inherit; text-decoration:none; }
+.indicators-page .indicator-name:hover{ color:var(--primary-700); }
 .indicators-page .country-flag{ font-size:11px; font-weight:600; padding:2px 7px; border-radius:var(--radius-sm); background:var(--bg-muted); }
 .indicators-page .value-cell{ font-family:var(--font-mono); font-weight:500; }
 .indicators-page .delta-badge{ display:inline-flex; align-items:center; gap:3px; font-size:12px; padding:2px 7px; border-radius:var(--radius-sm); font-family:var(--font-mono); }

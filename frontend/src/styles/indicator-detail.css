@@ -1,0 +1,94 @@
+.indicator-detail-page .detail-back{ margin-bottom:12px; }
+.indicator-detail-page .detail-layout{
+  display:grid; grid-template-columns:1fr 280px; gap:20px; align-items:start;
+}
+.indicator-detail-page .detail-hero{
+  background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card); padding:22px 24px; margin-bottom:16px;
+}
+.indicator-detail-page .detail-head-row{
+  display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:14px;
+}
+.indicator-detail-page .detail-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+.indicator-detail-page .detail-tags{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.indicator-detail-page .detail-kpi-row{ display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; }
+.indicator-detail-page .detail-value{
+  font-family:var(--font-mono); font-size:36px; font-weight:600; line-height:1.1; margin:0;
+}
+.indicator-detail-page .detail-updated{ font-size:13px; color:var(--text-tertiary); }
+.indicator-detail-page .chart-card{
+  background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card); padding:18px 20px; margin-bottom:16px;
+}
+.indicator-detail-page .period-bar{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.indicator-detail-page .period-btn{
+  border:1px solid var(--border-default); background:var(--bg-surface); color:var(--text-secondary);
+  border-radius:999px; padding:6px 14px; font-size:13px;
+}
+.indicator-detail-page .period-btn.active{
+  background:var(--primary-50); color:var(--primary-700); border-color:var(--primary-100);
+}
+.indicator-detail-page .indicator-chart-host{ width:100%; min-height:320px; }
+.indicator-detail-page .stats-row{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:16px;
+}
+.indicator-detail-page .stat-box{
+  background:var(--bg-muted); border-radius:var(--radius-md); padding:10px 12px;
+}
+.indicator-detail-page .stat-label{ font-size:12px; color:var(--text-tertiary); margin:0 0 4px; }
+.indicator-detail-page .stat-value{ font-family:var(--font-mono); font-size:15px; font-weight:500; margin:0; }
+.indicator-detail-page .meta-card{
+  background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card); padding:18px 20px; position:sticky; top:86px;
+}
+.indicator-detail-page .meta-card h2{ font-size:15px; margin:0 0 14px; }
+.indicator-detail-page .meta-row{
+  display:flex; justify-content:space-between; gap:12px; padding:8px 0;
+  border-bottom:1px solid var(--border-subtle); font-size:13px;
+}
+.indicator-detail-page .meta-row:last-child{ border-bottom:none; }
+.indicator-detail-page .meta-key{ color:var(--text-tertiary); }
+.indicator-detail-page .meta-val{ text-align:right; font-family:var(--font-mono); word-break:break-all; }
+.indicator-detail-page .source-note{
+  margin-top:14px; padding-top:14px; border-top:1px solid var(--border-subtle);
+  font-size:12px; color:var(--text-tertiary); line-height:1.5;
+}
+.indicator-detail-page .history-card{
+  background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg);
+  overflow:hidden;
+}
+.indicator-detail-page .history-card summary{
+  cursor:pointer; padding:14px 18px; font-weight:600; list-style:none;
+}
+.indicator-detail-page .history-card summary::-webkit-details-marker{ display:none; }
+.indicator-detail-page .history-table{ width:100%; border-collapse:collapse; }
+.indicator-detail-page .history-table th,
+.indicator-detail-page .history-table td{
+  padding:10px 14px; border-top:1px solid var(--border-subtle); font-size:13px;
+}
+.indicator-detail-page .history-table .num{ text-align:right; font-family:var(--font-mono); }
+.indicator-detail-page .delta-badge{ display:inline-flex; align-items:center; gap:3px; font-size:12px; padding:2px 7px; border-radius:var(--radius-sm); font-family:var(--font-mono); }
+.indicator-detail-page .delta-badge.up{ background:var(--positive-bg); color:var(--positive-text); }
+.indicator-detail-page .delta-badge.down{ background:var(--negative-bg); color:var(--negative-text); }
+.indicator-detail-page .delta-badge.flat{ background:var(--neutral-bg); color:var(--neutral-text); }
+.indicator-detail-page .source-tag{ font-size:11.5px; font-weight:500; padding:2px 8px; border-radius:var(--radius-sm); }
+.indicator-detail-page .source-tag.cbr{ background:var(--src-cbr-bg); color:var(--src-cbr-text); }
+.indicator-detail-page .source-tag.rosstat{ background:var(--src-rosstat-bg); color:var(--src-rosstat-text); }
+.indicator-detail-page .source-tag.fred{ background:var(--src-fred-bg); color:var(--src-fred-text); }
+.indicator-detail-page .source-tag.oecd{ background:var(--src-oecd-bg); color:var(--src-oecd-text); }
+.indicator-detail-page .source-tag.ecb{ background:var(--src-imf-bg); color:var(--src-imf-text); }
+.indicator-detail-page .source-tag.eurostat{ background:var(--src-oecd-bg); color:var(--src-oecd-text); }
+.indicator-detail-page .source-tag.moex{ background:var(--src-moex-bg); color:var(--src-moex-text); }
+.indicator-detail-page .source-tag.imf{ background:var(--src-imf-bg); color:var(--src-imf-text); }
+.indicator-detail-page .source-tag.world_bank{ background:var(--src-cbr-bg); color:var(--src-cbr-text); }
+.indicator-detail-page .country-flag{ font-size:11px; font-weight:600; padding:2px 7px; border-radius:var(--radius-sm); background:var(--bg-muted); }
+.indicator-detail-page .freq-tag{ font-size:12px; color:var(--text-tertiary); font-family:var(--font-mono); }
+.indicator-detail-page .empty-chart{
+  min-height:240px; display:flex; align-items:center; justify-content:center; color:var(--text-tertiary);
+}
+
+@media (max-width:960px){
+  .indicator-detail-page .detail-layout{ grid-template-columns:1fr; }
+  .indicator-detail-page .meta-card{ position:static; }
+  .indicator-detail-page .stats-row{ grid-template-columns:repeat(2,1fr); }
+}
