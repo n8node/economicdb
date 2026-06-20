@@ -14,7 +14,11 @@ import structlog
 logger = structlog.get_logger()
 
 OECD_SDMX_BASE = "https://sdmx.oecd.org/public/rest/data"
-OECD_HICP_DATAFLOW = "OECD.SDD.TPS,DSD_PRICES@DF_PRICES_HICP,1.0"
+OECD_DATAFLOWS = {
+    "HICP": "OECD.SDD.TPS,DSD_PRICES@DF_PRICES_HICP,1.0",
+    "CLI": "OECD.SDD.STES,DSD_STES@DF_CLI,1.0",
+    "BTS": "OECD.SDD.STES,DSD_STES@DF_BTS,1.0",
+}
 DEFAULT_FROM_DATE = date(2020, 1, 1)
 HTTP_HEADERS = {
     "User-Agent": "economicdb/0.1 (+https://economicdb.com)",
@@ -23,6 +27,7 @@ HTTP_HEADERS = {
 HTTP_TIMEOUT = httpx.Timeout(connect=8.0, read=45.0, write=10.0, pool=10.0)
 HTTP_RETRIES = 3
 MONTH_PERIOD_RE = re.compile(r"^(\d{4})-(\d{2})$")
+QUARTER_PERIOD_RE = re.compile(r"^(\d{4})-Q([1-4])$")
 
 
 class OecdError(Exception):
@@ -30,6 +35,16 @@ class OecdError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+def parse_oecd_external_id(external_id: str) -> tuple[str, str]:
+    if "/" in external_id:
+        flow_key, series_key = external_id.split("/", 1)
+        dataflow = OECD_DATAFLOWS.get(flow_key)
+        if dataflow is None or not series_key:
+            raise OecdError(f"Неизвестный OECD dataflow: {external_id}", code="oecd_unknown_external_id")
+        return dataflow, series_key
+    return OECD_DATAFLOWS["HICP"], external_id
 
 
 def _iter_year_chunks(from_date: date, to_date: date) -> Iterator[tuple[date, date]]:
@@ -46,15 +61,20 @@ def _format_period(value: date) -> str:
     return value.strftime("%Y-%m")
 
 
-def _parse_month_period(raw: str) -> date | None:
-    match = MONTH_PERIOD_RE.match(raw.strip())
-    if not match:
-        return None
-    year = int(match.group(1))
-    month = int(match.group(2))
-    if month < 1 or month > 12:
-        return None
-    return date(year, month, 1)
+def _parse_period(raw: str) -> date | None:
+    cleaned = raw.strip()
+    month_match = MONTH_PERIOD_RE.match(cleaned)
+    if month_match:
+        year = int(month_match.group(1))
+        month = int(month_match.group(2))
+        if 1 <= month <= 12:
+            return date(year, month, 1)
+    quarter_match = QUARTER_PERIOD_RE.match(cleaned)
+    if quarter_match:
+        year = int(quarter_match.group(1))
+        quarter = int(quarter_match.group(2))
+        return date(year, (quarter - 1) * 3 + 1, 1)
+    return None
 
 
 def _parse_decimal(raw: str) -> Decimal | None:
@@ -67,9 +87,9 @@ def _parse_decimal(raw: str) -> Decimal | None:
         return None
 
 
-def _build_data_url(series_key: str, *, start_period: str, end_period: str) -> str:
+def _build_data_url(dataflow: str, series_key: str, *, start_period: str, end_period: str) -> str:
     return (
-        f"{OECD_SDMX_BASE}/{OECD_HICP_DATAFLOW}/{series_key}"
+        f"{OECD_SDMX_BASE}/{dataflow}/{series_key}"
         f"?startPeriod={start_period}&endPeriod={end_period}"
         "&dimensionAtObservation=AllDimensions&format=csvfilewithlabels"
     )
@@ -81,7 +101,7 @@ def _parse_sdmx_csv(text: str) -> list[tuple[date, Decimal]]:
     for row in reader:
         if row.get("STRUCTURE") != "DATAFLOW":
             continue
-        observed = _parse_month_period(row.get("TIME_PERIOD", ""))
+        observed = _parse_period(row.get("TIME_PERIOD", ""))
         value = _parse_decimal(row.get("OBS_VALUE", ""))
         if observed is None or value is None:
             continue
@@ -121,16 +141,18 @@ async def _http_get(url: str) -> str:
     raise OecdError(f"Не удалось загрузить OECD SDMX ({'; '.join(errors)})", code="oecd_network_error")
 
 
-async def fetch_hicp_yoy_series(
-    series_key: str,
+async def fetch_sdmx_series(
+    external_id: str,
     *,
     from_date: date = DEFAULT_FROM_DATE,
     to_date: date | None = None,
 ) -> list[tuple[date, Decimal]]:
+    dataflow, series_key = parse_oecd_external_id(external_id)
     end = to_date or datetime.now(timezone.utc).date()
     merged: dict[date, Decimal] = {}
     for chunk_from, chunk_to in _iter_year_chunks(from_date, end):
         url = _build_data_url(
+            dataflow,
             series_key,
             start_period=_format_period(chunk_from),
             end_period=_format_period(chunk_to),
@@ -143,15 +165,24 @@ async def fetch_hicp_yoy_series(
 
     series = sorted(merged.items(), key=lambda item: item[0])
     if not series:
-        raise OecdError("Не удалось получить HICP еврозоны (г/г)", code="oecd_parse_error")
+        raise OecdError(f"Не удалось получить ряд OECD ({external_id})", code="oecd_parse_error")
     logger.info(
-        "oecd_hicp_yoy_loaded",
-        series_key=series_key,
+        "oecd_series_loaded",
+        external_id=external_id,
         points=len(series),
         from_date=from_date.isoformat(),
         to_date=end.isoformat(),
     )
     return series
+
+
+async def fetch_hicp_yoy_series(
+    series_key: str,
+    *,
+    from_date: date = DEFAULT_FROM_DATE,
+    to_date: date | None = None,
+) -> list[tuple[date, Decimal]]:
+    return await fetch_sdmx_series(series_key, from_date=from_date, to_date=to_date)
 
 
 async def test_connection() -> dict:

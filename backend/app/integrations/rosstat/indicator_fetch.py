@@ -23,6 +23,14 @@ FEDSTAT_CONFIG: dict[str, FedstatConfig] = {
         transform="index_yoy",
         fallback_cbr_cpi=True,
     ),
+    "31074/food": FedstatConfig(
+        series_key={"s_OKATO": "030", "s_grtov": "6", "s_POK": "9"},
+        transform="index_yoy",
+    ),
+    "31074/services": FedstatConfig(
+        series_key={"s_OKATO": "030", "s_grtov": "57", "s_POK": "9"},
+        transform="index_yoy",
+    ),
     "57806": FedstatConfig(
         series_key={"s_OKATO": "643004.АГ", "s_OKVED2": "1323500.029.31", "s_POK": "3"},
         transform="index_yoy",
@@ -39,13 +47,37 @@ FEDSTAT_CONFIG: dict[str, FedstatConfig] = {
         series_key={"s_OKATO": "643", "s_POK": "30"},
         transform="index_yoy",
     ),
+    "57609": FedstatConfig(
+        series_key={
+            "s_OKATO": "643004.АГ",
+            "s_OKVED2": "1323500.029.31",
+            "s_POK": "9",
+            "s_kanalreal": "1",
+        },
+        transform="index_yoy",
+    ),
+    "31081": FedstatConfig(
+        series_key={"s_OKATO": "643", "s_POK": "9"},
+        transform="index_yoy",
+    ),
 }
 
 
-def parse_fedstat_id(external_id: str) -> str | None:
+def parse_fedstat_config_key(external_id: str) -> str | None:
     if external_id.startswith(FEDSTAT_PREFIX):
-        return external_id.removeprefix(FEDSTAT_PREFIX).split("/", 1)[0]
+        return external_id.removeprefix(FEDSTAT_PREFIX)
     return None
+
+
+def parse_fedstat_id(external_id: str) -> str | None:
+    config_key = parse_fedstat_config_key(external_id)
+    if config_key is None:
+        return None
+    return config_key.split("/", 1)[0]
+
+
+def fedstat_indicator_id(config_key: str) -> str:
+    return config_key.split("/", 1)[0]
 
 
 async def fetch_indicator_series(
@@ -55,21 +87,22 @@ async def fetch_indicator_series(
     to_date: date,
 ) -> tuple[list[tuple[date, object]], str]:
     external_id = (indicator.external_id or "").strip()
-    fedstat_id = parse_fedstat_id(external_id)
-    if not fedstat_id:
+    config_key = parse_fedstat_config_key(external_id)
+    if not config_key:
         raise RosstatError(f"Нет fedstat external_id для {indicator.id}", code="rosstat_missing_external_id")
 
-    config = FEDSTAT_CONFIG.get(fedstat_id)
+    config = FEDSTAT_CONFIG.get(config_key)
     if config is None:
         raise RosstatError(
-            f"Нет конфигурации fedstat для {fedstat_id} ({indicator.id})",
+            f"Нет конфигурации fedstat для {config_key} ({indicator.id})",
             code="rosstat_unconfigured",
         )
 
-    if fedstat_id == "31074" and config.fallback_cbr_cpi:
+    indicator_id = fedstat_indicator_id(config_key)
+    if config_key == "31074" and config.fallback_cbr_cpi:
         try:
             series = await fetch_fedstat_series(
-                fedstat_id,
+                indicator_id,
                 series_key=config.series_key,
                 transform=config.transform,
                 from_date=from_date,
@@ -81,12 +114,12 @@ async def fetch_indicator_series(
             return series, external_id
 
     series = await fetch_fedstat_series(
-        fedstat_id,
+        indicator_id,
         series_key=config.series_key,
         transform=config.transform,
         from_date=from_date,
         to_date=to_date,
     )
     if not series:
-        raise RosstatError(f"Пустой ряд fedstat {fedstat_id}", code="rosstat_empty_series")
+        raise RosstatError(f"Пустой ряд fedstat {config_key}", code="rosstat_empty_series")
     return series, external_id

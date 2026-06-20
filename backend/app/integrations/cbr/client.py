@@ -18,6 +18,8 @@ CBR_XML_DYNAMIC_URLS = (
     f"{CBR_BASE_URL}/scripts/XML_dynamic.asp",
 )
 CBR_KEY_RATE_URL = f"{CBR_BASE_URL}/hd_base/KeyRate/"
+CBR_MRRF_URL = f"{CBR_BASE_URL}/hd_base/mrrf/mrrf_m/"
+CBR_MONETARY_AGG_URL = f"{CBR_BASE_URL}/statistics/macro_itm/dkfs/monetary_agg/"
 CBR_SOAP_URLS = (
     "http://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx",
     f"{CBR_BASE_URL}/DailyInfoWebServ/DailyInfo.asmx",
@@ -419,6 +421,142 @@ async def fetch_usd_rub_series(
     if not series:
         raise CbrError("Не удалось разобрать курс USD/RUB", code="cbr_parse_error")
     return series
+
+
+def _parse_mrrf_xml(xml_text: str) -> list[tuple[date, Decimal]]:
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as exc:
+        raise CbrError("ЦБ РФ вернул некорректный XML для международных резервов", code="cbr_parse_error") from exc
+
+    points: list[tuple[date, Decimal]] = []
+    for node in root.iter():
+        tag = node.tag.split("}")[-1]
+        if tag not in {"Month", "Record", "row", "Row"}:
+            continue
+        dt_text = None
+        value_text = None
+        for child in node:
+            child_tag = child.tag.split("}")[-1]
+            if child_tag in {"Date", "DT", "date"} and child.text:
+                dt_text = child.text.strip()
+            elif child_tag in {
+                "MonthInternationalReserves",
+                "InternationalReserves",
+                "Value",
+                "value",
+                "Reserves",
+            } and child.text:
+                value_text = child.text.strip()
+        if dt_text and value_text:
+            observed = _parse_observed(dt_text)
+            value = _parse_decimal(value_text)
+            if observed is not None and value is not None:
+                points.append((observed, value))
+    return sorted(points, key=lambda item: item[0])
+
+
+def _parse_mrrf_html(html: str) -> list[tuple[date, Decimal]]:
+    points: list[tuple[date, Decimal]] = []
+    for match in re.finditer(
+        r"<tr>\s*<td>(\d{2}\.\d{2}\.\d{4})</td>\s*<td[^>]*>\s*([\d\s]+)\s*</td>",
+        html,
+        flags=re.IGNORECASE,
+    ):
+        observed = _parse_observed(match.group(1))
+        value = _parse_decimal(match.group(2))
+        if observed is None or value is None:
+            continue
+        points.append((observed, (value / Decimal("1000")).quantize(Decimal("0.01"))))
+    return sorted(points, key=lambda item: item[0])
+
+
+def _parse_monetary_agg_json(html: str) -> list[tuple[date, Decimal]]:
+    pattern = re.compile(r'"Date"\s*:\s*"(\d{4}-\d{2}-\d{2})"[^}]*?"M2"\s*:\s*([\d.]+)')
+    points: list[tuple[date, Decimal]] = []
+    for raw_date, raw_m2 in pattern.findall(html):
+        try:
+            observed = date.fromisoformat(raw_date)
+        except ValueError:
+            continue
+        value = _parse_decimal(raw_m2)
+        if value is None:
+            continue
+        points.append((observed, (value / Decimal("1000")).quantize(Decimal("0.01"))))
+    if not points:
+        raise CbrError("Не удалось найти ряд M2 на странице ЦБ", code="cbr_parse_error")
+    return sorted(points, key=lambda item: item[0])
+
+
+async def _fetch_mrrf_soap(from_date: date, to_date: date) -> list[tuple[date, Decimal]]:
+    inner = (
+        f'<mrrfXML xmlns="{CBR_NAMESPACE}">'
+        f"<fromDate>{_soap_datetime(from_date)}</fromDate>"
+        f"<ToDate>{_soap_datetime(to_date)}</ToDate>"
+        f"</mrrfXML>"
+    )
+    response = await _soap_call("mrrfXML", inner)
+    xml_text = _extract_result_xml(response, "mrrfXMLResult")
+    series = _parse_mrrf_xml(xml_text)
+    if not series:
+        raise CbrError("Не удалось разобрать международные резервы (SOAP)", code="cbr_parse_error")
+    return series
+
+
+async def _fetch_mrrf_html(from_date: date, to_date: date) -> list[tuple[date, Decimal]]:
+    html = await _http_get(
+        CBR_MRRF_URL,
+        {
+            "UniDbQuery.Posted": "True",
+            "UniDbQuery.From": _format_cbr_date_dot(from_date),
+            "UniDbQuery.To": _format_cbr_date_dot(to_date),
+        },
+        encoding="utf-8",
+    )
+    series = _parse_mrrf_html(html)
+    if not series:
+        raise CbrError("Не удалось разобрать международные резервы (HTML)", code="cbr_parse_error")
+    return series
+
+
+async def fetch_international_reserves_series(
+    *,
+    from_date: date = DEFAULT_FROM_DATE,
+    to_date: date | None = None,
+) -> list[tuple[date, Decimal]]:
+    end = to_date or datetime.now(timezone.utc).date()
+    merged: dict[date, Decimal] = {}
+    for chunk_from, chunk_to in _iter_year_chunks(from_date, end):
+        try:
+            chunk = await _fetch_mrrf_soap(chunk_from, chunk_to)
+        except CbrError as exc:
+            logger.warning(
+                "cbr_mrrf_soap_fallback",
+                from_date=chunk_from.isoformat(),
+                to_date=chunk_to.isoformat(),
+                error=exc.message,
+            )
+            chunk = await _fetch_mrrf_html(chunk_from, chunk_to)
+        for observed, value in chunk:
+            merged[observed] = value
+    series = sorted(merged.items(), key=lambda item: item[0])
+    if not series:
+        raise CbrError("Не удалось получить международные резервы ЦБ", code="cbr_parse_error")
+    return series
+
+
+async def fetch_m2_series(
+    *,
+    from_date: date = DEFAULT_FROM_DATE,
+    to_date: date | None = None,
+) -> list[tuple[date, Decimal]]:
+    html = await _http_get(CBR_MONETARY_AGG_URL, encoding="utf-8")
+    series = _parse_monetary_agg_json(html)
+    end = to_date or datetime.now(timezone.utc).date()
+    filtered = [(observed, value) for observed, value in series if from_date <= observed <= end]
+    if not filtered:
+        raise CbrError("Не удалось получить денежную массу M2 ЦБ", code="cbr_parse_error")
+    return filtered
 
 
 async def test_connection() -> dict:
