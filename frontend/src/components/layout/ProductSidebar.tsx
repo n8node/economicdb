@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
@@ -28,10 +27,10 @@ export function ProductSidebar() {
         {NAV.map((item) => {
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           return (
-            <Link key={item.href} href={item.href} className={`nav-item${active ? " active" : ""}`}>
+            <a key={item.href} href={item.href} className={`nav-item${active ? " active" : ""}`}>
               <i className={`ti ${item.icon}`} />
               <span>{item.label}</span>
-            </Link>
+            </a>
           );
         })}
       </nav>
