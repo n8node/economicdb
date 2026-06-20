@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MetaTags } from "@/components/ui/MetaTags";
 import { MiniSparkline } from "./MiniSparkline";
+import { IndicatorRowPreview, isRowPreviewBlockedTarget } from "./IndicatorRowPreview";
 import { MAX_COMPARE_SERIES } from "@/lib/compare";
 import {
   COMPARE_KEY,
@@ -77,6 +78,9 @@ export function IndicatorsView() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [rowPreview, setRowPreview] = useState<{ item: IndicatorListItem; x: number; y: number } | null>(null);
+  const [rowPreviewVisible, setRowPreviewVisible] = useState(false);
+  const rowPreviewHideTimer = useRef<number | null>(null);
 
   useEffect(() => {
     setFavoriteIds(loadIds(FAVORITES_KEY));
@@ -194,6 +198,38 @@ export function IndicatorsView() {
   };
 
   const compareLabel = compareActionLabel(compareIds);
+
+  const clearRowPreviewHideTimer = () => {
+    if (rowPreviewHideTimer.current !== null) {
+      window.clearTimeout(rowPreviewHideTimer.current);
+      rowPreviewHideTimer.current = null;
+    }
+  };
+
+  const hideRowPreview = () => {
+    setRowPreviewVisible(false);
+    clearRowPreviewHideTimer();
+    rowPreviewHideTimer.current = window.setTimeout(() => {
+      setRowPreview(null);
+      rowPreviewHideTimer.current = null;
+    }, 180);
+  };
+
+  const showRowPreview = (item: IndicatorListItem, x: number, y: number) => {
+    clearRowPreviewHideTimer();
+    setRowPreview({ item, x, y });
+    setRowPreviewVisible(true);
+  };
+
+  const handleRowPointerMove = (item: IndicatorListItem, event: React.MouseEvent<HTMLTableRowElement>) => {
+    if (isRowPreviewBlockedTarget(event.target)) {
+      if (rowPreviewVisible) hideRowPreview();
+      return;
+    }
+    showRowPreview(item, event.clientX, event.clientY);
+  };
+
+  useEffect(() => () => clearRowPreviewHideTimer(), []);
 
   const filterGroups = useMemo<FilterGroupConfig[]>(() => {
     if (!facets) return [];
@@ -400,7 +436,16 @@ export function IndicatorsView() {
                 </thead>
                 <tbody>
                   {items.map((row) => (
-                    <tr key={row.id} className={`row ${selected.includes(row.id) ? "selected" : ""}`}>
+                    <tr
+                      key={row.id}
+                      className={`row ${selected.includes(row.id) ? "selected" : ""} ${rowPreview?.item.id === row.id && rowPreviewVisible ? "preview-active" : ""}`}
+                      onMouseMove={(event) => handleRowPointerMove(row, event)}
+                      onMouseLeave={(event) => {
+                        const tbody = event.currentTarget.closest("tbody");
+                        if (event.relatedTarget instanceof Node && tbody?.contains(event.relatedTarget)) return;
+                        hideRowPreview();
+                      }}
+                    >
                       <td className="checkbox-cell">
                         <input type="checkbox" checked={selected.includes(row.id)} onChange={() => toggleSelect(row.id)} />
                       </td>
@@ -506,6 +551,12 @@ export function IndicatorsView() {
             </Link>
           </div>
       </div>
+
+      <IndicatorRowPreview
+        preview={rowPreview}
+        visible={rowPreviewVisible}
+        categoryLabel={rowPreview ? labels?.categories[rowPreview.item.category] : undefined}
+      />
     </div>
   );
 }
