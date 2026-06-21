@@ -15,6 +15,8 @@ COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 BASE="https://${DOMAIN}"
 
 nginx_state=$($COMPOSE ps nginx --format '{{.State}}' 2>/dev/null | head -1 || true)
+nginx_health=$($COMPOSE ps nginx --format '{{.Health}}' 2>/dev/null | head -1 || true)
+echo "nginx: state=${nginx_state:-?} health=${nginx_health:-?}"
 if [ "$nginx_state" != "running" ]; then
   echo "ERROR: nginx state is ${nginx_state:-unknown}, expected running"
   $COMPOSE ps nginx 2>/dev/null || true

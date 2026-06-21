@@ -1,5 +1,5 @@
 #!/bin/bash
-# Экстренное восстановление: sync, nginx conf, recreate nginx, health check.
+# Экстренное восстановление: sync, nginx conf, reload/start nginx, health check.
 set -euo pipefail
 
 cd /opt/economicdb
@@ -14,12 +14,10 @@ chmod +x scripts/*.sh
 
 echo "=== Recover: nginx config ==="
 bash scripts/generate-nginx-https-conf.sh
-bash scripts/validate-nginx-config.sh
 
-echo "=== Recover: recreate nginx ==="
+echo "=== Recover: nginx ==="
 $COMPOSE build nginx
-$COMPOSE up -d --force-recreate --no-deps nginx
-bash scripts/nginx-wait.sh
+bash scripts/nginx-reload-safe.sh
 
 echo "=== Recover: verify ==="
 sleep 2

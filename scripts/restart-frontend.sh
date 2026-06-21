@@ -42,12 +42,8 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
-echo "=== Recreate nginx (fresh Docker DNS + config includes) ==="
-bash scripts/validate-nginx-config.sh
-$COMPOSE up -d --force-recreate --no-deps nginx
-
-echo "=== Verify nginx (skip reload — container just started fresh) ==="
-NGINX_RELOAD=0 bash scripts/nginx-wait.sh
+echo "=== Reload nginx (no recreate — avoids killing browser TLS sessions) ==="
+bash scripts/nginx-reload-safe.sh
 
 echo "=== Ensure static assets are present ==="
 bash scripts/fix-static-volume.sh
