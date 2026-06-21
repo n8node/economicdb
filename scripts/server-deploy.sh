@@ -26,10 +26,13 @@ echo "=== BUILD_ID=${BUILD_ID} ==="
 
 # Конфиг nginx на диск до recreate контейнера — избегаем crash loop на старом conf
 bash scripts/generate-nginx-https-conf.sh
+# Важно: сначала пересобираем nginx, иначе validate может запускаться на старом
+# образе и падать на устаревшем nginx.conf.
+COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+$COMPOSE build nginx
 bash scripts/validate-nginx-config.sh
 
 SERVICES="${1:-}"
-COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
 if [ -n "$SERVICES" ]; then
   $COMPOSE build $SERVICES
