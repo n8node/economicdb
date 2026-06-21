@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
-import { NavigationFallback } from "@/components/NavigationFallback";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter" });
@@ -25,7 +24,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script src="/macro-hard-navigation.js" />
       </head>
       <body>
-        <NavigationFallback />
         {children}
       </body>
     </html>

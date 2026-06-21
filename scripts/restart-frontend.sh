@@ -42,13 +42,10 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
-echo "=== Ensure nginx has include files ==="
-if ! $COMPOSE exec -T nginx test -f /etc/nginx/includes/frontend-proxy-base.conf 2>/dev/null; then
-  echo "nginx includes missing in running container; recreating nginx"
-  $COMPOSE up -d --force-recreate nginx
-fi
+echo "=== Recreate nginx (fresh Docker DNS + config includes) ==="
+$COMPOSE up -d --force-recreate --no-deps nginx
 
-echo "=== Reload nginx (refresh Docker DNS) ==="
+echo "=== Reload nginx ==="
 $COMPOSE exec nginx nginx -t
 $COMPOSE exec nginx nginx -s reload
 

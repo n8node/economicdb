@@ -23,6 +23,5 @@
   }
 
   window.__macroHardNavigation = "external";
-  window.addEventListener("click", handleClick, true);
   document.addEventListener("click", handleClick, true);
 })();

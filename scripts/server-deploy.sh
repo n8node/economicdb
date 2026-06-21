@@ -24,7 +24,7 @@ else
   $COMPOSE build nginx
   $COMPOSE up -d backend worker
   $COMPOSE up -d --force-recreate --no-deps frontend
-  $COMPOSE up -d --force-recreate nginx
+  # Wait for frontend, then recreate nginx — never recreate nginx before frontend is ready
   SKIP_BUILD=1 bash scripts/restart-frontend.sh
 fi
 
@@ -33,8 +33,6 @@ if [ -f scripts/apply-nginx-https.sh ]; then
 fi
 
 bash scripts/fix-static-volume.sh
-
-$COMPOSE exec nginx nginx -s reload 2>/dev/null || true
 
 sleep 3
 curl -sf https://economicdb.com/health && echo " health OK" || echo "WARNING: health failed"
