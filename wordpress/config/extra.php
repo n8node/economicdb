@@ -18,3 +18,10 @@ if (!defined('WP_HOME')) {
 if (!defined('WP_SITEURL')) {
     define('WP_SITEURL', $scheme . '://' . $host);
 }
+
+if (!defined('WP_MEMORY_LIMIT')) {
+    define('WP_MEMORY_LIMIT', '256M');
+}
+if (!defined('WP_MAX_MEMORY_LIMIT')) {
+    define('WP_MAX_MEMORY_LIMIT', '512M');
+}
