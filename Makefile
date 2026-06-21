@@ -1,7 +1,7 @@
 .PHONY: dev prod down migrate logs logs-prod status deploy first-deploy setup-server backup-db backup-wp psql wp-cli lint test setup
 
 dev:
-	test -f nginx/conf.d/default.conf || cp nginx/conf.d/default.dev.conf nginx/conf.d/default.conf
+	test -f nginx/conf.d/default.conf || cp nginx/conf.d/default.dev.sample nginx/conf.d/default.conf
 	docker compose up --build -d
 
 down:
