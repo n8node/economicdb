@@ -45,7 +45,7 @@ curl -sS --connect-timeout 10 -o /dev/null -w "https default /health -> %{http_c
 echo ""
 echo "=== Nginx listeners ==="
 ss -ltnp 2>/dev/null | grep -E ':(80|443)\s' || true
-$COMPOSE exec -T nginx sh -c "nginx -T 2>/dev/null | grep -n 'listen 443\\|http2'" || true
+$COMPOSE exec -T nginx sh -c "nginx -T 2>/dev/null | grep -n 'listen 443\\|http2\\|keepalive_timeout\\|Alt-Svc'" || true
 
 echo ""
 echo "=== HTTP redirect (expect 301) ==="
@@ -75,7 +75,7 @@ fi
 
 echo ""
 echo "=== Cache-Control /app ==="
-curl -s --connect-timeout 10 -D - -o /dev/null "${HTTPS_BASE}/app" | grep -iE '^(HTTP/|cache-control|pragma|strict-transport-security)' || true
+curl -s --connect-timeout 10 -D - -o /dev/null "${HTTPS_BASE}/app" | grep -iE '^(HTTP/|cache-control|pragma|strict-transport-security|alt-svc|connection)' || true
 
 echo ""
 echo "=== Recent logs ==="
