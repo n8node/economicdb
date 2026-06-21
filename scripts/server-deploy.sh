@@ -3,8 +3,12 @@
 set -euo pipefail
 
 cd /opt/economicdb
-git checkout -- .
-git pull origin main
+
+BRANCH="${DEPLOY_BRANCH:-main}"
+echo "=== Sync repo to origin/${BRANCH} ==="
+git fetch origin "$BRANCH"
+# Deploy server: discard local edits to tracked files (nginx conf.d is regenerated below).
+git reset --hard "origin/${BRANCH}"
 
 chmod +x scripts/*.sh
 export BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo local)"
