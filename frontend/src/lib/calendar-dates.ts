@@ -33,16 +33,30 @@ export function parseDateKey(key: string): Date {
 }
 
 export function mskToday(): Date {
-  const parts = new Intl.DateTimeFormat("en-CA", {
+  const key = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Moscow",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).formatToParts(new Date());
-  const year = Number(parts.find((p) => p.type === "year")?.value);
-  const month = Number(parts.find((p) => p.type === "month")?.value);
-  const day = Number(parts.find((p) => p.type === "day")?.value);
-  return new Date(year, month - 1, day);
+  }).format(new Date());
+  return parseDateKey(key);
+}
+
+export function isPeriodOnToday(mode: CalendarViewMode, focusDate: Date): boolean {
+  const today = mskToday();
+  switch (mode) {
+    case "day":
+      return isSameDay(focusDate, today);
+    case "week":
+      return toDateKey(startOfWeek(focusDate)) === toDateKey(startOfWeek(today));
+    case "month":
+    case "agenda":
+      return focusDate.getFullYear() === today.getFullYear() && focusDate.getMonth() === today.getMonth();
+    case "year":
+      return focusDate.getFullYear() === today.getFullYear();
+    default:
+      return false;
+  }
 }
 
 export function isSameDay(a: Date, b: Date): boolean {

@@ -16,6 +16,7 @@ import {
   getMonthGrid,
   getWeekDays,
   getYearMonths,
+  isPeriodOnToday,
   isSameDay,
   monthLabel,
   mskToday,
@@ -130,18 +131,27 @@ export function CalendarView() {
     setViewMode("day");
   };
 
+  const goToToday = () => {
+    setFocusDate(mskToday());
+  };
+
+  const todayFocused = isPeriodOnToday(viewMode, focusDate);
+
   const renderDayView = () => {
     const key = toDateKey(focusDate);
     const dayEvents = eventsByDay.get(key) || [];
 
     return (
-      <div className="cal-day-view card card-pad">
+      <div className="cal-day-view">
         <div className="cal-day-head">
           <h3>{formatDayTitle(focusDate)}</h3>
           <span className="meta">{dayEvents.length} событий</span>
         </div>
         {dayEvents.length === 0 ? (
-          <p className="cal-empty-day meta">На этот день событий нет</p>
+          <div className="cal-stage-empty">
+            <i className="ti ti-calendar-off" />
+            <p className="meta">На этот день событий нет</p>
+          </div>
         ) : (
           <div className="cal-day-timeline">
             {dayEvents.map((event) => (
@@ -204,7 +214,7 @@ export function CalendarView() {
   const renderMonthView = () => {
     const cells = getMonthGrid(focusDate);
     return (
-      <div className="cal-month-shell card">
+      <div className="cal-month-shell">
         <div className="cal-month-weekdays">
           {weekdayLabels().map((label) => (
             <span key={label}>{label}</span>
@@ -254,7 +264,7 @@ export function CalendarView() {
             <button
               key={monthDate.getMonth()}
               type="button"
-              className="cal-year-month card card-pad"
+              className="cal-year-month"
               onClick={() => {
                 setFocusDate(monthDate);
                 setViewMode("month");
@@ -293,16 +303,25 @@ export function CalendarView() {
   const renderAgendaView = () => {
     const sortedKeys = [...eventsByDay.keys()].sort();
     if (sortedKeys.length === 0) {
-      return <p className="meta cal-empty-day">Событий в выбранном периоде нет</p>;
+      return (
+        <div className="cal-stage-empty">
+          <i className="ti ti-calendar-off" />
+          <p className="meta">Событий в выбранном периоде нет</p>
+        </div>
+      );
     }
     return (
       <div className="cal-agenda">
         {sortedKeys.map((key) => {
           const dayEvents = eventsByDay.get(key) || [];
           const date = parseDateKey(key);
+          const isToday = isSameDay(date, today);
           return (
-            <section key={key} className="cal-agenda-day card card-pad">
-              <h3>{formatDayTitle(date)}</h3>
+            <section key={key} className={`cal-agenda-day${isToday ? " today" : ""}`}>
+              <button type="button" className="cal-agenda-day-head" onClick={() => openDay(date)}>
+                <h3>{formatDayTitle(date)}</h3>
+                <span className="meta">{dayEvents.length}</span>
+              </button>
               {dayEvents.map((event) => (
                 <button key={event.id} type="button" className="cal-agenda-row" onClick={() => setSelectedId(event.id)}>
                   <span className={`importance ${event.importance}`} />
@@ -367,9 +386,7 @@ export function CalendarView() {
           >
             <i className="ti ti-chevron-left" />
           </button>
-          <button type="button" className="cal-nav-title" onClick={() => setFocusDate(mskToday())}>
-            {navigationTitle(viewMode, focusDate)}
-          </button>
+          <span className="cal-nav-title">{navigationTitle(viewMode, focusDate)}</span>
           <button
             type="button"
             className="cal-nav-btn"
@@ -378,7 +395,11 @@ export function CalendarView() {
           >
             <i className="ti ti-chevron-right" />
           </button>
-          <button type="button" className="cal-today-btn" onClick={() => setFocusDate(mskToday())}>
+          <button
+            type="button"
+            className={`cal-today-btn${todayFocused ? " active" : ""}`}
+            onClick={goToToday}
+          >
             Сегодня
           </button>
         </div>
@@ -442,28 +463,34 @@ export function CalendarView() {
         ))}
       </div>
 
-      {loading ? (
-        <div className="card card-pad cal-loading">
-          <i className="ti ti-loader-2 cal-spin" />
-          <p className="meta">Загрузка календаря…</p>
-        </div>
-      ) : events.length === 0 ? (
-        <div className="card card-pad empty-state calendar-empty">
-          <i className="ti ti-calendar-off empty-icon" />
-          <h3>Нет событий в {monthLabel(focusDate).toLowerCase()}</h3>
-          <p className="meta">
-            Попробуйте другой период, снимите фильтры или попросите администратора синхронизировать календарь.
-          </p>
-        </div>
-      ) : (
-        <>
-          {viewMode === "day" && renderDayView()}
-          {viewMode === "week" && renderWeekView()}
-          {viewMode === "month" && renderMonthView()}
-          {viewMode === "year" && renderYearView()}
-          {viewMode === "agenda" && renderAgendaView()}
-        </>
-      )}
+      <div className="cal-body">
+        {loading ? (
+          <div className="cal-stage">
+            <div className="cal-stage-empty">
+              <i className="ti ti-loader-2 cal-spin" />
+              <p className="meta">Загрузка календаря…</p>
+            </div>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="cal-stage">
+            <div className="cal-stage-empty calendar-empty">
+              <i className="ti ti-calendar-off empty-icon" />
+              <h3>Нет событий в {monthLabel(focusDate).toLowerCase()}</h3>
+              <p className="meta">
+                Попробуйте другой период, снимите фильтры или попросите администратора синхронизировать календарь.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="cal-stage">
+            {viewMode === "day" && renderDayView()}
+            {viewMode === "week" && renderWeekView()}
+            {viewMode === "month" && renderMonthView()}
+            {viewMode === "year" && renderYearView()}
+            {viewMode === "agenda" && renderAgendaView()}
+          </div>
+        )}
+      </div>
 
       <p className="calendar-footnote meta">
         Источники: Банк России, Росстат, FRED, ECB · Прогнозы часто недоступны (Tier C)
