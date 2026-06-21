@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
-
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.etl.calendar.enricher import enrich_past_events
-from app.etl.calendar.options import CALENDAR_PROVIDER_ID, CalendarSyncOptions
+from app.etl.calendar.options import CALENDAR_PROVIDER_ID, CalendarSyncOptions, resolve_calendar_date_range
 from app.etl.calendar.writer import CalendarEventDraft, upsert_events
-from app.etl.helpers import resolve_date_range
 from app.etl.jobs_service import create_etl_job, finish_etl_job
 from app.etl.options import SyncOptions
 from app.integrations.cbr.calendar_fetch import fetch_cbr_calendar_events
@@ -22,26 +19,13 @@ from app.services.credentials import get_api_key
 
 logger = structlog.get_logger()
 
-DEFAULT_LOOKBACK_DAYS = 90
-DEFAULT_LOOKAHEAD_DAYS = 120
-
-
-def _resolve_calendar_range(options: CalendarSyncOptions | None) -> tuple[date, date]:
-    if options and (options.date_from or options.date_to):
-        from_date, to_date = resolve_date_range(
-            SyncOptions(date_from=options.date_from, date_to=options.date_to)
-        )
-        return from_date, to_date
-    today = date.today()
-    return today - timedelta(days=DEFAULT_LOOKBACK_DAYS), today + timedelta(days=DEFAULT_LOOKAHEAD_DAYS)
-
 
 async def run_calendar_sync(
     session: AsyncSession,
     options: CalendarSyncOptions | None = None,
 ) -> dict:
     opts = options or CalendarSyncOptions()
-    date_from, date_to = _resolve_calendar_range(opts)
+    date_from, date_to = resolve_calendar_date_range(opts)
     sources = opts.sources or list(CalendarSyncOptions().sources)
     dry_run = opts.dry_run
 
@@ -130,7 +114,7 @@ async def run_calendar_sync_with_job(
     if opts.dry_run:
         return await run_calendar_sync(session, opts)
 
-    date_from, date_to = _resolve_calendar_range(opts)
+    date_from, date_to = resolve_calendar_date_range(opts)
     job = await create_etl_job(
         session,
         CALENDAR_PROVIDER_ID,

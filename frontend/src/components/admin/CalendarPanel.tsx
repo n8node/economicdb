@@ -206,6 +206,10 @@ export function CalendarPanel() {
 
       <div className="admin-card-block">
         <h2>Период загрузки</h2>
+        <p className="muted">
+          По умолчанию: 90 дней назад и 120 дней вперёд. Без будущих дат в календаре пользователя не будет
+          предстоящих событий.
+        </p>
         <div className="admin-form-row">
           <label>
             С

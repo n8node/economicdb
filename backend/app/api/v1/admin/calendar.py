@@ -6,11 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_admin, get_session
 from app.etl.calendar.enricher import enrich_past_events
-from app.etl.calendar.options import DEFAULT_CALENDAR_SOURCES, CalendarSyncOptions
+from app.etl.calendar.options import (
+    DEFAULT_CALENDAR_SOURCES,
+    CalendarSyncOptions,
+    resolve_calendar_date_range,
+)
 from app.etl.calendar.sync import run_calendar_sync, run_calendar_sync_with_job
-from app.etl.helpers import resolve_date_range
 from app.etl.jobs_service import job_to_dict, list_etl_jobs
-from app.etl.options import SyncOptions
 from app.models.admin import AdminUser
 from app.models.events import EconomicEvent
 from app.schemas.calendar_admin import (
@@ -83,7 +85,7 @@ async def calendar_sources(_: AdminUser = Depends(get_current_admin)) -> Calenda
 
 @router.get("/defaults")
 async def calendar_defaults(_: AdminUser = Depends(get_current_admin)) -> dict:
-    from_date, to_date = resolve_date_range(None)
+    from_date, to_date = resolve_calendar_date_range(CalendarSyncOptions())
     return {
         "date_from": from_date.isoformat(),
         "date_to": to_date.isoformat(),
