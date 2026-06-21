@@ -87,8 +87,8 @@ export function SummaryDetailView({ id }: { id: string }) {
     );
   }
 
-  const sections = buildSections(data);
-  const insightSections = sections.filter((section) => section.key !== "intro").slice(0, 4);
+  const sections = buildSections(data).filter((section) => section.key !== "intro");
+  const insightSections = sections.slice(0, 4);
   const metrics = buildMetricCards(data.citations);
 
   return (
@@ -105,9 +105,6 @@ export function SummaryDetailView({ id }: { id: string }) {
           </span>
           <p className="summary-period">{data.period_label} · {data.reading_minutes} мин чтения</p>
           <h1>{data.headline}</h1>
-          <p className="summary-hero-lead">
-            {sections[0]?.lead || "Короткая facts-first записка по ключевым макроэкономическим сигналам недели."}
-          </p>
           <div className="summary-hero-actions">
             <Link href="/app/indicators" target="_top" className="btn primary">
               <i className="ti ti-chart-line" />
@@ -118,26 +115,6 @@ export function SummaryDetailView({ id }: { id: string }) {
               Календарь событий
             </Link>
           </div>
-        </div>
-        <div className="summary-hero-panel">
-          <p className="hero-panel-label">Покрытие выпуска</p>
-          <div className="hero-panel-grid">
-            <div>
-              <strong>{Object.keys(data.citations).length}</strong>
-              <span>цитат</span>
-            </div>
-            <div>
-              <strong>{data.source_count}</strong>
-              <span>источников</span>
-            </div>
-            <div>
-              <strong>{data.word_count}</strong>
-              <span>слов</span>
-            </div>
-          </div>
-          <p className="hero-panel-note">
-            Числа проходят проверку по Facts JSON и связаны с официальными источниками.
-          </p>
         </div>
       </section>
 
