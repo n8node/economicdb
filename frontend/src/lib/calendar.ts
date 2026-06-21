@@ -25,6 +25,8 @@ export type CalendarFilters = {
   importance?: string[];
   category?: string[];
   status?: "upcoming" | "past";
+  from?: string;
+  to?: string;
 };
 
 function buildQuery(filters: CalendarFilters): string {
@@ -33,6 +35,8 @@ function buildQuery(filters: CalendarFilters): string {
   filters.importance?.forEach((v) => params.append("importance", v));
   filters.category?.forEach((v) => params.append("category", v));
   if (filters.status) params.set("status", filters.status);
+  if (filters.from) params.set("from", `${filters.from}T00:00:00+03:00`);
+  if (filters.to) params.set("to", `${filters.to}T23:59:59+03:00`);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }

@@ -1,24 +1,49 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   CATEGORY_LABELS,
   IMPORTANCE_LABELS,
   calendarIcsUrl,
-  fetchCalendarEvent,
   fetchCalendarEvents,
   type CalendarEvent,
-  type CalendarEventDetail,
   type CalendarFilters,
 } from "@/lib/calendar";
+import {
+  eventDateKey,
+  eventTimeLabel,
+  formatDayTitle,
+  getMonthGrid,
+  getWeekDays,
+  getYearMonths,
+  isSameDay,
+  monthLabel,
+  mskToday,
+  navigationTitle,
+  parseDateKey,
+  rangeForView,
+  shiftFocusDate,
+  shortMonthLabel,
+  toDateKey,
+  weekdayLabels,
+  type CalendarViewMode,
+} from "@/lib/calendar-dates";
 import { SOURCE_LABELS } from "@/lib/indicators";
+import { EventModal } from "@/components/calendar/EventModal";
 
 const COUNTRY_LABELS: Record<string, string> = {
   ru: "Россия",
   us: "США",
   eu: "Еврозона",
 };
+
+const VIEW_MODES: { id: CalendarViewMode; label: string }[] = [
+  { id: "day", label: "День" },
+  { id: "week", label: "Неделя" },
+  { id: "month", label: "Месяц" },
+  { id: "year", label: "Год" },
+  { id: "agenda", label: "Список" },
+];
 
 const SOURCE_TAG_CLASS: Record<string, string> = {
   cbr: "cbr",
@@ -29,188 +54,61 @@ const SOURCE_TAG_CLASS: Record<string, string> = {
   oecd: "ecb",
 };
 
-function surpriseClass(direction: string | null) {
-  if (direction === "up") return "surprise-up";
-  if (direction === "down") return "surprise-down";
-  return "surprise-flat";
+function groupEventsByDay(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
+  const map = new Map<string, CalendarEvent[]>();
+  for (const event of events) {
+    const key = eventDateKey(event.scheduled_at_msk);
+    const list = map.get(key) || [];
+    list.push(event);
+    map.set(key, list);
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => a.scheduled_at_msk.localeCompare(b.scheduled_at_msk));
+  }
+  return map;
 }
 
-function EventDrawer({ eventId, onClose }: { eventId: string | null; onClose: () => void }) {
-  const [detail, setDetail] = useState<CalendarEventDetail | null>(null);
-
-  useEffect(() => {
-    if (!eventId) {
-      setDetail(null);
-      return;
-    }
-    fetchCalendarEvent(eventId).then(setDetail).catch(() => setDetail(null));
-  }, [eventId]);
-
-  if (!eventId) return null;
-
+function EventChip({
+  event,
+  compact,
+  onSelect,
+}: {
+  event: CalendarEvent;
+  compact?: boolean;
+  onSelect: (id: string) => void;
+}) {
   return (
-    <div className="drawer-overlay" onClick={onClose}>
-      <aside className="event-drawer" onClick={(e) => e.stopPropagation()}>
-        <div className="drawer-head">
-          <div>
-            {detail && (
-              <div className="drawer-badges">
-                <span className={`importance-badge ${detail.importance}`}>
-                  {IMPORTANCE_LABELS[detail.importance] || detail.importance}
-                </span>
-                <span className="country-flag">{COUNTRY_LABELS[detail.country] || detail.country.toUpperCase()}</span>
-                <span className={`source-tag ${SOURCE_TAG_CLASS[detail.source] || ""}`}>
-                  {SOURCE_LABELS[detail.source] || detail.source}
-                </span>
-              </div>
-            )}
-            <h2>{detail?.title_ru || "Загрузка…"}</h2>
-          </div>
-          <button type="button" className="row-icon-btn" onClick={onClose} aria-label="Закрыть">
-            <i className="ti ti-x" />
-          </button>
-        </div>
-        {detail && (
-          <>
-            <p className="meta drawer-time">{detail.scheduled_label}</p>
-            <div className="drawer-grid">
-              <div className="drawer-metric">
-                <span className="meta">Факт</span>
-                <p className="metric-value">{detail.actual ?? "—"}</p>
-              </div>
-              <div className="drawer-metric">
-                <span className="meta">Прогноз</span>
-                <p className="metric-value">{detail.forecast ?? "—"}</p>
-              </div>
-              <div className="drawer-metric">
-                <span className="meta">Предыдущее</span>
-                <p className="metric-value">{detail.previous ?? "—"}</p>
-              </div>
-              <div className="drawer-metric">
-                <span className="meta">Сюрприз</span>
-                <p className={`metric-value ${surpriseClass(detail.surprise_direction)}`}>
-                  {detail.surprise ?? "—"}
-                </p>
-              </div>
-            </div>
-            {detail.linked_indicator_id && (
-              <Link href={`/app/indicators/${detail.linked_indicator_id}`} className="drawer-link">
-                <i className="ti ti-chart-line" /> Открыть показатель в каталоге
-              </Link>
-            )}
-            <p className="ai-disclaimer">
-              Прогноз/consensus часто «—» — универсального бесплатного источника нет. Факты подтягиваются из рядов
-              показателей после публикации.
-            </p>
-          </>
-        )}
-      </aside>
-    </div>
-  );
-}
-
-function WeekView({ events, onSelect }: { events: CalendarEvent[]; onSelect: (id: string) => void }) {
-  const days = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
-    for (const event of events) {
-      const dayKey = event.scheduled_at_msk.slice(0, 10);
-      const list = map.get(dayKey) || [];
-      list.push(event);
-      map.set(dayKey, list);
-    }
-    const sortedKeys = [...map.keys()].sort();
-    const start = sortedKeys[0] ? new Date(sortedKeys[0]) : new Date();
-    const weekStart = new Date(start);
-    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(weekStart);
-      d.setDate(d.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
-      return { date: d, events: map.get(key) || [] };
-    });
-  }, [events]);
-
-  const weekday = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-
-  return (
-    <div className="week-grid">
-      {days.map(({ date, events: dayEvents }, idx) => {
-        const isWeekend = idx >= 5;
-        const isToday = date.toDateString() === new Date().toDateString();
-        return (
-          <div key={date.toISOString()} className={`week-day-col${isWeekend ? " weekend" : ""}${isToday ? " today" : ""}`}>
-            <div className="week-day-head">
-              {weekday[idx]}
-              <span className="num">{date.getDate()}</span>
-            </div>
-            {dayEvents.length === 0 ? (
-              <div className="week-empty-note">{isWeekend ? "Выходной" : "Событий нет"}</div>
-            ) : (
-              dayEvents.map((event) => (
-                <button key={event.id} type="button" className="week-mini-event" onClick={() => onSelect(event.id)}>
-                  <span className="week-mini-time">{event.scheduled_label.split(", ")[1]?.replace(" МСК", "") || "—"}</span>
-                  <span className="country-flag">{event.country.toUpperCase()}</span>
-                  <span className="week-mini-title">{event.title_ru}</span>
-                  {event.status === "past" && event.actual && <span className="week-mini-actual">{event.actual}</span>}
-                </button>
-              ))
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function MonthView({ events, onSelect }: { events: CalendarEvent[]; onSelect: (id: string) => void }) {
-  const grouped = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
-    for (const event of events) {
-      const day = event.scheduled_label.split(",")[0];
-      const list = map.get(day) || [];
-      list.push(event);
-      map.set(day, list);
-    }
-    return [...map.entries()].sort(([a], [b]) => {
-      const [da, ma, ya] = a.split(".").map(Number);
-      const [db, mb, yb] = b.split(".").map(Number);
-      return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
-    });
-  }, [events]);
-
-  return (
-    <div className="month-grid">
-      {grouped.map(([day, dayEvents]) => (
-        <section key={day} className="month-day card card-pad">
-          <h3>{day}</h3>
-          {dayEvents.map((event) => (
-            <button key={event.id} type="button" className="month-event" onClick={() => onSelect(event.id)}>
-              <span className={`importance ${event.importance}`} />
-              <div>
-                <strong>{event.title_ru}</strong>
-                <p className="meta">{event.scheduled_label.split(", ")[1]}</p>
-              </div>
-            </button>
-          ))}
-        </section>
-      ))}
-    </div>
+    <button
+      type="button"
+      className={`cal-event-chip importance-${event.importance}${compact ? " compact" : ""}`}
+      onClick={() => onSelect(event.id)}
+      title={event.title_ru}
+    >
+      {!compact && <span className="cal-event-chip-time">{eventTimeLabel(event.scheduled_label)}</span>}
+      <span className="cal-event-chip-title">{event.title_ru}</span>
+    </button>
   );
 }
 
 export function CalendarView() {
-  const [view, setView] = useState<"list" | "week" | "month">("list");
+  const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
+  const [focusDate, setFocusDate] = useState(() => mskToday());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [filters, setFilters] = useState<CalendarFilters>({ status: "upcoming" });
+  const [filters, setFilters] = useState<CalendarFilters>({});
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const range = useMemo(() => rangeForView(viewMode, focusDate), [viewMode, focusDate]);
+
   useEffect(() => {
     setLoading(true);
-    fetchCalendarEvents(filters)
+    fetchCalendarEvents({ ...filters, from: range.from, to: range.to })
       .then((res) => setEvents(res.items))
       .finally(() => setLoading(false));
-  }, [filters]);
+  }, [filters, range.from, range.to]);
+
+  const eventsByDay = useMemo(() => groupEventsByDay(events), [events]);
+  const today = mskToday();
 
   const toggleFilter = (group: keyof CalendarFilters, value: string) => {
     setFilters((prev) => {
@@ -227,12 +125,204 @@ export function CalendarView() {
     return { upcoming, past, high, total: events.length };
   }, [events]);
 
-  const grouped = events.reduce<Record<string, CalendarEvent[]>>((acc, event) => {
-    const day = event.scheduled_label.split(",")[0];
-    acc[day] = acc[day] || [];
-    acc[day].push(event);
-    return acc;
-  }, {});
+  const openDay = (date: Date) => {
+    setFocusDate(date);
+    setViewMode("day");
+  };
+
+  const renderDayView = () => {
+    const key = toDateKey(focusDate);
+    const dayEvents = eventsByDay.get(key) || [];
+
+    return (
+      <div className="cal-day-view card card-pad">
+        <div className="cal-day-head">
+          <h3>{formatDayTitle(focusDate)}</h3>
+          <span className="meta">{dayEvents.length} событий</span>
+        </div>
+        {dayEvents.length === 0 ? (
+          <p className="cal-empty-day meta">На этот день событий нет</p>
+        ) : (
+          <div className="cal-day-timeline">
+            {dayEvents.map((event) => (
+              <button key={event.id} type="button" className="cal-day-event" onClick={() => setSelectedId(event.id)}>
+                <div className="cal-day-event-time">
+                  <span className={`importance ${event.importance}`} />
+                  {eventTimeLabel(event.scheduled_label)}
+                </div>
+                <div className="cal-day-event-body">
+                  <strong>{event.title_ru}</strong>
+                  <p className="meta">
+                    {COUNTRY_LABELS[event.country] || event.country.toUpperCase()} ·{" "}
+                    {IMPORTANCE_LABELS[event.importance]} · {CATEGORY_LABELS[event.category] || event.category}
+                  </p>
+                </div>
+                <span className={`source-tag ${SOURCE_TAG_CLASS[event.source] || ""}`}>
+                  {SOURCE_LABELS[event.source] || event.source}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderWeekView = () => {
+    const days = getWeekDays(focusDate);
+    return (
+      <div className="cal-week-grid">
+        {days.map((cell, idx) => {
+          const dayEvents = eventsByDay.get(cell.key) || [];
+          const isToday = isSameDay(cell.date, today);
+          const isWeekend = idx >= 5;
+          return (
+            <div
+              key={cell.key}
+              className={`cal-week-col${isWeekend ? " weekend" : ""}${isToday ? " today" : ""}`}
+            >
+              <button type="button" className="cal-week-col-head" onClick={() => openDay(cell.date)}>
+                <span>{weekdayLabels()[idx]}</span>
+                <strong>{cell.date.getDate()}</strong>
+              </button>
+              <div className="cal-week-col-body">
+                {dayEvents.length === 0 ? (
+                  <span className="cal-week-empty meta">—</span>
+                ) : (
+                  dayEvents.map((event) => (
+                    <EventChip key={event.id} event={event} onSelect={setSelectedId} />
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderMonthView = () => {
+    const cells = getMonthGrid(focusDate);
+    return (
+      <div className="cal-month-shell card">
+        <div className="cal-month-weekdays">
+          {weekdayLabels().map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+        <div className="cal-month-grid">
+          {cells.map((cell) => {
+            const dayEvents = eventsByDay.get(cell.key) || [];
+            const isToday = isSameDay(cell.date, today);
+            return (
+              <div
+                key={cell.key}
+                className={`cal-month-cell${cell.inMonth ? "" : " outside"}${isToday ? " today" : ""}`}
+              >
+                <button type="button" className="cal-month-day-num" onClick={() => openDay(cell.date)}>
+                  {cell.date.getDate()}
+                </button>
+                <div className="cal-month-events">
+                  {dayEvents.slice(0, 3).map((event) => (
+                    <EventChip key={event.id} event={event} compact onSelect={setSelectedId} />
+                  ))}
+                  {dayEvents.length > 3 && (
+                    <button type="button" className="cal-month-more" onClick={() => openDay(cell.date)}>
+                      +{dayEvents.length - 3} ещё
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderYearView = () => {
+    const months = getYearMonths(focusDate);
+    return (
+      <div className="cal-year-grid">
+        {months.map((monthDate) => {
+          const cells = getMonthGrid(monthDate);
+          const monthEvents = events.filter((event) => {
+            const d = parseDateKey(eventDateKey(event.scheduled_at_msk));
+            return d.getFullYear() === monthDate.getFullYear() && d.getMonth() === monthDate.getMonth();
+          });
+          return (
+            <button
+              key={monthDate.getMonth()}
+              type="button"
+              className="cal-year-month card card-pad"
+              onClick={() => {
+                setFocusDate(monthDate);
+                setViewMode("month");
+              }}
+            >
+              <div className="cal-year-month-head">
+                <strong>{shortMonthLabel(monthDate)}</strong>
+                <span className="meta">{monthEvents.length}</span>
+              </div>
+              <div className="cal-year-mini-grid">
+                {weekdayLabels().map((label) => (
+                  <span key={label} className="cal-year-mini-wd">
+                    {label.slice(0, 1)}
+                  </span>
+                ))}
+                {cells.map((cell) => {
+                  const count = eventsByDay.get(cell.key)?.length || 0;
+                  const isToday = isSameDay(cell.date, today);
+                  return (
+                    <span
+                      key={cell.key}
+                      className={`cal-year-mini-day${cell.inMonth ? "" : " outside"}${count ? " has-events" : ""}${isToday ? " today" : ""}`}
+                    >
+                      {cell.inMonth ? cell.date.getDate() : ""}
+                    </span>
+                  );
+                })}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderAgendaView = () => {
+    const sortedKeys = [...eventsByDay.keys()].sort();
+    if (sortedKeys.length === 0) {
+      return <p className="meta cal-empty-day">Событий в выбранном периоде нет</p>;
+    }
+    return (
+      <div className="cal-agenda">
+        {sortedKeys.map((key) => {
+          const dayEvents = eventsByDay.get(key) || [];
+          const date = parseDateKey(key);
+          return (
+            <section key={key} className="cal-agenda-day card card-pad">
+              <h3>{formatDayTitle(date)}</h3>
+              {dayEvents.map((event) => (
+                <button key={event.id} type="button" className="cal-agenda-row" onClick={() => setSelectedId(event.id)}>
+                  <span className={`importance ${event.importance}`} />
+                  <div>
+                    <strong>{event.title_ru}</strong>
+                    <p className="meta">
+                      {eventTimeLabel(event.scheduled_label)} · {IMPORTANCE_LABELS[event.importance]}
+                    </p>
+                  </div>
+                  <span className={`source-tag ${SOURCE_TAG_CLASS[event.source] || ""}`}>
+                    {SOURCE_LABELS[event.source] || event.source}
+                  </span>
+                </button>
+              ))}
+            </section>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="content calendar-page">
@@ -250,7 +340,7 @@ export function CalendarView() {
 
       <div className="calendar-summary">
         <div className="summary-card">
-          <span className="meta">Показано</span>
+          <span className="meta">В периоде</span>
           <strong>{summary.total}</strong>
         </div>
         <div className="summary-card">
@@ -267,18 +357,50 @@ export function CalendarView() {
         </div>
       </div>
 
-      <div className="toolbar-row">
-        <div className="seg">
-          {(["list", "week", "month"] as const).map((mode) => (
-            <button key={mode} type="button" className={view === mode ? "active" : ""} onClick={() => setView(mode)}>
-              {mode === "list" ? "Список" : mode === "week" ? "Неделя" : "Месяц"}
-            </button>
-          ))}
+      <div className="cal-toolbar card card-pad">
+        <div className="cal-nav">
+          <button
+            type="button"
+            className="cal-nav-btn"
+            onClick={() => setFocusDate((d) => shiftFocusDate(viewMode, d, -1))}
+            aria-label="Предыдущий период"
+          >
+            <i className="ti ti-chevron-left" />
+          </button>
+          <button type="button" className="cal-nav-title" onClick={() => setFocusDate(mskToday())}>
+            {navigationTitle(viewMode, focusDate)}
+          </button>
+          <button
+            type="button"
+            className="cal-nav-btn"
+            onClick={() => setFocusDate((d) => shiftFocusDate(viewMode, d, 1))}
+            aria-label="Следующий период"
+          >
+            <i className="ti ti-chevron-right" />
+          </button>
+          <button type="button" className="cal-today-btn" onClick={() => setFocusDate(mskToday())}>
+            Сегодня
+          </button>
         </div>
-        <div className="legend">
-          <span><i className="importance high" /> Высокая</span>
-          <span><i className="importance med" /> Средняя</span>
-          <span><i className="importance low" /> Низкая</span>
+
+        <div className="toolbar-row cal-toolbar-row">
+          <div className="seg">
+            {VIEW_MODES.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                className={viewMode === mode.id ? "active" : ""}
+                onClick={() => setViewMode(mode.id)}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+          <div className="legend">
+            <span><i className="importance high" /> Высокая</span>
+            <span><i className="importance med" /> Средняя</span>
+            <span><i className="importance low" /> Низкая</span>
+          </div>
         </div>
       </div>
 
@@ -321,67 +443,33 @@ export function CalendarView() {
       </div>
 
       {loading ? (
-        <div className="card card-pad"><p className="meta">Загрузка календаря…</p></div>
+        <div className="card card-pad cal-loading">
+          <i className="ti ti-loader-2 cal-spin" />
+          <p className="meta">Загрузка календаря…</p>
+        </div>
       ) : events.length === 0 ? (
         <div className="card card-pad empty-state calendar-empty">
           <i className="ti ti-calendar-off empty-icon" />
-          <h3>Нет событий по выбранным фильтрам</h3>
+          <h3>Нет событий в {monthLabel(focusDate).toLowerCase()}</h3>
           <p className="meta">
-            {filters.status === "upcoming"
-              ? "Предстоящих событий нет — возможно, синхронизация загрузила только прошлые даты. Переключитесь на «Прошедшие» или попросите администратора пересинхронизировать календарь с датами в будущем."
-              : "Если календарь пуст — администратор может загрузить события в разделе «Календарь» админ-панели."}
+            Попробуйте другой период, снимите фильтры или попросите администратора синхронизировать календарь.
           </p>
         </div>
-      ) : view === "list" ? (
-        <div className="event-list">
-          {Object.entries(grouped).map(([day, dayEvents]) => (
-            <section key={day} className="day-group card card-pad">
-              <h3>{day}</h3>
-              {dayEvents.map((event) => (
-                <button key={event.id} type="button" className="event-row" onClick={() => setSelectedId(event.id)}>
-                  <span className={`importance ${event.importance}`} />
-                  <div className="event-main">
-                    <strong>{event.title_ru}</strong>
-                    <p className="meta">
-                      {event.scheduled_label.split(", ")[1]} · {IMPORTANCE_LABELS[event.importance]} ·{" "}
-                      {CATEGORY_LABELS[event.category] || event.category}
-                    </p>
-                  </div>
-                  <span className={`source-tag ${SOURCE_TAG_CLASS[event.source] || ""}`}>
-                    {SOURCE_LABELS[event.source] || event.source}
-                  </span>
-                  <span className="country-flag">{event.country.toUpperCase()}</span>
-                  {event.status === "past" ? (
-                    <span className="event-values">
-                      <span>{event.actual ?? "—"}</span>
-                      <span className="meta"> / {event.forecast ?? "—"}</span>
-                      {event.surprise && (
-                        <span className={`surprise-badge ${surpriseClass(event.surprise_direction)}`}>
-                          {event.surprise}
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="event-status upcoming">Скоро</span>
-                  )}
-                </button>
-              ))}
-            </section>
-          ))}
-        </div>
-      ) : view === "week" ? (
-        <div className="card card-pad week-wrap">
-          <WeekView events={events} onSelect={setSelectedId} />
-        </div>
       ) : (
-        <MonthView events={events} onSelect={setSelectedId} />
+        <>
+          {viewMode === "day" && renderDayView()}
+          {viewMode === "week" && renderWeekView()}
+          {viewMode === "month" && renderMonthView()}
+          {viewMode === "year" && renderYearView()}
+          {viewMode === "agenda" && renderAgendaView()}
+        </>
       )}
 
       <p className="calendar-footnote meta">
         Источники: Банк России, Росстат, FRED, ECB · Прогнозы часто недоступны (Tier C)
       </p>
 
-      <EventDrawer eventId={selectedId} onClose={() => setSelectedId(null)} />
+      <EventModal eventId={selectedId} onClose={() => setSelectedId(null)} />
     </div>
   );
 }
