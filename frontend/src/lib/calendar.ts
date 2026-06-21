@@ -18,7 +18,21 @@ export type CalendarEvent = {
   linked_indicator_id: string | null;
 };
 
-export type CalendarEventDetail = CalendarEvent & { unit: string | null };
+export type CalendarIndicatorStats = {
+  min: string;
+  max: string;
+  avg: string;
+  median: string;
+  change: string;
+  cagr: string | null;
+  volatility: string;
+  pct_above_current: string;
+};
+
+export type CalendarEventDetail = CalendarEvent & {
+  unit: string | null;
+  indicator_stats: CalendarIndicatorStats | null;
+};
 
 export type CalendarFilters = {
   country?: string[];

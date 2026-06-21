@@ -21,8 +21,20 @@ class CalendarEventItem(BaseModel):
     linked_indicator_id: str | None
 
 
+class CalendarIndicatorStats(BaseModel):
+    min: str
+    max: str
+    avg: str
+    median: str
+    change: str
+    cagr: str | None
+    volatility: str
+    pct_above_current: str
+
+
 class CalendarEventDetail(CalendarEventItem):
     unit: str | None
+    indicator_stats: CalendarIndicatorStats | None = None
 
 
 class CalendarEventsResponse(BaseModel):

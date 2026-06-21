@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.timezones import MSK
 from app.etl.calendar.values import ResolvedEventValues, merge_event_values, resolve_events_values
 from app.models.events import EconomicEvent
-from app.schemas.calendar import CalendarEventDetail, CalendarEventItem, CalendarEventsResponse, CalendarSurpriseItem
+from app.models.indicators import Indicator
+from app.repositories.indicators import get_stats as get_indicator_stats
+from app.schemas.calendar import (
+    CalendarEventDetail,
+    CalendarEventItem,
+    CalendarEventsResponse,
+    CalendarIndicatorStats,
+    CalendarSurpriseItem,
+)
+from app.schemas.indicators import IndicatorStatsResponse
 
 
 def _format_num(value, unit: str | None) -> str | None:
@@ -25,6 +34,45 @@ def _format_num(value, unit: str | None) -> str | None:
 def _format_dt(dt: datetime) -> str:
     local = dt.astimezone(MSK)
     return local.strftime("%d.%m.%Y, %H:%M МСК")
+
+
+def _format_indicator_stats(stats: IndicatorStatsResponse, unit: str | None) -> CalendarIndicatorStats:
+    cagr = None
+    if stats.cagr is not None:
+        cagr = f"{stats.cagr:.2f}%".replace(".", ",")
+
+    return CalendarIndicatorStats(
+        min=_format_num(stats.min, unit) or "—",
+        max=_format_num(stats.max, unit) or "—",
+        avg=_format_num(stats.avg, unit) or "—",
+        median=_format_num(stats.median, unit) or "—",
+        change=_format_num(stats.change, unit) or "—",
+        cagr=cagr,
+        volatility=_format_num(stats.volatility, unit) or "—",
+        pct_above_current=f"{stats.pct_above_current:g}%",
+    )
+
+
+async def _load_indicator_stats_for_event(
+    session: AsyncSession,
+    linked_indicator_id: str,
+    event_at: datetime,
+    now: datetime,
+) -> CalendarIndicatorStats | None:
+    indicator = await session.get(Indicator, linked_indicator_id)
+    if indicator is None or not indicator.enabled:
+        return None
+
+    event_date = event_at.astimezone(MSK).date()
+    today = now.astimezone(MSK).date()
+    date_to: date = min(event_date, today)
+    date_from = date_to - timedelta(days=365 * 5)
+
+    stats = await get_indicator_stats(session, linked_indicator_id, date_from, date_to)
+    if stats is None:
+        return None
+
+    return _format_indicator_stats(stats, indicator.unit)
 
 
 def _surprise_direction(surprise) -> str | None:
@@ -107,7 +155,15 @@ async def get_event(session: AsyncSession, event_id: str) -> CalendarEventDetail
     now = datetime.now(timezone.utc)
     resolved_map = await resolve_events_values(session, [row], now=now)
     item = _to_item(row, now, resolved=resolved_map.get(row.id))
-    return CalendarEventDetail(**item.model_dump(), unit=row.unit)
+    indicator_stats = None
+    if row.linked_indicator_id:
+        indicator_stats = await _load_indicator_stats_for_event(
+            session,
+            row.linked_indicator_id,
+            row.scheduled_at_msk,
+            now,
+        )
+    return CalendarEventDetail(**item.model_dump(), unit=row.unit, indicator_stats=indicator_stats)
 
 
 async def recent_surprises(session: AsyncSession, limit: int = 5) -> list[CalendarSurpriseItem]:

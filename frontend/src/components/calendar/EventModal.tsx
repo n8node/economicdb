@@ -7,6 +7,7 @@ import {
   IMPORTANCE_LABELS,
   fetchCalendarEvent,
   type CalendarEventDetail,
+  type CalendarIndicatorStats,
 } from "@/lib/calendar";
 
 const COUNTRY_LABELS: Record<string, string> = {
@@ -33,10 +34,43 @@ const SOURCE_LABELS: Record<string, string> = {
   oecd: "OECD",
 };
 
-function surpriseClass(direction: string | null) {
-  if (direction === "up") return "surprise-up";
-  if (direction === "down") return "surprise-down";
-  return "surprise-flat";
+function StatsGrid({ stats }: { stats: CalendarIndicatorStats }) {
+  return (
+    <div className="cal-modal-stats">
+      <div className="cal-stat-box">
+        <p className="cal-stat-label">Мин.</p>
+        <p className="cal-stat-value">{stats.min}</p>
+      </div>
+      <div className="cal-stat-box">
+        <p className="cal-stat-label">Макс.</p>
+        <p className="cal-stat-value">{stats.max}</p>
+      </div>
+      <div className="cal-stat-box">
+        <p className="cal-stat-label">Среднее</p>
+        <p className="cal-stat-value">{stats.avg}</p>
+      </div>
+      <div className="cal-stat-box">
+        <p className="cal-stat-label">Медиана</p>
+        <p className="cal-stat-value">{stats.median}</p>
+      </div>
+      <div className="cal-stat-box">
+        <p className="cal-stat-label">Изменение</p>
+        <p className="cal-stat-value">{stats.change}</p>
+      </div>
+      <div className="cal-stat-box">
+        <p className="cal-stat-label">CAGR</p>
+        <p className="cal-stat-value">{stats.cagr ?? "—"}</p>
+      </div>
+      <div className="cal-stat-box">
+        <p className="cal-stat-label">Волатильность</p>
+        <p className="cal-stat-value">{stats.volatility}</p>
+      </div>
+      <div className="cal-stat-box">
+        <p className="cal-stat-label">Выше текущего</p>
+        <p className="cal-stat-value">{stats.pct_above_current}</p>
+      </div>
+    </div>
+  );
 }
 
 type EventModalProps = {
@@ -120,26 +154,21 @@ export function EventModal({ eventId, onClose }: EventModalProps) {
               </p>
             </div>
 
-            <div className="cal-modal-metrics">
-              <div className="cal-modal-metric">
-                <span className="meta">Факт</span>
-                <p className="metric-value">{detail.actual ?? "—"}</p>
+            {detail.indicator_stats ? (
+              <>
+                <p className="meta cal-modal-stats-note">Статистика по ряду показателя за 5 лет</p>
+                <StatsGrid stats={detail.indicator_stats} />
+              </>
+            ) : detail.actual ? (
+              <div className="cal-modal-metrics">
+                <div className="cal-modal-metric">
+                  <span className="meta">Факт</span>
+                  <p className="metric-value">{detail.actual}</p>
+                </div>
               </div>
-              <div className="cal-modal-metric">
-                <span className="meta">Прогноз</span>
-                <p className="metric-value">{detail.forecast ?? "—"}</p>
-              </div>
-              <div className="cal-modal-metric">
-                <span className="meta">Предыдущее</span>
-                <p className="metric-value">{detail.previous ?? "—"}</p>
-              </div>
-              <div className="cal-modal-metric">
-                <span className="meta">Сюрприз</span>
-                <p className={`metric-value ${surpriseClass(detail.surprise_direction)}`}>
-                  {detail.surprise ?? "—"}
-                </p>
-              </div>
-            </div>
+            ) : (
+              <p className="meta cal-modal-empty-stats">Нет связанного показателя для статистики</p>
+            )}
 
             {detail.linked_indicator_id && (
               <Link href={`/app/indicators/${detail.linked_indicator_id}`} className="cal-modal-link" onClick={onClose}>
@@ -149,8 +178,7 @@ export function EventModal({ eventId, onClose }: EventModalProps) {
             )}
 
             <p className="ai-disclaimer cal-modal-disclaimer">
-              Прогноз/consensus часто «—» — универсального бесплатного источника нет. Факты подтягиваются из рядов
-              показателей после публикации.
+              Статистика считается по историческому ряду связанного показателя (окно 5 лет до даты события).
             </p>
           </>
         )}
