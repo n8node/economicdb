@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.digest_schema import SECTION_STORAGE_KEYS
 from app.ai.facts import FactsJSON, build_summary_id, build_weekly_facts, resolve_digest_period
+from app.ai.fallback_digest import build_fallback_digest
 from app.ai.openrouter import generate_weekly_digest
 from app.ai.validator import DigestValidator
 from app.models.ai_usage import AiUsageLog
@@ -86,6 +87,70 @@ def _draft_to_storage(draft: dict, facts: FactsJSON) -> tuple[str, dict[str, str
     return headline, sections, citations, tags, word_count
 
 
+async def _publish_digest(
+    session: AsyncSession,
+    *,
+    existing: WeeklySummary | None,
+    summary_id: str,
+    period_start: date,
+    period_end: date,
+    period_label: str,
+    draft: dict,
+    facts: FactsJSON,
+    model: str,
+    warnings: list[str] | None = None,
+) -> dict:
+    headline, sections, citations, tags, word_count = _draft_to_storage(draft, facts)
+    executive = draft.get("executive_summary")
+    if isinstance(executive, str) and executive.strip():
+        sections = {"intro": executive.strip(), **sections}
+    source_count = len({kpi.source for kpi in facts.kpis})
+
+    if existing is None:
+        existing = WeeklySummary(
+            id=summary_id,
+            period_start=period_start,
+            period_end=period_end,
+            period_label=period_label,
+            headline=headline,
+            sections=sections,
+            citations=citations,
+            tags=tags,
+            word_count=word_count,
+            source_count=source_count,
+            status="published",
+        )
+        session.add(existing)
+    else:
+        existing.period_start = period_start
+        existing.period_end = period_end
+        existing.period_label = period_label
+        existing.headline = headline
+        existing.sections = sections
+        existing.citations = citations
+        existing.tags = tags
+        existing.word_count = word_count
+        existing.source_count = source_count
+        existing.status = "published"
+
+    await session.commit()
+    logger.info(
+        "digest_published",
+        summary_id=summary_id,
+        model=model,
+        kpis=len(facts.kpis),
+        warnings=warnings or [],
+    )
+    return {
+        "ok": True,
+        "summary_id": summary_id,
+        "model": model,
+        "message": f"Сводка опубликована: {period_label}",
+        "word_count": word_count,
+        "warnings": warnings or [],
+    }
+
+
 async def generate_and_store_weekly_digest(
     session: AsyncSession,
     *,
@@ -133,7 +198,9 @@ async def generate_and_store_weekly_digest(
     if model_fallback and model_fallback != model_digest:
         models_to_try.append(model_fallback)
 
-    last_error = "validation_failed"
+    last_error = "generation_failed"
+    citation_failed = False
+
     for attempt, model in enumerate(models_to_try, start=1):
         try:
             completion = await generate_weekly_digest(
@@ -156,6 +223,7 @@ async def generate_and_store_weekly_digest(
 
         validation = validator.validate(completion.content, facts)
         if not validation.ok:
+            citation_failed = True
             logger.warning(
                 "digest_validation_failed",
                 model=model,
@@ -165,50 +233,49 @@ async def generate_and_store_weekly_digest(
             last_error = validation.message or "validation_failed"
             continue
 
-        headline, sections, citations, tags, word_count = _draft_to_storage(completion.content, facts)
-        executive = completion.content.get("executive_summary")
-        if isinstance(executive, str) and executive.strip():
-            sections = {"intro": executive.strip(), **sections}
-        source_count = len({kpi.source for kpi in facts.kpis})
+        if validation.warnings:
+            logger.warning("digest_validation_warnings", model=model, warnings=validation.warnings)
 
-        if existing is None:
-            existing = WeeklySummary(
-                id=summary_id,
-                period_start=period_start,
-                period_end=period_end,
-                period_label=period_label,
-                headline=headline,
-                sections=sections,
-                citations=citations,
-                tags=tags,
-                word_count=word_count,
-                source_count=source_count,
-                status="published",
-            )
-            session.add(existing)
-        else:
-            existing.period_start = period_start
-            existing.period_end = period_end
-            existing.period_label = period_label
-            existing.headline = headline
-            existing.sections = sections
-            existing.citations = citations
-            existing.tags = tags
-            existing.word_count = word_count
-            existing.source_count = source_count
-            existing.status = "published"
+        return await _publish_digest(
+            session,
+            existing=existing,
+            summary_id=summary_id,
+            period_start=period_start,
+            period_end=period_end,
+            period_label=period_label,
+            draft=completion.content,
+            facts=facts,
+            model=completion.model,
+            warnings=validation.warnings,
+        )
 
-        await session.commit()
-        logger.info("digest_published", summary_id=summary_id, model=completion.model, kpis=len(facts.kpis))
+    fallback_draft = build_fallback_digest(facts)
+    fallback_validation = validator.validate(fallback_draft, facts)
+    if not fallback_validation.ok:
         return {
-            "ok": True,
-            "summary_id": summary_id,
-            "model": completion.model,
-            "message": f"Сводка опубликована: {period_label}",
-            "word_count": word_count,
+            "ok": False,
+            "error": "generation_failed",
+            "message": fallback_validation.message or last_error,
         }
 
-    return {"ok": False, "error": "generation_failed", "message": last_error}
+    logger.warning(
+        "digest_using_fallback",
+        reason=last_error,
+        citation_failed=citation_failed,
+        warnings=fallback_validation.warnings,
+    )
+    return await _publish_digest(
+        session,
+        existing=existing,
+        summary_id=summary_id,
+        period_start=period_start,
+        period_end=period_end,
+        period_label=period_label,
+        draft=fallback_draft,
+        facts=facts,
+        model="facts_fallback",
+        warnings=[f"LLM недоступен или не прошёл проверку: {last_error}", *fallback_validation.warnings],
+    )
 
 
 async def has_published_summaries(session: AsyncSession) -> bool:

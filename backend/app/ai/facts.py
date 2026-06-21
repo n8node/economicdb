@@ -8,6 +8,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.series import format_change, format_value
+from app.ai.numeric_utils import expand_numeric_variants, numbers_from_text, numeric_variants, period_benign_numbers
 from app.core.timezones import MSK
 from app.models.events import EconomicEvent
 from app.models.indicators import Indicator
@@ -54,6 +55,8 @@ class KPIFact:
     source: str
     updated_at: str | None
     citation_key: str
+    raw_value: float | None = None
+    raw_change: float | None = None
 
 
 @dataclass
@@ -90,19 +93,32 @@ class FactsJSON:
 
     def all_numeric_values(self) -> set[float]:
         values: set[float] = set()
+        values |= period_benign_numbers(self.period_start, self.period_end)
+
         for fact in self.kpis:
-            values |= _numbers_from_text(fact.value)
+            values |= numbers_from_text(fact.value)
             if fact.change:
-                values |= _numbers_from_text(fact.change)
+                values |= numbers_from_text(fact.change)
+            if fact.raw_value is not None:
+                values |= numeric_variants(fact.raw_value)
+            if fact.raw_change is not None:
+                values |= numeric_variants(fact.raw_change)
+
         for surprise in self.calendar_surprises:
             for part in (surprise.actual, surprise.forecast, surprise.surprise):
                 if part:
-                    values |= _numbers_from_text(part)
+                    values |= numbers_from_text(part)
+            values |= numbers_from_text(surprise.scheduled_at)
+
+        for event in self.next_week_events:
+            values |= numbers_from_text(event.scheduled_at)
+
         for citation in self.citation_keys.values():
-            values |= _numbers_from_text(citation.value)
+            values |= numbers_from_text(citation.value)
             if citation.change:
-                values |= _numbers_from_text(citation.change)
-        return values
+                values |= numbers_from_text(citation.change)
+
+        return expand_numeric_variants(values)
 
     def to_prompt_dict(self) -> dict:
         return {
@@ -192,19 +208,6 @@ def _month_name(month: int) -> str:
     return names.get(month, "")
 
 
-def _numbers_from_text(text: str) -> set[float]:
-    import re
-
-    values: set[float] = set()
-    for match in re.finditer(r"-?\d+[,.]?\d*", text):
-        raw = match.group(0).replace(",", ".")
-        try:
-            values.add(round(float(raw), 4))
-        except ValueError:
-            continue
-    return values
-
-
 async def build_weekly_facts(
     session: AsyncSession,
     *,
@@ -234,6 +237,8 @@ async def build_weekly_facts(
             continue
         value = format_value(row.last_value, row.unit) or "—"
         change = format_change(row.last_change, row.unit if row.unit in {"%", "п.п."} else "%")
+        raw_value = float(row.last_value) if row.last_value is not None else None
+        raw_change = float(row.last_change) if row.last_change is not None else None
         citation_key = indicator_id
         kpi = KPIFact(
             indicator_id=indicator_id,
@@ -245,6 +250,8 @@ async def build_weekly_facts(
             source=SOURCE_LABELS.get(row.source, row.source),
             updated_at=row.updated_at.isoformat() if row.updated_at else None,
             citation_key=citation_key,
+            raw_value=raw_value,
+            raw_change=raw_change,
         )
         facts.kpis.append(kpi)
         facts.citation_keys[citation_key] = CitationFact(
