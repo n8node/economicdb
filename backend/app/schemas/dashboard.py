@@ -13,6 +13,7 @@ class AiSummaryBlock(BaseModel):
     period: str
     headline: str
     bullets: list[str]
+    summary_id: str | None = None
 
 
 class CalendarEventItem(BaseModel):

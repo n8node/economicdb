@@ -59,8 +59,12 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
               <li key={item}>{item}</li>
             ))}
           </ul>
-          <Link href="/app/summaries/ws_2026_w25" target="_top" className="btn primary">
-            Читать полностью
+          <Link
+            href={data.ai_summary.summary_id ? `/app/summaries/${data.ai_summary.summary_id}` : "/app/summaries"}
+            target="_top"
+            className="btn primary"
+          >
+            {data.ai_summary.summary_id ? "Читать полностью" : "Архив сводок"}
           </Link>
           <p className="ai-disclaimer">
             Сгенерировано AI на основе официальных данных. Не является инвестиционной рекомендацией.

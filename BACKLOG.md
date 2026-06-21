@@ -12,9 +12,9 @@
 - [x] DATA_CATALOG multisource-пакет: +97 показателей, hidden until ETL verification
 - [x] Calendar ETL: FRED/CBR/ECB/FOMC/Rosstat release ingestion + enricher + admin sync UI
 - [ ] Перенос остальных mockups → React (indicators, compare, summaries)
-- [ ] OpenRouter weekly digest + validator
+- [x] OpenRouter admin settings UI (`/adminus/settings`: key, test, models, model for digest)
+- [x] OpenRouter weekly digest worker + facts builder + validator
 - [ ] Robokassa billing
-- [x] Admin OpenRouter settings UI (`/adminus/settings`: key, test, models, model for digest)
 - [ ] Admin settings UI (SMTP, Robokassa)
 
 ## Design gaps

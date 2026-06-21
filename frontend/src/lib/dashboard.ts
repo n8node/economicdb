@@ -13,6 +13,7 @@ export type DashboardOverview = {
     period: string;
     headline: string;
     bullets: string[];
+    summary_id: string | null;
   };
   calendar_events: Array<{
     title: string;

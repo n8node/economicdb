@@ -93,13 +93,13 @@ async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryB
         )
 
     summary = ai_summary or AiSummaryBlock(
-        period="Реальные данные",
-        headline="AI-сводка появится после подключения OpenRouter и генерации worker-ом",
+        period="—",
+        headline="AI-сводка ещё не сгенерирована",
         bullets=[
-            "Показатели на дашборде загружаются только из подключённых провайдеров",
-            "Фейковые события и demo-сводки отключены",
-            "Числа в AI-блоках будут использовать только Facts JSON из реальных рядов",
+            "Worker создаст сводку автоматически после ETL и настройки OpenRouter",
+            "Или нажмите «Сгенерировать сводку» в /adminus/settings",
         ],
+        summary_id=None,
     )
 
     return DashboardOverview(

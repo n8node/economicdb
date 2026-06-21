@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     etl_sync_timezone: str = "Europe/Moscow"
     calendar_sync_hour: int = 5
     calendar_sync_minute: int = 0
+    digest_sync_hour: int = 8
+    digest_sync_minute: int = 0
+    digest_sync_day_of_week: str = "mon"
 
 
 settings = Settings()

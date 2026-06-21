@@ -38,6 +38,7 @@ export function SettingsPanel() {
   const [loadingModels, setLoadingModels] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const loadSettings = useCallback(async () => {
     const data = await adminAuthFetch<OpenRouterSettings>("/admin/settings/openrouter");
@@ -137,6 +138,33 @@ export function SettingsPanel() {
       setError("Ошибка проверки подключения");
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function generateDigest() {
+    setGenerating(true);
+    setMessage("");
+    setError("");
+    try {
+      const result = await adminAuthFetch<{
+        ok: boolean;
+        message?: string;
+        error?: string;
+        summary_id?: string;
+        skipped?: boolean;
+      }>("/admin/ai/digest/regenerate", {
+        method: "POST",
+        body: JSON.stringify({ force: true }),
+      });
+      if (!result.ok) {
+        setError(result.message || result.error || "Не удалось сгенерировать сводку");
+        return;
+      }
+      setMessage(result.message || `Сводка создана: ${result.summary_id || "ok"}`);
+    } catch {
+      setError("Ошибка генерации сводки");
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -245,6 +273,9 @@ export function SettingsPanel() {
           </button>
           <button type="button" className="admin-btn" onClick={() => void loadModels()} disabled={loadingModels}>
             Обновить список моделей
+          </button>
+          <button type="button" className="admin-btn primary" onClick={() => void generateDigest()} disabled={generating}>
+            {generating ? "Генерация…" : "Сгенерировать сводку сейчас"}
           </button>
         </div>
       </section>
