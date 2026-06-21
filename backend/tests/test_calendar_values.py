@@ -25,14 +25,28 @@ def _event(indicator_id: str, day: date) -> EconomicEvent:
 def test_release_values_use_publication_month() -> None:
     event_day = date(2025, 5, 13)
     points = [
+        (date(2025, 3, 1), Decimal("2.20")),
         (date(2025, 4, 1), Decimal("2.33")),
         (date(2025, 5, 1), Decimal("2.38")),
     ]
 
     actual, previous = _pick_release_values(points, event_day)
 
-    assert actual == Decimal("2.38")
-    assert previous == Decimal("2.33")
+    assert actual == Decimal("2.33")
+    assert previous == Decimal("2.20")
+
+
+def test_release_values_for_rosstat_mid_month_release() -> None:
+    event_day = date(2026, 6, 10)
+    points = [
+        (date(2026, 4, 1), Decimal("5.10")),
+        (date(2026, 5, 1), Decimal("5.31")),
+    ]
+
+    actual, previous = _pick_release_values(points, event_day)
+
+    assert actual == Decimal("5.31")
+    assert previous == Decimal("5.10")
 
 
 def test_rate_decision_uses_change_on_meeting_day() -> None:

@@ -12,6 +12,8 @@ from app.models.events import EconomicEvent
 from app.models.indicators import IndicatorValue
 
 RATE_INDICATOR_IDS = frozenset({"cbr_key_rate", "fed_funds", "ecb_deposit_rate"})
+LOOKBACK_DAYS = 450
+LOOKAHEAD_DAYS = 14
 
 
 @dataclass(frozen=True)
@@ -26,7 +28,7 @@ def event_day_msk(event: EconomicEvent) -> date:
 
 
 def value_window(event_day: date) -> tuple[date, date]:
-    return event_day - timedelta(days=45), event_day + timedelta(days=7)
+    return event_day - timedelta(days=LOOKBACK_DAYS), event_day + timedelta(days=LOOKAHEAD_DAYS)
 
 
 def resolve_event_values(
@@ -129,18 +131,30 @@ def _pick_release_values(
     points: list[tuple[date, Decimal]],
     event_day: date,
 ) -> tuple[Decimal, Decimal | None] | None:
+    publication_month = _publication_month_start(event_day)
+    publication_points = [(d, v) for d, v in points if d == publication_month]
+    if publication_points:
+        actual_date, actual_value = publication_points[-1]
+        return actual_value, _pick_previous(points, actual_date)
+
     same_month = [(d, v) for d, v in points if d.year == event_day.year and d.month == event_day.month]
     if same_month:
         actual_date, actual_value = same_month[-1]
-    else:
-        on_or_after = [(d, v) for d, v in points if d >= event_day]
-        if on_or_after:
-            actual_date, actual_value = on_or_after[0]
-        else:
-            actual_date, actual_value = points[-1]
+        return actual_value, _pick_previous(points, actual_date)
 
-    previous_value = _pick_previous(points, actual_date)
-    return actual_value, previous_value
+    on_or_before = [(d, v) for d, v in points if d <= event_day]
+    if on_or_before:
+        actual_date, actual_value = on_or_before[-1]
+        return actual_value, _pick_previous(points, actual_date)
+
+    actual_date, actual_value = points[-1]
+    return actual_value, _pick_previous(points, actual_date)
+
+
+def _publication_month_start(event_day: date) -> date:
+    if event_day.month == 1:
+        return date(event_day.year - 1, 12, 1)
+    return date(event_day.year, event_day.month - 1, 1)
 
 
 def _pick_rate_decision(
