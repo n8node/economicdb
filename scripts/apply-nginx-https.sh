@@ -24,7 +24,6 @@ sed -i "s/DOMAIN_PLACEHOLDER/${DOMAIN}/g" nginx/conf.d/https.conf
 cp nginx/templates/default.http-redirect.conf nginx/conf.d/default.conf
 sed -i "s/DOMAIN_PLACEHOLDER/${DOMAIN}/g" nginx/conf.d/default.conf
 
-$COMPOSE exec nginx nginx -t
-$COMPOSE exec nginx nginx -s reload
+bash scripts/nginx-wait.sh
 
 echo "=== HTTPS nginx applied for ${DOMAIN} ==="

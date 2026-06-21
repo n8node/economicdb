@@ -45,9 +45,8 @@ done
 echo "=== Recreate nginx (fresh Docker DNS + config includes) ==="
 $COMPOSE up -d --force-recreate --no-deps nginx
 
-echo "=== Reload nginx ==="
-$COMPOSE exec nginx nginx -t
-$COMPOSE exec nginx nginx -s reload
+echo "=== Verify nginx (skip reload — container just started fresh) ==="
+NGINX_RELOAD=0 bash scripts/nginx-wait.sh
 
 echo "=== Ensure static assets are present ==="
 bash scripts/fix-static-volume.sh

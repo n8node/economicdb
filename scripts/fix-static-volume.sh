@@ -23,7 +23,7 @@ if [ "${public_nav:-no}" != "yes" ]; then
   exit 1
 fi
 
-$COMPOSE exec nginx nginx -s reload 2>/dev/null || true
+$COMPOSE exec -T nginx nginx -s reload 2>/dev/null || NGINX_RELOAD=1 bash scripts/nginx-wait.sh
 
 DOMAIN="${DOMAIN:-economicdb.com}"
 chunk=$(curl -s "https://${DOMAIN}/app" | grep -oE '/_next/static/[^"]+\.js' | head -1 || true)
