@@ -6,9 +6,8 @@ import signal
 import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from zoneinfo import ZoneInfo
-
 from app.config.settings import settings
+from app.core.timezones import get_tz
 from app.workers.jobs import run_daily_calendar_sync, run_daily_etl
 
 structlog.configure(processors=[structlog.processors.JSONRenderer()])
@@ -16,7 +15,7 @@ logger = structlog.get_logger()
 
 
 def _build_scheduler() -> AsyncIOScheduler:
-    timezone = ZoneInfo(settings.etl_sync_timezone)
+    timezone = get_tz(settings.etl_sync_timezone)
     scheduler = AsyncIOScheduler(timezone=timezone)
     scheduler.add_job(
         run_daily_etl,

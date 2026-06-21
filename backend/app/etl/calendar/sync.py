@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.etl.calendar.enricher import enrich_past_events
 from app.etl.calendar.options import CALENDAR_PROVIDER_ID, CalendarSyncOptions
-from app.etl.calendar.writer import upsert_events
+from app.etl.calendar.writer import CalendarEventDraft, upsert_events
 from app.etl.helpers import resolve_date_range
 from app.etl.jobs_service import create_etl_job, finish_etl_job
 from app.etl.options import SyncOptions
@@ -84,7 +84,7 @@ async def run_calendar_sync(
         all_drafts.extend(drafts)
         source_stats["rosstat"] = len(drafts)
 
-    unique: dict[str, object] = {}
+    unique: dict[str, CalendarEventDraft] = {}
     for draft in all_drafts:
         unique[draft.id] = draft
     deduped = list(unique.values())

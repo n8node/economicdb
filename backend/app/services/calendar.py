@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.timezones import MSK
 from app.models.events import EconomicEvent
 from app.schemas.calendar import CalendarEventDetail, CalendarEventItem, CalendarEventsResponse, CalendarSurpriseItem
-
-MSK = ZoneInfo("Europe/Moscow")
 
 
 def _format_num(value, unit: str | None) -> str | None:

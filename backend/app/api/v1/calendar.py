@@ -1,15 +1,14 @@
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.indicators import get_db
+from app.core.timezones import MSK
 from app.schemas.calendar import CalendarEventDetail, CalendarEventsResponse, CalendarSurpriseItem
 from app.services import calendar as calendar_service
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
-MSK = ZoneInfo("Europe/Moscow")
 
 
 @router.get("/events", response_model=CalendarEventsResponse)

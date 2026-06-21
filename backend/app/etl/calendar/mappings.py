@@ -2,11 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time
-from zoneinfo import ZoneInfo
 
-MSK = ZoneInfo("Europe/Moscow")
-ET = ZoneInfo("America/New_York")
-CET = ZoneInfo("Europe/Berlin")
+from app.core.timezones import CET, ET, MSK
 
 
 @dataclass(frozen=True)
