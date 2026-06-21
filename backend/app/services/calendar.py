@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.events import EconomicEvent
 from app.schemas.calendar import CalendarEventDetail, CalendarEventItem, CalendarEventsResponse, CalendarSurpriseItem
+
+MSK = ZoneInfo("Europe/Moscow")
 
 
 def _format_num(value, unit: str | None) -> str | None:
@@ -21,7 +24,7 @@ def _format_num(value, unit: str | None) -> str | None:
 
 
 def _format_dt(dt: datetime) -> str:
-    local = dt.astimezone(timezone.utc)
+    local = dt.astimezone(MSK)
     return local.strftime("%d.%m.%Y, %H:%M МСК")
 
 

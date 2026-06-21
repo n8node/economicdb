@@ -10,7 +10,8 @@
 - [x] Dashboard «Обзор» на реальных рядах FRED/ЦБ без demo fallback
 - [x] ETL schema + providers admin + FRED/ЦБ sync
 - [x] DATA_CATALOG multisource-пакет: +97 показателей, hidden until ETL verification
-- [ ] Перенос остальных mockups → React (indicators, compare, calendar, summaries)
+- [x] Calendar ETL: FRED/CBR/ECB/FOMC/Rosstat release ingestion + enricher + admin sync UI
+- [ ] Перенос остальных mockups → React (indicators, compare, summaries)
 - [ ] OpenRouter weekly digest + validator
 - [ ] Robokassa billing
 - [ ] Admin settings UI (OpenRouter, SMTP, providers CRUD)
@@ -22,6 +23,6 @@
 
 ## Mock/demo gaps (не баги)
 
-- Реальные calendar events ещё не подключены к провайдерам
+- [x] Реальные calendar events подключены к провайдерам (FRED, CBR, ECB, FOMC, Росстат)
 - Calendar forecast «—»
 - AI archive filters в demo

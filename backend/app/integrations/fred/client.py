@@ -54,6 +54,43 @@ async def test_connection(api_key: str) -> dict:
         }
 
 
+async def fetch_release_dates(
+    api_key: str,
+    release_id: int,
+    *,
+    realtime_start: str,
+    realtime_end: str,
+) -> list[date]:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(
+            f"{FRED_BASE_URL}/release/dates",
+            params={
+                "release_id": release_id,
+                "api_key": api_key,
+                "file_type": "json",
+                "realtime_start": realtime_start,
+                "realtime_end": realtime_end,
+                "include_release_dates_with_no_data": "true",
+                "sort_order": "asc",
+                "limit": 10000,
+            },
+        )
+        if response.status_code == 400:
+            payload = response.json()
+            error_msg = payload.get("error_message", f"Ошибка FRED release {release_id}")
+            raise FredError(str(error_msg), code="fred_bad_request")
+        response.raise_for_status()
+        payload = response.json()
+
+    dates: list[date] = []
+    for row in payload.get("release_dates", []):
+        raw = row.get("date")
+        if not raw:
+            continue
+        dates.append(date.fromisoformat(str(raw)))
+    return dates
+
+
 async def fetch_observations(
     api_key: str,
     series_id: str,

@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +9,7 @@ from app.schemas.calendar import CalendarEventDetail, CalendarEventsResponse, Ca
 from app.services import calendar as calendar_service
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
+MSK = ZoneInfo("Europe/Moscow")
 
 
 @router.get("/events", response_model=CalendarEventsResponse)
@@ -52,7 +54,7 @@ async def calendar_export_ics(session: AsyncSession = Depends(get_db)) -> Respon
     data = await calendar_service.list_events(session)
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//economicdb//Macro//RU"]
     for event in data.items:
-        dt = event.scheduled_at_msk.strftime("%Y%m%dT%H%M%SZ")
+        dt = event.scheduled_at_msk.astimezone(MSK).strftime("%Y%m%dT%H%M%S")
         lines.extend(
             [
                 "BEGIN:VEVENT",

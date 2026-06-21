@@ -9,7 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 from zoneinfo import ZoneInfo
 
 from app.config.settings import settings
-from app.workers.jobs import run_daily_etl
+from app.workers.jobs import run_daily_calendar_sync, run_daily_etl
 
 structlog.configure(processors=[structlog.processors.JSONRenderer()])
 logger = structlog.get_logger()
@@ -26,6 +26,18 @@ def _build_scheduler() -> AsyncIOScheduler:
             timezone=timezone,
         ),
         id="daily_etl",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        run_daily_calendar_sync,
+        CronTrigger(
+            hour=settings.calendar_sync_hour,
+            minute=settings.calendar_sync_minute,
+            timezone=timezone,
+        ),
+        id="daily_calendar",
         replace_existing=True,
         max_instances=1,
         coalesce=True,

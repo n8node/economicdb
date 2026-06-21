@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     etl_sync_hour: int = 4
     etl_sync_minute: int = 0
     etl_sync_timezone: str = "Europe/Moscow"
+    calendar_sync_hour: int = 5
+    calendar_sync_minute: int = 0
 
 
 settings = Settings()

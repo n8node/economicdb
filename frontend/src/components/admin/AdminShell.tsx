@@ -59,6 +59,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const nav = [
     { href: "/adminus/dashboard", label: "Обзор" },
     { href: "/adminus/data", label: "Данные и ETL" },
+    { href: "/adminus/calendar", label: "Календарь" },
     { href: "/adminus/providers", label: "Провайдеры данных" },
     { href: "/adminus/settings", label: "Настройки" },
   ];
