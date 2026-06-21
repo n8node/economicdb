@@ -28,6 +28,12 @@ function formatBrushYear(value: number): string {
   return new Date(value * 1000).getFullYear().toString();
 }
 
+function chartHeightForWidth(width: number): number {
+  if (width < 480) return 220;
+  if (width < 768) return 260;
+  return 360;
+}
+
 type ChartEvent = { date: string; title: string };
 
 const PLAQUE_WIDTH = 148;
@@ -157,11 +163,12 @@ export function IndicatorChart({
       try {
         const mainWidth = host.clientWidth;
         if (mainWidth < 20) return;
+        const mainHeight = chartHeightForWidth(mainWidth);
 
         if (!mainRef.current) {
           const opts: Options = {
             width: mainWidth,
-            height: 360,
+            height: mainHeight,
             scales: { x: { time: true }, y: { auto: true } },
             series,
             legend: { show: false },
@@ -257,7 +264,7 @@ export function IndicatorChart({
 
           mainRef.current = new uPlot(opts, data, host);
         } else {
-          mainRef.current.setSize({ width: mainWidth, height: 360 });
+          mainRef.current.setSize({ width: mainWidth, height: mainHeight });
           mainRef.current.setData(data);
         }
 
@@ -347,7 +354,7 @@ export function IndicatorChart({
             onResetZoom?.();
           }}
         >
-          Сбросить масштаб
+          <i className="ti ti-zoom-reset" /> Сбросить масштаб
         </button>
       </div>
       <div className="chart-cursor-wrap" ref={wrapRef}>

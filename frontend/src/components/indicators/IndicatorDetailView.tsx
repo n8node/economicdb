@@ -249,10 +249,10 @@ export function IndicatorDetailView({ id }: { id: string }) {
               onClick={() => series && exportSeriesCsv(indicator.name_ru, series.points)}
               disabled={!series?.points.length}
             >
-              CSV
+              <i className="ti ti-download" /> CSV
             </button>
             <Link href="/app/compare" target="_top" className="btn">
-              Сравнение
+              <i className="ti ti-chart-line" /> Сравнение
             </Link>
           </div>
         </div>
@@ -282,7 +282,7 @@ export function IndicatorDetailView({ id }: { id: string }) {
       </div>
 
       <div className="detail-layout">
-        <div>
+        <div className="detail-main">
           <section className="chart-card">
             <div className="chart-toolbar">
               <div className="period-bar">

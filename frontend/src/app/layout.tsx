@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import "@tabler/icons-webfont/tabler-icons.min.css";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter" });
@@ -17,10 +18,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru" className={`${inter.variable} ${jetbrains.variable}`}>
       <head>
         <meta name="deploy-id" content={deployId} />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css"
-        />
         <script src="/macro-hard-navigation.js" />
       </head>
       <body>
