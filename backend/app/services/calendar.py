@@ -6,6 +6,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.timezones import MSK
+from app.etl.calendar.values import ResolvedEventValues, merge_event_values, resolve_events_values
 from app.models.events import EconomicEvent
 from app.schemas.calendar import CalendarEventDetail, CalendarEventItem, CalendarEventsResponse, CalendarSurpriseItem
 
@@ -35,8 +36,15 @@ def _surprise_direction(surprise) -> str | None:
     return "up" if val > 0 else "down"
 
 
-def _to_item(row: EconomicEvent, now: datetime) -> CalendarEventItem:
+def _to_item(
+    row: EconomicEvent,
+    now: datetime,
+    *,
+    resolved: ResolvedEventValues | None = None,
+) -> CalendarEventItem:
     status = "upcoming" if row.scheduled_at_msk > now else "past"
+    actual, previous, surprise = merge_event_values(row, resolved)
+
     return CalendarEventItem(
         id=row.id,
         title_ru=row.title_ru,
@@ -46,11 +54,11 @@ def _to_item(row: EconomicEvent, now: datetime) -> CalendarEventItem:
         scheduled_at_msk=row.scheduled_at_msk,
         scheduled_label=_format_dt(row.scheduled_at_msk),
         status=status,
-        actual=_format_num(row.actual, row.unit),
+        actual=_format_num(actual, row.unit),
         forecast=_format_num(row.forecast, row.unit) if row.forecast is not None else "—",
-        previous=_format_num(row.previous, row.unit),
-        surprise=_format_num(row.surprise, row.unit),
-        surprise_direction=_surprise_direction(row.surprise),
+        previous=_format_num(previous, row.unit),
+        surprise=_format_num(surprise, row.unit),
+        surprise_direction=_surprise_direction(surprise),
         source=row.source,
         linked_indicator_id=row.linked_indicator_id,
     )
@@ -83,7 +91,8 @@ async def list_events(
         query = query.where(and_(*clauses))
 
     rows = list((await session.scalars(query.order_by(EconomicEvent.scheduled_at_msk))).all())
-    items = [_to_item(row, now) for row in rows]
+    resolved_map = await resolve_events_values(session, rows, now=now)
+    items = [_to_item(row, now, resolved=resolved_map.get(row.id)) for row in rows]
     if status == "upcoming":
         items = [i for i in items if i.status == "upcoming"]
     elif status == "past":
@@ -96,7 +105,8 @@ async def get_event(session: AsyncSession, event_id: str) -> CalendarEventDetail
     if row is None:
         return None
     now = datetime.now(timezone.utc)
-    item = _to_item(row, now)
+    resolved_map = await resolve_events_values(session, [row], now=now)
+    item = _to_item(row, now, resolved=resolved_map.get(row.id))
     return CalendarEventDetail(**item.model_dump(), unit=row.unit)
 
 
