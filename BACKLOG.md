@@ -14,7 +14,8 @@
 - [ ] Перенос остальных mockups → React (indicators, compare, summaries)
 - [ ] OpenRouter weekly digest + validator
 - [ ] Robokassa billing
-- [ ] Admin settings UI (OpenRouter, SMTP, providers CRUD)
+- [x] Admin OpenRouter settings UI (`/adminus/settings`: key, test, models, model for digest)
+- [ ] Admin settings UI (SMTP, Robokassa)
 
 ## Design gaps
 
