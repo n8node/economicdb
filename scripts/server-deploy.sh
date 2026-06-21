@@ -6,9 +6,19 @@ cd /opt/economicdb
 
 BRANCH="${DEPLOY_BRANCH:-main}"
 echo "=== Sync repo to origin/${BRANCH} ==="
+OLD_REV="$(git rev-parse HEAD)"
 git fetch origin "$BRANCH"
 # Deploy server: discard local edits to tracked files (nginx conf.d is regenerated below).
 git reset --hard "origin/${BRANCH}"
+NEW_REV="$(git rev-parse HEAD)"
+
+if [ "$OLD_REV" = "$NEW_REV" ]; then
+  echo "Already up to date ($(git rev-parse --short HEAD))"
+else
+  echo "Updating $(git rev-parse --short "$OLD_REV")..$(git rev-parse --short "$NEW_REV")"
+  git log --oneline --no-decorate "${OLD_REV}..${NEW_REV}"
+  git diff --stat "${OLD_REV}" "${NEW_REV}"
+fi
 
 chmod +x scripts/*.sh
 export BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo local)"
