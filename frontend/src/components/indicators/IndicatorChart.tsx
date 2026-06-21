@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import uPlot, { type AlignedData, type Options, type Series } from "uplot";
 import "uplot/dist/uPlot.min.css";
 import type { SeriesPoint } from "@/lib/indicators";
@@ -30,6 +30,33 @@ function formatBrushYear(value: number): string {
 
 type ChartEvent = { date: string; title: string };
 
+const PLAQUE_WIDTH = 148;
+const PLAQUE_HEIGHT = 76;
+
+function computePlaquePosition(
+  x: number,
+  y: number,
+  wrapWidth: number,
+  wrapHeight: number,
+): { left: number; top: number } {
+  const pad = 10;
+  let left = x + 16;
+  let top = y - PLAQUE_HEIGHT - 12;
+
+  if (left + PLAQUE_WIDTH > wrapWidth - pad) {
+    left = x - PLAQUE_WIDTH - 16;
+  }
+  if (top < pad) {
+    top = y + 16;
+  }
+  if (left < pad) left = pad;
+  if (top + PLAQUE_HEIGHT > wrapHeight - pad) {
+    top = wrapHeight - PLAQUE_HEIGHT - pad;
+  }
+
+  return { left, top };
+}
+
 export function IndicatorChart({
   points,
   unit,
@@ -57,6 +84,7 @@ export function IndicatorChart({
   onResetZoom?: () => void;
   resetToken?: number;
 }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const brushHostRef = useRef<HTMLDivElement | null>(null);
   const [brushHostEl, setBrushHostEl] = useState<HTMLDivElement | null>(null);
@@ -69,8 +97,15 @@ export function IndicatorChart({
   const initialXRef = useRef<{ min: number; max: number } | null>(null);
   const syncKeyRef = useRef(createBrushSyncKey(`indicator-${Math.random().toString(36).slice(2, 10)}`));
   const onHoverIndexRef = useRef(onHoverIndex);
-  const [hover, setHover] = useState<ChartHoverPoint | null>(null);
+  const [hover, setHover] = useState<{ point: ChartHoverPoint; x: number; y: number } | null>(null);
   const [chartError, setChartError] = useState<string | null>(null);
+
+  const plaqueStyle = useMemo(() => {
+    if (!hover || !wrapRef.current) return null;
+    const { width, height } = wrapRef.current.getBoundingClientRect();
+    const { left, top } = computePlaquePosition(hover.x, hover.y, width, height);
+    return { left, top };
+  }, [hover]);
 
   onHoverIndexRef.current = onHoverIndex;
 
@@ -140,7 +175,16 @@ export function IndicatorChart({
                 gap: 8,
               },
             ],
-            cursor: mainChartSyncCursor(syncKey),
+            cursor: {
+              ...mainChartSyncCursor(syncKey),
+              points: {
+                show: true,
+                size: 7,
+                fill: "#1B7561",
+                stroke: "#ffffff",
+                width: 2,
+              },
+            },
             hooks: {
               draw: [
                 (u) => {
@@ -191,9 +235,12 @@ export function IndicatorChart({
               setCursor: [
                 (u) => {
                   const idx = u.cursor.idx ?? null;
+                  const point = buildHoverPoint(points, idx);
+                  const x = u.cursor.left ?? 0;
+                  const y = u.cursor.top ?? 0;
                   deferChartUpdate(() => {
                     onHoverIndexRef.current?.(idx);
-                    setHover(buildHoverPoint(points, idx));
+                    setHover(point ? { point, x, y } : null);
                   });
                 },
               ],
@@ -286,20 +333,7 @@ export function IndicatorChart({
   return (
     <div className="chart-stack">
       <div className="chart-tooltip-row">
-        {hover ? (
-          <div className="chart-tooltip">
-            <strong>{new Date(hover.date).toLocaleDateString("ru-RU")}</strong>
-            <span>{formatAxisValue(hover.value, unit, normalized)}</span>
-            {hover.delta !== null ? (
-              <span className={hover.delta >= 0 ? "up" : "down"}>
-                {hover.delta >= 0 ? "+" : ""}
-                {hover.delta.toFixed(2).replace(".", ",")}
-              </span>
-            ) : null}
-          </div>
-        ) : (
-          <span className="meta">Наведите на график или потяните для zoom</span>
-        )}
+        {!hover ? <span className="meta">Наведите на график или потяните для zoom</span> : <span />}
         <button
           type="button"
           className="btn chart-reset-btn"
@@ -316,7 +350,36 @@ export function IndicatorChart({
           Сбросить масштаб
         </button>
       </div>
-      <div className="indicator-chart-host" ref={hostRef} />
+      <div className="chart-cursor-wrap" ref={wrapRef}>
+        <div className="indicator-chart-host" ref={hostRef} />
+        {hover && plaqueStyle ? (
+          <div
+            className="chart-cursor-plaque"
+            style={{ left: plaqueStyle.left, top: plaqueStyle.top }}
+            aria-hidden
+          >
+            <span className="chart-cursor-plaque-date">
+              {new Date(hover.point.date).toLocaleDateString("ru-RU", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+            <span className="chart-cursor-plaque-value">
+              {formatAxisValue(hover.point.value, unit, normalized)}
+            </span>
+            {hover.point.delta !== null ? (
+              <span
+                className={`chart-cursor-plaque-delta ${hover.point.delta >= 0 ? "up" : "down"}`}
+              >
+                {hover.point.delta >= 0 ? "+" : ""}
+                {hover.point.delta.toFixed(2).replace(".", ",")}
+                {normalized || unit === "%" ? " п.п." : ""}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
       {points.length >= 8 ? (
         <div className="chart-brush-panel">
           <div className="chart-brush-head">
