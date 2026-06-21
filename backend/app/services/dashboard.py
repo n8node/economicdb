@@ -13,12 +13,10 @@ from app.schemas.dashboard import (
     CalendarEventItem,
     ChangeItem,
     DashboardOverview,
-    FavoriteItem,
     KpiItem,
 )
 
 KPI_IDS = ["cbr_key_rate", "usd_rub", "us_cpi_yoy", "fed_funds", "oil_brent"]
-FAVORITE_IDS = ["cbr_key_rate", "usd_rub", "ru_cpi_yoy", "us_cpi_yoy", "fed_funds"]
 
 
 async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryBlock | None = None) -> DashboardOverview:
@@ -28,7 +26,7 @@ async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryB
     indicators = (
         await session.scalars(
             select(Indicator).where(
-                Indicator.id.in_(KPI_IDS + FAVORITE_IDS),
+                Indicator.id.in_(KPI_IDS),
                 Indicator.enabled.is_(True),
             )
         )
@@ -77,21 +75,6 @@ async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryB
         for event in upcoming.all()
     ]
 
-    favorites: list[FavoriteItem] = []
-    for indicator_id in FAVORITE_IDS:
-        row = indicator_map.get(indicator_id)
-        if not row:
-            continue
-        favorites.append(
-            FavoriteItem(
-                label=row.name_ru,
-                value=format_value(row.last_value, row.unit) or "—",
-                delta=format_change(row.last_change, row.unit if row.unit in {"%", "п.п."} else "%") or "—",
-                delta_direction=delta_direction(row.last_change),
-                source=row.source,
-            )
-        )
-
     surprises = await session.scalars(
         select(EconomicEvent)
         .where(EconomicEvent.surprise.is_not(None))
@@ -124,6 +107,5 @@ async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryB
         kpis=kpis,
         ai_summary=summary,
         calendar_events=calendar_events,
-        favorites=favorites,
         changes=changes,
     )

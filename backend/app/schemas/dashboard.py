@@ -21,14 +21,6 @@ class CalendarEventItem(BaseModel):
     country: str  # ru | eu | us
 
 
-class FavoriteItem(BaseModel):
-    label: str
-    value: str
-    delta: str
-    delta_direction: str
-    source: str  # cbr | rosstat | fred | oecd | ecb | eurostat | imf | world_bank | moex
-
-
 class ChangeItem(BaseModel):
     direction: str
     text: str
@@ -40,5 +32,4 @@ class DashboardOverview(BaseModel):
     kpis: list[KpiItem]
     ai_summary: AiSummaryBlock
     calendar_events: list[CalendarEventItem]
-    favorites: list[FavoriteItem]
     changes: list[ChangeItem]

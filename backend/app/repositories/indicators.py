@@ -123,6 +123,23 @@ def _to_list_item(row: Indicator, sparkline: list[float]) -> IndicatorListItem:
     )
 
 
+async def list_indicators_by_ids(session: AsyncSession, ids: list[str]) -> list[IndicatorListItem]:
+    if not ids:
+        return []
+
+    ordered_ids = list(dict.fromkeys(ids))[:100]
+    rows = await session.scalars(
+        select(Indicator).where(Indicator.id.in_(ordered_ids), Indicator.enabled.is_(True))
+    )
+    row_map = {row.id: row for row in rows.all()}
+    sparklines = await _load_sparklines(session, [indicator_id for indicator_id in ordered_ids if indicator_id in row_map])
+    return [
+        _to_list_item(row_map[indicator_id], sparklines.get(indicator_id, []))
+        for indicator_id in ordered_ids
+        if indicator_id in row_map
+    ]
+
+
 async def list_indicators(
     session: AsyncSession,
     *,

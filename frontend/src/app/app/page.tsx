@@ -6,7 +6,6 @@ const FALLBACK: DashboardOverview = {
   kpis: [],
   ai_summary: { period: "—", headline: "Данные временно недоступны", bullets: [] },
   calendar_events: [],
-  favorites: [],
   changes: [],
 };
 

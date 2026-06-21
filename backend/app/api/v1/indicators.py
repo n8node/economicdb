@@ -9,6 +9,7 @@ from app.schemas.indicators import (
     IndicatorDetail,
     IndicatorEventItem,
     IndicatorFacets,
+    IndicatorListItem,
     IndicatorListResponse,
     IndicatorRelatedItem,
     IndicatorSearchItem,
@@ -49,6 +50,14 @@ async def list_indicators(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get("/by-ids", response_model=list[IndicatorListItem])
+async def indicators_by_ids(
+    ids: list[str] = Query(default=[]),
+    session: AsyncSession = Depends(get_db),
+) -> list[IndicatorListItem]:
+    return await repo.list_indicators_by_ids(session, ids)
 
 
 @router.get("/facets", response_model=IndicatorFacets)

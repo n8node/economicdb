@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DashboardFavoritesSection } from "@/components/dashboard/DashboardFavoritesSection";
 import { MiniSparkline } from "@/components/indicators/MiniSparkline";
 import type { DashboardOverview } from "@/lib/dashboard";
 
@@ -85,38 +86,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
         </div>
       </div>
 
-      <div style={{ marginBottom: 22 }}>
-        <p className="section-title">
-          Мои избранные показатели
-          <Link href="/app/favorites" target="_top" className="btn ghost">
-            Все <i className="ti ti-arrow-right" />
-          </Link>
-        </p>
-        <div className="fav-grid">
-          {data.favorites.map((item) => (
-            <div key={item.label} className="fav-card">
-              <div className="fav-top">
-                <p className="fav-label">{item.label}</p>
-                <button type="button" className="star-btn active" aria-label="В избранном">
-                  <i className="ti ti-star-filled" />
-                </button>
-              </div>
-              <p className="fav-value">{item.value}</p>
-              <span className={`delta ${item.delta_direction}`} style={{ fontSize: 11.5 }}>
-                {item.delta}
-              </span>
-              <div>
-                <span className={`source-tag ${item.source}`}>
-                  {item.source === "cbr" && "Банк России"}
-                  {item.source === "rosstat" && "Росстат"}
-                  {item.source === "fred" && "FRED"}
-                  {item.source === "oecd" && "OECD"}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <DashboardFavoritesSection />
 
       <div className="card card-pad">
         <p className="section-title">Что изменилось</p>

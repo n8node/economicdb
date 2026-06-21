@@ -19,13 +19,6 @@ export type DashboardOverview = {
     time: string;
     country: string;
   }>;
-  favorites: Array<{
-    label: string;
-    value: string;
-    delta: string;
-    delta_direction: DeltaDirection;
-    source: string;
-  }>;
   changes: Array<{
     direction: DeltaDirection;
     text: string;

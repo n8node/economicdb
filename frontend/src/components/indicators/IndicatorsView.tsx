@@ -14,6 +14,7 @@ import {
   fetchFacetLabels,
   fetchIndicatorFacets,
   fetchIndicators,
+  fetchIndicatorsByIds,
   loadIds,
   saveIds,
   compareActionLabel,
@@ -98,6 +99,37 @@ export function IndicatorsView() {
     setLoading(true);
     setLoadError(null);
     try {
+      if (favoritesOnly) {
+        const fav = loadIds(FAVORITES_KEY);
+        if (!fav.length) {
+          setItems([]);
+          setTotal(0);
+          return;
+        }
+        let list = await fetchIndicatorsByIds(fav);
+        if (search) {
+          const q = search.toLowerCase();
+          list = list.filter(
+            (item) => item.name_ru.toLowerCase().includes(q) || item.id.toLowerCase().includes(q),
+          );
+        }
+        if (applied.country.length) {
+          list = list.filter((item) => applied.country.includes(item.country));
+        }
+        if (applied.category.length) {
+          list = list.filter((item) => applied.category.includes(item.category));
+        }
+        if (applied.frequency.length) {
+          list = list.filter((item) => applied.frequency.includes(item.frequency));
+        }
+        if (applied.source.length) {
+          list = list.filter((item) => applied.source.includes(item.source));
+        }
+        setItems(list);
+        setTotal(list.length);
+        return;
+      }
+
       const res = await fetchIndicators({
         q: search || undefined,
         country: applied.country.length ? applied.country : undefined,
@@ -109,13 +141,9 @@ export function IndicatorsView() {
         page,
         page_size: pageSize,
       });
-      let list = res.items ?? [];
-      if (favoritesOnly) {
-        const fav = loadIds(FAVORITES_KEY);
-        list = list.filter((i) => fav.includes(i.id));
-      }
+      const list = res.items ?? [];
       setItems(list);
-      setTotal(favoritesOnly ? list.length : (res.total ?? list.length));
+      setTotal(res.total ?? list.length);
     } catch {
       setItems([]);
       setTotal(0);

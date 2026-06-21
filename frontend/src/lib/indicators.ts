@@ -120,6 +120,21 @@ export async function fetchIndicators(filters: IndicatorFilters = {}): Promise<I
   return apiFetch<IndicatorListResponse>(`/indicators${buildQuery(filters)}`);
 }
 
+export async function fetchIndicatorsByIds(ids: string[]): Promise<IndicatorListItem[]> {
+  if (!ids.length) return [];
+  const params = new URLSearchParams();
+  ids.forEach((id) => params.append("ids", id));
+  return apiFetch<IndicatorListItem[]>(`/indicators/by-ids?${params.toString()}`);
+}
+
+export async function fetchFavoriteIndicators(): Promise<IndicatorListItem[]> {
+  const ids = loadIds(FAVORITES_KEY);
+  if (!ids.length) return [];
+  const items = await fetchIndicatorsByIds(ids);
+  const map = new Map(items.map((item) => [item.id, item]));
+  return ids.map((id) => map.get(id)).filter((item): item is IndicatorListItem => Boolean(item));
+}
+
 export async function fetchIndicatorFacets(): Promise<IndicatorFacets> {
   return apiFetch<IndicatorFacets>("/indicators/facets");
 }
@@ -220,7 +235,11 @@ export function loadIds(key: string): string[] {
 }
 
 export function saveIds(key: string, ids: string[]) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(key, JSON.stringify(ids));
+  if (key === FAVORITES_KEY) {
+    window.dispatchEvent(new CustomEvent("macro_favorites_changed", { detail: ids }));
+  }
 }
 
 export function toggleId(key: string, id: string): string[] {
