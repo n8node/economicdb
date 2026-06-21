@@ -4,10 +4,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if [ ! -f nginx/templates/https.conf.template ]; then
-  echo "ERROR: nginx/templates/https.conf.template not found"
-  exit 1
-fi
+bash scripts/generate-nginx-https-conf.sh
+bash scripts/validate-nginx-config.sh
+bash scripts/nginx-wait.sh
 
 DOMAIN="${DOMAIN:-economicdb.com}"
 if [ -f .env ]; then
@@ -15,15 +14,5 @@ if [ -f .env ]; then
   source .env
   DOMAIN="${DOMAIN:-economicdb.com}"
 fi
-
-COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
-
-cp nginx/templates/https.conf.template nginx/conf.d/https.conf
-sed -i "s/DOMAIN_PLACEHOLDER/${DOMAIN}/g" nginx/conf.d/https.conf
-
-cp nginx/templates/default.http-redirect.conf nginx/conf.d/default.conf
-sed -i "s/DOMAIN_PLACEHOLDER/${DOMAIN}/g" nginx/conf.d/default.conf
-
-bash scripts/nginx-wait.sh
 
 echo "=== HTTPS nginx applied for ${DOMAIN} ==="

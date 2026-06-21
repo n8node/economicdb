@@ -24,6 +24,10 @@ chmod +x scripts/*.sh
 export BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo local)"
 echo "=== BUILD_ID=${BUILD_ID} ==="
 
+# Конфиг nginx на диск до recreate контейнера — избегаем crash loop на старом conf
+bash scripts/generate-nginx-https-conf.sh
+bash scripts/validate-nginx-config.sh
+
 SERVICES="${1:-}"
 COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
@@ -42,12 +46,5 @@ else
   SKIP_BUILD=1 bash scripts/restart-frontend.sh
 fi
 
-if [ -f scripts/apply-nginx-https.sh ]; then
-  ./scripts/apply-nginx-https.sh
-fi
-
-bash scripts/fix-static-volume.sh
-
-sleep 3
-curl -sf https://economicdb.com/health && echo " health OK" || echo "WARNING: health failed"
+bash scripts/verify-deploy-health.sh
 bash scripts/diagnose-site.sh

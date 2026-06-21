@@ -43,6 +43,7 @@ for i in $(seq 1 60); do
 done
 
 echo "=== Recreate nginx (fresh Docker DNS + config includes) ==="
+bash scripts/validate-nginx-config.sh
 $COMPOSE up -d --force-recreate --no-deps nginx
 
 echo "=== Verify nginx (skip reload — container just started fresh) ==="

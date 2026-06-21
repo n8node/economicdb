@@ -5,7 +5,7 @@ set -euo pipefail
 RELOAD="${NGINX_RELOAD:-1}"
 COMPOSE="${COMPOSE:-docker compose -f docker-compose.yml -f docker-compose.prod.yml}"
 
-for i in $(seq 1 30); do
+for i in $(seq 1 45); do
   state=$($COMPOSE ps nginx --format '{{.State}}' 2>/dev/null | head -1 || true)
   if [ "$state" = "running" ]; then
     if $COMPOSE exec -T nginx nginx -t 2>/dev/null; then
