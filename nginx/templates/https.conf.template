@@ -41,7 +41,6 @@ server {
         proxy_pass $backend_upstream;
         include /etc/nginx/includes/frontend-proxy-base.conf;
         include /etc/nginx/includes/cache-api.conf;
-        proxy_read_timeout 120s;
     }
 
     location = /health {
@@ -54,7 +53,7 @@ server {
     location = /deploy-id {
         set $frontend_upstream http://frontend:3000;
         proxy_pass $frontend_upstream;
-        include /etc/nginx/includes/frontend-proxy-base.conf;
+        include /etc/nginx/includes/frontend-proxy-headers.conf;
         include /etc/nginx/includes/cache-html.conf;
         proxy_connect_timeout 5s;
         proxy_read_timeout 10s;
@@ -85,9 +84,6 @@ server {
         proxy_pass $frontend_upstream;
         include /etc/nginx/includes/frontend-proxy-base.conf;
         include /etc/nginx/includes/cache-html.conf;
-        proxy_connect_timeout 10s;
-        proxy_read_timeout 120s;
-        proxy_send_timeout 120s;
         proxy_intercept_errors on;
     }
 
@@ -96,9 +92,6 @@ server {
         proxy_pass $frontend_upstream;
         include /etc/nginx/includes/frontend-proxy-base.conf;
         include /etc/nginx/includes/cache-html.conf;
-        proxy_connect_timeout 10s;
-        proxy_read_timeout 120s;
-        proxy_send_timeout 120s;
         proxy_intercept_errors on;
     }
 
