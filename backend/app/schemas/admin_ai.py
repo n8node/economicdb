@@ -13,3 +13,4 @@ class DigestRegenerateResult(BaseModel):
     skipped: bool | None = None
     model: str | None = None
     word_count: int | None = None
+    warnings: list[str] | None = None

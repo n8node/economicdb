@@ -39,6 +39,14 @@ server {
         root /var/www/certbot;
     }
 
+    location = /api/v1/admin/ai/digest/regenerate {
+        set $backend_upstream http://backend:8080;
+        proxy_pass $backend_upstream;
+        include /etc/nginx/includes/frontend-proxy-headers.conf;
+        include /etc/nginx/includes/proxy-api-long.conf;
+        include /etc/nginx/includes/cache-api.conf;
+    }
+
     location /api/ {
         set $backend_upstream http://backend:8080;
         proxy_pass $backend_upstream;

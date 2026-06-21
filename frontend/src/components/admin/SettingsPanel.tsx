@@ -152,6 +152,7 @@ export function SettingsPanel() {
         error?: string;
         summary_id?: string;
         skipped?: boolean;
+        warnings?: string[];
       }>("/admin/ai/digest/regenerate", {
         method: "POST",
         body: JSON.stringify({ force: true }),
@@ -160,9 +161,20 @@ export function SettingsPanel() {
         setError(result.message || result.error || "Не удалось сгенерировать сводку");
         return;
       }
-      setMessage(result.message || `Сводка создана: ${result.summary_id || "ok"}`);
-    } catch {
-      setError("Ошибка генерации сводки");
+      const warningNote =
+        result.warnings && result.warnings.length > 0
+          ? ` (${result.warnings.length} предупр.)`
+          : "";
+      setMessage((result.message || `Сводка создана: ${result.summary_id || "ok"}`) + warningNote);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : "";
+      if (/API 50[234]|Failed to fetch|NetworkError|Load failed/i.test(detail)) {
+        setError(
+          "Запрос прервался по таймауту или сети. Сводка могла уже сохраниться — проверьте /app/summaries и повторите только при необходимости.",
+        );
+      } else {
+        setError("Ошибка генерации сводки");
+      }
     } finally {
       setGenerating(false);
     }
