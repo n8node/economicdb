@@ -42,11 +42,17 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
+echo "=== Ensure nginx has include files ==="
+if ! $COMPOSE exec -T nginx test -f /etc/nginx/includes/frontend-proxy-base.conf 2>/dev/null; then
+  echo "nginx includes missing in running container; recreating nginx"
+  $COMPOSE up -d --force-recreate nginx
+fi
+
 echo "=== Reload nginx (refresh Docker DNS) ==="
 $COMPOSE exec nginx nginx -t
 $COMPOSE exec nginx nginx -s reload
 
-echo "=== Ensure static volume populated ==="
+echo "=== Ensure static assets are present ==="
 bash scripts/fix-static-volume.sh
 
 echo "=== Test /app ==="

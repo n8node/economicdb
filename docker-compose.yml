@@ -14,6 +14,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/includes:/etc/nginx/includes:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     restart: unless-stopped
 

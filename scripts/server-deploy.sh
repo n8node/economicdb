@@ -24,8 +24,8 @@ else
   $COMPOSE build nginx
   $COMPOSE up -d backend worker
   $COMPOSE up -d --force-recreate --no-deps frontend
+  $COMPOSE up -d --force-recreate nginx
   SKIP_BUILD=1 bash scripts/restart-frontend.sh
-  $COMPOSE up -d nginx
 fi
 
 if [ -f scripts/apply-nginx-https.sh ]; then
