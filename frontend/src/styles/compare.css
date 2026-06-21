@@ -162,3 +162,9 @@
   .compare-page .series-list{ max-height:360px; }
   .compare-page .series-actions{ flex-direction:row; flex-wrap:wrap; }
 }
+@media (max-width:768px){
+  .compare-page .page-head-actions{ width:100%; }
+  .compare-page .preset-bar{ gap:6px; }
+  .compare-page .preset-chip{ font-size:12px; padding:6px 12px; }
+  .compare-page .chart-head{ flex-wrap:wrap; gap:8px; }
+}

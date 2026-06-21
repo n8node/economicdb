@@ -26,3 +26,21 @@
 .calendar-page .event-drawer{ width:420px; max-width:100%; height:100%; background:var(--bg-surface); padding:20px; overflow:auto; box-shadow:-8px 0 24px rgba(0,0,0,.08); }
 .calendar-page .drawer-head{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
 .calendar-page .drawer-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0; }
+
+@media (max-width:768px){
+  .calendar-page .head-actions{ flex-wrap:wrap; width:100%; }
+  .calendar-page .toolbar-row{ flex-direction:column; }
+  .calendar-page .event-row{
+    grid-template-columns:8px 1fr; gap:10px;
+  }
+  .calendar-page .event-row .country-flag,
+  .calendar-page .event-row .event-values{
+    grid-column:2;
+  }
+  .calendar-page .drawer-grid{ grid-template-columns:1fr; }
+  .calendar-page .grid-view{ grid-template-columns:1fr; }
+}
+@media (max-width:480px){
+  .calendar-page .filter-bar{ gap:6px; }
+  .calendar-page .pill{ font-size:12px; padding:5px 10px; }
+}

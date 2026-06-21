@@ -5,3 +5,12 @@
 .summaries-page .summary-card{ display:block; position:relative; }
 .summaries-page .summary-card.pinned{ border-color:var(--primary-400); }
 .summaries-page .summary-card h2{ font-size:18px; margin:8px 0; }
+
+@media (max-width:768px){
+  .summaries-page .summary-grid{ grid-template-columns:1fr; }
+  .summaries-page .summary-card h2{ font-size:16px; }
+}
+@media (max-width:480px){
+  .summaries-page .filter-bar{ gap:6px; }
+  .summaries-page .pill{ font-size:12px; padding:5px 10px; }
+}

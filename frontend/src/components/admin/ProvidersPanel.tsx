@@ -174,6 +174,7 @@ export function ProvidersPanel() {
         После деплоя: Ctrl+Shift+R на сайте или очистка данных для {`economicdb.com`} один раз.
       </p>
       {message ? <p className="muted">{message}</p> : null}
+      <div className="admin-table-scroll">
       <table className="admin-table">
         <thead>
           <tr>
@@ -260,6 +261,7 @@ export function ProvidersPanel() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

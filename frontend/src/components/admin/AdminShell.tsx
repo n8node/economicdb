@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AdminUser, clearAdminToken, fetchAdminMe } from "@/lib/auth";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -10,6 +10,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [checking, setChecking] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   useEffect(() => {
     fetchAdminMe()
@@ -22,6 +25,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       })
       .finally(() => setChecking(false));
   }, [router]);
+
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth > 768) setSidebarOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   function logout() {
     clearAdminToken();
@@ -46,9 +64,22 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
-        <h2 style={{ fontSize: 16, margin: "0 0 16px" }}>Adminus</h2>
+    <div className={`admin-shell${sidebarOpen ? " sidebar-open" : ""}`}>
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="admin-sidebar-backdrop"
+          onClick={closeSidebar}
+          aria-label="Закрыть меню"
+        />
+      )}
+      <aside className={`admin-sidebar${sidebarOpen ? " is-open" : ""}`}>
+        <div className="admin-sidebar-head">
+          <h2>Adminus</h2>
+          <button type="button" className="admin-btn admin-sidebar-close" onClick={closeSidebar} aria-label="Закрыть меню">
+            <i className="ti ti-x" />
+          </button>
+        </div>
         <nav>
           {nav.map((item) => (
             <Link
@@ -56,6 +87,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               href={item.href}
               target="_top"
               className={pathname === item.href || pathname.startsWith(`${item.href}/`) ? "active" : ""}
+              onClick={closeSidebar}
             >
               {item.label}
             </Link>
@@ -64,7 +96,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </aside>
       <main className="admin-main">
         <div className="admin-top">
-          <span className="muted">{admin.email}</span>
+          <div className="admin-top-start">
+            <button
+              type="button"
+              className="admin-btn admin-menu-toggle"
+              onClick={() => setSidebarOpen((v) => !v)}
+              aria-label="Меню"
+            >
+              <i className="ti ti-menu-2" />
+            </button>
+            <span className="muted admin-email">{admin.email}</span>
+          </div>
           <button type="button" className="admin-btn" onClick={logout}>
             Выйти
           </button>

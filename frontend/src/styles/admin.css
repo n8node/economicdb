@@ -85,6 +85,40 @@
   background: #fff;
   border-right: 1px solid #e4e7ec;
   padding: 20px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.admin-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.admin-sidebar-head h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.admin-sidebar-close,
+.admin-menu-toggle,
+.admin-sidebar-backdrop {
+  display: none;
+}
+
+.admin-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(20, 24, 31, 0.35);
+  cursor: pointer;
 }
 
 .admin-sidebar nav a {
@@ -110,7 +144,33 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.admin-top-start {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-table-scroll .admin-table {
+  min-width: 640px;
 }
 
 .admin-table {
@@ -233,5 +293,77 @@
 @media (max-width: 960px) {
   .admin-etl-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar-backdrop {
+    display: block;
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    width: min(260px, 86vw);
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: none;
+  }
+
+  .admin-sidebar.is-open {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(20, 24, 31, 0.12);
+  }
+
+  .admin-sidebar-close,
+  .admin-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .admin-main {
+    padding: 16px;
+  }
+
+  .admin-top {
+    margin-bottom: 18px;
+  }
+
+  .admin-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-card {
+    padding: 24px 20px;
+  }
+
+  .admin-tabs {
+    gap: 6px;
+  }
+
+  .admin-tabs .admin-btn {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-page {
+    padding: 16px;
+  }
+
+  .admin-card {
+    padding: 20px 16px;
+  }
+
+  .admin-email {
+    max-width: 160px;
   }
 }

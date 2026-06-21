@@ -126,3 +126,15 @@
   .indicator-detail-page .stats-grid,
   .indicator-detail-page .stats-row{ grid-template-columns:repeat(2,1fr); }
 }
+@media (max-width:768px){
+  .indicator-detail-page .detail-head-actions{ flex-wrap:wrap; width:100%; }
+  .indicator-detail-page .chart-controls{ flex-wrap:wrap; gap:8px; }
+  .indicator-detail-page .history-card{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .indicator-detail-page .history-table{ min-width:480px; }
+  .indicator-detail-page .stats-grid,
+  .indicator-detail-page .stats-row{ grid-template-columns:1fr 1fr; }
+}
+@media (max-width:480px){
+  .indicator-detail-page .stats-grid,
+  .indicator-detail-page .stats-row{ grid-template-columns:1fr; }
+}

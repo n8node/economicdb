@@ -506,6 +506,7 @@ export function DataPanel() {
                 Загрузить выбранные
               </button>
             </div>
+            <div className="admin-table-scroll">
             <table className="admin-table">
               <thead>
                 <tr>
@@ -554,6 +555,7 @@ export function DataPanel() {
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
         </div>
       ) : null}
@@ -572,6 +574,7 @@ export function DataPanel() {
               Импортировать волну в каталог
             </button>
           </div>
+          <div className="admin-table-scroll">
           <table className="admin-table">
             <thead>
               <tr>
@@ -596,10 +599,12 @@ export function DataPanel() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       ) : null}
 
       {tab === "jobs" ? (
+        <div className="admin-table-scroll">
         <table className="admin-table">
           <thead>
             <tr>
@@ -630,6 +635,7 @@ export function DataPanel() {
             ))}
           </tbody>
         </table>
+        </div>
       ) : null}
     </div>
   );
