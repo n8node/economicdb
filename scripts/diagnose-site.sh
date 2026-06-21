@@ -83,13 +83,10 @@ $COMPOSE logs nginx --tail=8 2>/dev/null || true
 $COMPOSE logs frontend --tail=8 2>/dev/null || true
 
 echo ""
-echo "=== Static staging in image ==="
-$COMPOSE exec -T frontend sh -c 'find /opt/static-staging -type f 2>/dev/null | wc -l' 2>/dev/null || echo "staging check failed"
+echo "=== Static assets in image ==="
+$COMPOSE exec -T frontend sh -c 'find /app/.next/static -type f 2>/dev/null | wc -l' 2>/dev/null || echo "static check failed"
 
 echo ""
-echo "=== Static volume (/data/next-static) ==="
-$COMPOSE exec -T frontend sh -c 'find /data/next-static -type f 2>/dev/null | wc -l' 2>/dev/null || echo "volume check failed"
-
-echo ""
-echo "=== Symlink /app/.next/static ==="
-$COMPOSE exec -T frontend sh -c 'ls -la /app/.next/static 2>/dev/null || echo missing' 2>/dev/null || true
+echo "=== Public hard-navigation asset ==="
+$COMPOSE exec -T frontend sh -c 'ls -la /app/public/macro-hard-navigation.js 2>/dev/null || echo missing' 2>/dev/null || true
+curl -s --connect-timeout 10 "${HTTPS_BASE}/macro-hard-navigation.js" | grep -o '__macroHardNavigation' || echo "hard navigation marker not found"

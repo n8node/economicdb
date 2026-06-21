@@ -61,8 +61,6 @@ services:
       INTERNAL_API_URL: http://backend:8080
     expose:
       - "3000"
-    volumes:
-      - next_static:/data/next-static
     healthcheck:
       test:
         [
@@ -181,4 +179,3 @@ volumes:
   mysql_data:
   wordpress_data:
   filebrowser_data:
-  next_static:

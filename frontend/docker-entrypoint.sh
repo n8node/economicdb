@@ -1,35 +1,23 @@
 #!/bin/sh
 set -eu
 
-STATIC_ROOT=/data/next-static
+STATIC_ROOT=/app/.next/static
 
-mkdir -p "$STATIC_ROOT"
-
-if [ ! -d /opt/static-staging ]; then
-  echo "ERROR: /opt/static-staging is missing" >&2
+if [ ! -d "$STATIC_ROOT" ]; then
+  echo "ERROR: ${STATIC_ROOT} is missing" >&2
   exit 1
 fi
 
-staging_count=$(find /opt/static-staging -type f 2>/dev/null | wc -l | tr -d " ")
-if [ "$staging_count" -eq 0 ]; then
-  echo "ERROR: /opt/static-staging is empty" >&2
+static_count=$(find "$STATIC_ROOT" -type f 2>/dev/null | wc -l | tr -d " ")
+if [ "$static_count" -eq 0 ]; then
+  echo "ERROR: ${STATIC_ROOT} is empty" >&2
   exit 1
 fi
 
-rm -rf "${STATIC_ROOT:?}"/*
-cp -a /opt/static-staging/. "$STATIC_ROOT/"
-
-mkdir -p /app/.next
-if [ -e /app/.next/static ] && [ ! -L /app/.next/static ]; then
-  rm -rf /app/.next/static
-fi
-ln -sfn "$STATIC_ROOT" /app/.next/static
-
-volume_count=$(find "$STATIC_ROOT" -type f 2>/dev/null | wc -l | tr -d " ")
-if [ "$volume_count" -eq 0 ]; then
-  echo "ERROR: ${STATIC_ROOT} is empty after copy" >&2
+if [ ! -d /app/public ]; then
+  echo "ERROR: /app/public is missing" >&2
   exit 1
 fi
 
-echo "static ready: staging=${staging_count} volume=${volume_count}"
+echo "static ready: files=${static_count}"
 exec "$@"
