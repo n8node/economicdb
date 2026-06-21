@@ -14,6 +14,7 @@ const DELTA_ICON: Record<string, string> = {
 
 export function DashboardView({ data }: { data: DashboardOverview }) {
   const router = useRouter();
+  const aiBullets = normalizeAiBullets(data.ai_summary.bullets);
 
   return (
     <div className="content">
@@ -44,7 +45,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
         ))}
       </div>
 
-      <div className="row-2col">
+      <div className="row-2col dashboard-overview-row">
         <div className="card ai-card card-pad">
           <div className="card-head">
             <span className="ai-badge">
@@ -55,7 +56,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
           </div>
           <p className="ai-headline">{data.ai_summary.headline}</p>
           <ul className="ai-bullets">
-            {data.ai_summary.bullets.map((item) => (
+            {aiBullets.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
@@ -112,4 +113,16 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
       </footer>
     </div>
   );
+}
+
+function normalizeAiBullets(items: string[]): string[] {
+  return items
+    .flatMap((item) =>
+      item
+        .split(/\n+|\s+•\s+/)
+        .map((part) => part.replace(/^•\s*/, "").trim())
+        .filter(Boolean),
+    )
+    .filter((item, index, all) => all.indexOf(item) === index)
+    .slice(0, 5);
 }

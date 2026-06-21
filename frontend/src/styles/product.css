@@ -374,6 +374,11 @@ button{ font-family: inherit; cursor: pointer; }
   gap: 16px;
   margin-bottom: 22px;
 }
+.dashboard-overview-row{
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, .9fr);
+  align-items: stretch;
+}
+.dashboard-overview-row > .card{ min-width:0; height:100%; }
 
 .card{
   background: var(--bg-surface);
@@ -390,8 +395,12 @@ button{ font-family: inherit; cursor: pointer; }
 
 /* AI summary card */
 .ai-card{
-  background: var(--primary-50);
+  background:
+    radial-gradient(circle at 100% 0, rgba(47,156,132,.12), transparent 34%),
+    var(--primary-50);
   border: 1px solid var(--primary-100);
+  display:flex;
+  flex-direction:column;
 }
 .ai-badge{
   display:inline-flex; align-items:center; gap:5px;
@@ -407,12 +416,36 @@ button{ font-family: inherit; cursor: pointer; }
   line-height: 1.35;
 }
 .ai-bullets{
-  margin: 0 0 16px; padding-left: 18px;
-  font-size: 13.5px; color: var(--text-secondary); line-height: 1.75;
+  display:grid; gap:8px;
+  margin: 0 0 16px; padding:0;
+  font-size: 13.5px; color: var(--text-secondary); line-height: 1.55;
+  list-style:none;
+}
+.ai-bullets li{
+  position:relative;
+  padding:8px 10px 8px 30px;
+  border-radius:var(--radius-md);
+  background:rgba(255,255,255,.55);
+  border:1px solid rgba(255,255,255,.45);
+}
+[data-theme="dark"] .ai-bullets li{
+  background:rgba(24,27,33,.48);
+  border-color:var(--border-subtle);
+}
+.ai-bullets li::before{
+  content:"";
+  position:absolute;
+  left:13px;
+  top:16px;
+  width:6px;
+  height:6px;
+  border-radius:999px;
+  background:var(--primary-400);
+  box-shadow:0 0 0 4px rgba(47,156,132,.12);
 }
 .ai-disclaimer{
   font-size: 11.5px; color: var(--text-tertiary);
-  margin: 14px 0 0; padding-top: 12px;
+  margin: auto 0 0; padding-top: 12px;
   border-top: 1px solid var(--primary-100);
 }
 
@@ -593,6 +626,7 @@ footer.app-footer{
   .sidebar .nav-item{ justify-content:center; }
   .sidebar .brand{ justify-content:center; padding-right:0; }
   .row-2col{ grid-template-columns: 1fr; }
+  .dashboard-overview-row{ grid-template-columns: 1fr; }
   .search-box{ width: 240px; }
 }
 @media (max-width: 768px){

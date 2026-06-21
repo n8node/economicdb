@@ -1,3 +1,5 @@
+import re
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,14 +55,36 @@ async def get_summary(session: AsyncSession, summary_id: str) -> SummaryDetail |
     )
 
 
-def _section_teaser(sections: dict, key: str, limit: int = 180) -> str | None:
-    text = sections.get(key)
-    if not isinstance(text, str) or not text.strip():
-        return None
-    cleaned = text.strip().replace("\n\n", " · ").replace("\n", " ")
+def _truncate_teaser(text: str, limit: int = 150) -> str:
+    cleaned = re.sub(r"\s+", " ", text).strip()
     if len(cleaned) <= limit:
         return cleaned
-    return cleaned[: limit - 1].rstrip() + "…"
+    return cleaned[: limit - 1].rstrip(" ,.;:") + "…"
+
+
+def _section_teasers(sections: dict, key: str, limit: int = 150) -> list[str]:
+    text = sections.get(key)
+    if not isinstance(text, str) or not text.strip():
+        return []
+    parts = [
+        part.strip()
+        for part in re.split(r"\n+|\s+•\s+", text.strip())
+        if part.strip()
+    ]
+    if not parts:
+        return []
+    if len(parts) == 1:
+        parts = [
+            part.strip()
+            for part in re.split(r"(?<=[.!?])\s+", parts[0])
+            if part.strip()
+        ]
+    return [_truncate_teaser(part.lstrip("•").strip(), limit) for part in parts[:2]]
+
+
+def _section_teaser(sections: dict, key: str, limit: int = 150) -> str | None:
+    teasers = _section_teasers(sections, key, limit=limit)
+    return teasers[0] if teasers else None
 
 
 async def latest_summary_teaser(session: AsyncSession):
@@ -77,9 +101,9 @@ async def latest_summary_teaser(session: AsyncSession):
     sections = row.sections if isinstance(row.sections, dict) else {}
     bullets: list[str] = []
     for key in ("ru", "us", "next_week"):
-        teaser = _section_teaser(sections, key)
-        if teaser:
-            bullets.append(teaser)
+        bullets.extend(_section_teasers(sections, key))
+        if len(bullets) >= 4:
+            break
     if not bullets:
         bullets = [row.headline]
     return AiSummaryBlock(
