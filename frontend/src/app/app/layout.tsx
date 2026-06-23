@@ -1,6 +1,6 @@
 import "@/styles/product.css";
-import { ProductShell } from "@/components/layout/ProductShell";
+import { ProductAuthGate } from "@/components/auth/ProductAuthGate";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <ProductShell>{children}</ProductShell>;
+  return <ProductAuthGate>{children}</ProductAuthGate>;
 }

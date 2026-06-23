@@ -1,5 +1,6 @@
 "use client";
 
+import type { AppUser } from "@/lib/auth";
 import { usePathname } from "next/navigation";
 
 const NAV = [
@@ -15,11 +16,16 @@ const NAV = [
 
 type ProductSidebarProps = {
   open?: boolean;
+  user: AppUser;
   onNavigate?: () => void;
   onClose?: () => void;
 };
 
-export function ProductSidebar({ open = false, onNavigate, onClose }: ProductSidebarProps) {
+function userInitials(email: string): string {
+  return email.slice(0, 2).toUpperCase();
+}
+
+export function ProductSidebar({ open = false, user, onNavigate, onClose }: ProductSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -54,10 +60,10 @@ export function ProductSidebar({ open = false, onNavigate, onClose }: ProductSid
 
       <div className="sidebar-footer">
         <div className="user-row">
-          <div className="avatar">АС</div>
+          <div className="avatar">{userInitials(user.email)}</div>
           <div className="user-meta">
-            <p className="user-name">Анна Соколова</p>
-            <p className="user-plan">Тариф Pro</p>
+            <p className="user-name">{user.email}</p>
+            <p className="user-plan">Тариф Basic</p>
           </div>
         </div>
       </div>

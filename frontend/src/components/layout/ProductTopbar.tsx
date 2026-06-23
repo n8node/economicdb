@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { apiFetch } from "@/lib/api";
+import { clearUserToken, type AppUser } from "@/lib/auth";
 
 type SearchHit = { id: string; name_ru: string; country: string; source: string };
 
@@ -48,10 +49,15 @@ function SearchBox({ query, hits, onSearch, onSelect, onEnter, className = "" }:
 }
 
 type ProductTopbarProps = {
+  user: AppUser;
   onMenuToggle: () => void;
 };
 
-export function ProductTopbar({ onMenuToggle }: ProductTopbarProps) {
+function userInitials(email: string): string {
+  return email.slice(0, 2).toUpperCase();
+}
+
+export function ProductTopbar({ user, onMenuToggle }: ProductTopbarProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
@@ -87,6 +93,11 @@ export function ProductTopbar({ onMenuToggle }: ProductTopbarProps) {
     }
   };
 
+  const logout = () => {
+    clearUserToken();
+    router.replace("/app/login");
+  };
+
   return (
     <>
       <div className="topbar">
@@ -116,9 +127,9 @@ export function ProductTopbar({ onMenuToggle }: ProductTopbarProps) {
             <i className="ti ti-bell" />
             <span className="dot" />
           </button>
-          <div className="avatar" style={{ cursor: "pointer" }}>
-            АС
-          </div>
+          <button type="button" className="avatar avatar-button" onClick={logout} title="Выйти">
+            {userInitials(user.email)}
+          </button>
         </div>
       </div>
 

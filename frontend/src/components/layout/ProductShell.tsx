@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { AppUser } from "@/lib/auth";
 import { ProductSidebar } from "./ProductSidebar";
 import { ProductTopbar } from "./ProductTopbar";
 
-export function ProductShell({ children }: { children: React.ReactNode }) {
+export function ProductShell({ children, user }: { children: React.ReactNode; user: AppUser }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
@@ -34,9 +35,9 @@ export function ProductShell({ children }: { children: React.ReactNode }) {
           aria-label="Закрыть меню"
         />
       )}
-      <ProductSidebar open={sidebarOpen} onNavigate={closeSidebar} onClose={closeSidebar} />
+      <ProductSidebar open={sidebarOpen} user={user} onNavigate={closeSidebar} onClose={closeSidebar} />
       <div className="main">
-        <ProductTopbar onMenuToggle={() => setSidebarOpen((v) => !v)} />
+        <ProductTopbar user={user} onMenuToggle={() => setSidebarOpen((v) => !v)} />
         {children}
       </div>
     </div>

@@ -22,7 +22,14 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   });
 
   if (!response.ok) {
-    throw new Error(`API ${response.status}`);
+    let message = `API ${response.status}`;
+    try {
+      const data = (await response.json()) as { detail?: string };
+      if (data.detail) message = data.detail;
+    } catch {
+      // Keep the status-only message when the backend returns an empty body.
+    }
+    throw new Error(message);
   }
 
   return response.json() as Promise<T>;

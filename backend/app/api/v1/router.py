@@ -7,6 +7,7 @@ from app.api.v1.admin.calendar import router as admin_calendar_router
 from app.api.v1.admin.etl import router as admin_etl_router
 from app.api.v1.admin.indicators import router as admin_indicators_router
 from app.api.v1.admin.providers import router as admin_providers_router
+from app.api.v1.auth import router as auth_router
 from app.api.v1.calendar import router as calendar_router
 from app.api.v1.compare import router as compare_router
 from app.api.v1.dashboard import router as dashboard_router
@@ -21,6 +22,7 @@ api_router.include_router(admin_providers_router)
 api_router.include_router(admin_etl_router)
 api_router.include_router(admin_calendar_router)
 api_router.include_router(admin_indicators_router)
+api_router.include_router(auth_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(indicators_router)
 api_router.include_router(compare_router)

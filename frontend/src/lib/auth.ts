@@ -1,9 +1,17 @@
 const TOKEN_KEY = "macro_admin_token";
+const USER_TOKEN_KEY = "macro_user_token";
 
 export type AdminUser = {
   id: number;
   email: string;
   role: string;
+};
+
+export type AppUser = {
+  id: number;
+  email: string;
+  email_verified: boolean;
+  created_at: string;
 };
 
 export function getAdminToken(): string | null {
@@ -72,4 +80,64 @@ export async function adminAuthFetch<T>(path: string, init?: RequestInit): Promi
   }
 
   return response.json() as Promise<T>;
+}
+
+export function getUserToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(USER_TOKEN_KEY);
+}
+
+export function setUserToken(token: string): void {
+  localStorage.setItem(USER_TOKEN_KEY, token);
+}
+
+export function clearUserToken(): void {
+  localStorage.removeItem(USER_TOKEN_KEY);
+}
+
+type UserAuthPayload = {
+  access_token: string;
+  user: AppUser;
+};
+
+export async function registerUser(email: string, password: string): Promise<AppUser> {
+  const { apiFetch } = await import("./api");
+  const data = await apiFetch<UserAuthPayload>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+      password,
+      personal_data_consent: true,
+    }),
+  });
+  setUserToken(data.access_token);
+  return data.user;
+}
+
+export async function loginUser(email: string, password: string): Promise<AppUser> {
+  const { apiFetch } = await import("./api");
+  const data = await apiFetch<UserAuthPayload>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  setUserToken(data.access_token);
+  return data.user;
+}
+
+export async function fetchUserMe(): Promise<AppUser | null> {
+  const token = getUserToken();
+  if (!token) return null;
+
+  const { getApiBase } = await import("./api");
+  const response = await fetch(`${getApiBase()}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    clearUserToken();
+    return null;
+  }
+
+  return response.json() as Promise<AppUser>;
 }
