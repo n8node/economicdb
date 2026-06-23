@@ -20,37 +20,35 @@ export function FavoriteCardsGrid({ items, onChanged, cardClassName = "fav-card"
           target="_top"
           className={cardClassName}
         >
+          <button
+            type="button"
+            className="star-btn star-btn-corner active"
+            aria-label="Убрать из избранного"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              toggleId(FAVORITES_KEY, item.id);
+              onChanged?.();
+            }}
+          >
+            <i className="ti ti-star-filled" />
+          </button>
+
+          <p className="fav-label">{item.name_ru}</p>
+
           <div className="fav-card-body">
-            <div className="fav-main">
-              <div className="fav-top">
-                <p className="fav-label">{item.name_ru}</p>
-                <button
-                  type="button"
-                  className="star-btn active"
-                  aria-label="Убрать из избранного"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleId(FAVORITES_KEY, item.id);
-                    onChanged?.();
-                  }}
-                >
-                  <i className="ti ti-star-filled" />
-                </button>
-              </div>
+            <div className="fav-metrics">
               <p className="fav-value">{item.last_value ?? "—"}</p>
               <span className={`delta ${item.delta_direction}`}>{item.last_change ?? "—"}</span>
-              <div>
-                <span className={`source-tag ${item.source}`}>
-                  {SOURCE_LABELS[item.source] || item.source}
-                </span>
-              </div>
+              <span className={`source-tag ${item.source}`}>
+                {SOURCE_LABELS[item.source] || item.source}
+              </span>
             </div>
             <div className={`fav-spark fav-spark-${item.delta_direction}`}>
               <MiniSparkline
                 values={item.sparkline ?? []}
-                width={80}
-                height={50}
+                width={320}
+                height={58}
                 filled
                 responsive
                 endDot
