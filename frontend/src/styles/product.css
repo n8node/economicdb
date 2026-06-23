@@ -351,23 +351,66 @@ button{ font-family: inherit; cursor: pointer; }
   padding: 14px 16px;
   box-shadow: var(--shadow-card);
 }
+.kpi-card-body{
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 12px;
+}
+.kpi-main{
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 .kpi-label{
-  margin:0 0 8px; font-size: 12.5px; color: var(--text-secondary);
+  margin:0 0 6px; font-size: 12.5px; color: var(--text-secondary);
   display:flex; align-items:center; justify-content:space-between;
+  line-height: 1.35;
 }
 .kpi-value{
-  margin: 0 0 6px; font-size: 22px; font-weight: 600;
+  margin: 0 0 8px; font-size: 22px; font-weight: 600;
   font-family: var(--font-mono); letter-spacing: -0.01em;
+  line-height: 1.1;
 }
 .delta{
   display:inline-flex; align-items:center; gap:4px;
   font-size: 12px; font-weight: 500;
   padding: 2px 7px; border-radius: var(--radius-sm);
+  align-self: flex-start;
 }
 .delta.up{ background: var(--positive-bg); color: var(--positive-text); }
 .delta.down{ background: var(--negative-bg); color: var(--negative-text); }
 .delta.flat{ background: var(--neutral-bg); color: var(--neutral-text); }
-.kpi-spark{ height: 28px; margin-top: 8px; }
+.kpi-spark{
+  flex-shrink: 0;
+  width: 92px;
+  height: 58px;
+  padding: 6px 8px 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(139, 146, 160, 0.08), rgba(139, 146, 160, 0));
+}
+.kpi-spark .mini-spark-responsive{
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+.kpi-spark-up{
+  background: linear-gradient(180deg, rgba(27, 117, 97, 0.12), rgba(27, 117, 97, 0));
+  border-color: rgba(27, 117, 97, 0.18);
+}
+.kpi-spark-down{
+  background: linear-gradient(180deg, rgba(163, 60, 83, 0.12), rgba(163, 60, 83, 0));
+  border-color: rgba(163, 60, 83, 0.18);
+}
+.kpi-spark-flat{
+  background: linear-gradient(180deg, rgba(139, 146, 160, 0.10), rgba(139, 146, 160, 0));
+}
 
 /* ---------- TWO-COLUMN ROW ---------- */
 .row-2col{

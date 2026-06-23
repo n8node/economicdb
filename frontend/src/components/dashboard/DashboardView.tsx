@@ -32,14 +32,25 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
       <div className="kpi-grid">
         {data.kpis.map((kpi) => (
           <div key={kpi.label} className="kpi-card">
-            <p className="kpi-label">{kpi.label}</p>
-            <p className="kpi-value">{kpi.value}</p>
-            <span className={`delta ${kpi.delta_direction}`}>
-              <i className={`ti ${DELTA_ICON[kpi.delta_direction]}`} />
-              {kpi.delta}
-            </span>
-            <div className="kpi-spark">
-              <MiniSparkline values={kpi.sparkline || []} width={120} height={32} />
+            <div className="kpi-card-body">
+              <div className="kpi-main">
+                <p className="kpi-label">{kpi.label}</p>
+                <p className="kpi-value">{kpi.value}</p>
+                <span className={`delta ${kpi.delta_direction}`}>
+                  <i className={`ti ${DELTA_ICON[kpi.delta_direction]}`} />
+                  {kpi.delta}
+                </span>
+              </div>
+              <div className={`kpi-spark kpi-spark-${kpi.delta_direction}`}>
+                <MiniSparkline
+                  values={kpi.sparkline || []}
+                  width={92}
+                  height={58}
+                  filled
+                  responsive
+                  endDot
+                />
+              </div>
             </div>
           </div>
         ))}
