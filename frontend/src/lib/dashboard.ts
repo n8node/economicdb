@@ -32,11 +32,6 @@ export type DashboardOverview = {
     subtext: string | null;
     importance: string;
   }>;
-  changes: Array<{
-    direction: DeltaDirection;
-    text: string;
-    meta: string;
-  }>;
 };
 
 export async function fetchDashboardOverview(): Promise<DashboardOverview> {

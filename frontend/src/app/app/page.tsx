@@ -7,7 +7,6 @@ const FALLBACK: DashboardOverview = {
   ai_summary: { period: "—", headline: "Данные временно недоступны", bullets: [], summary_id: null },
   previous_ai_summary: null,
   calendar_events: [],
-  changes: [],
 };
 
 export default async function AppDashboardPage() {

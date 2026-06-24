@@ -11,7 +11,6 @@ from app.models.indicators import Indicator, IndicatorValue
 from app.schemas.dashboard import (
     AiSummaryBlock,
     CalendarEventItem,
-    ChangeItem,
     DashboardOverview,
     KpiItem,
 )
@@ -141,23 +140,6 @@ async def build_dashboard_overview(
         for event in upcoming.all()
     ]
 
-    surprises = await session.scalars(
-        select(EconomicEvent)
-        .where(EconomicEvent.surprise.is_not(None))
-        .order_by(EconomicEvent.scheduled_at_msk.desc())
-        .limit(3)
-    )
-    changes: list[ChangeItem] = []
-    for event in surprises.all():
-        direction = "up" if event.surprise and float(event.surprise) > 0 else "down" if event.surprise and float(event.surprise) < 0 else "flat"
-        changes.append(
-            ChangeItem(
-                direction=direction,
-                text=f"{event.title_ru}: факт {format_value(event.actual, event.unit) or '—'} vs прогноз {format_value(event.forecast, event.unit) or '—'}",
-                meta=f"{event.source.upper()} · {event.scheduled_at_msk.strftime('%d.%m.%Y')}",
-            )
-        )
-
     summary = ai_summary or AiSummaryBlock(
         period="—",
         headline="AI-сводка ещё не сгенерирована",
@@ -174,5 +156,4 @@ async def build_dashboard_overview(
         ai_summary=summary,
         previous_ai_summary=previous_ai_summary,
         calendar_events=calendar_events,
-        changes=changes,
     )

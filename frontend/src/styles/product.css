@@ -1236,24 +1236,6 @@ button{ font-family: inherit; cursor: pointer; }
 .row-icon-btn.off,
 .series-icon-btn.off{ opacity: 0.45; }
 
-/* changes list */
-.change-row{
-  display:flex; gap: 12px; align-items:flex-start;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.change-row:last-of-type{ border-bottom: none; }
-.change-icon{
-  width: 26px; height:26px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-  flex-shrink:0; font-size: 14px; margin-top: 1px;
-}
-.change-icon.up{ background: var(--positive-bg); color: var(--positive-text); }
-.change-icon.down{ background: var(--negative-bg); color: var(--negative-text); }
-.change-icon.flat{ background: var(--neutral-bg); color: var(--neutral-text); }
-.change-text{ margin:0; font-size: 13.5px; }
-.change-meta{ margin: 3px 0 0; font-size: 12px; color: var(--text-tertiary); }
-
 .section-title{
   font-size: 14.5px; font-weight: 600;
   margin: 0 0 14px;

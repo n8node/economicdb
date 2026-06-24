@@ -31,16 +31,9 @@ class CalendarEventItem(BaseModel):
     importance: str = "medium"  # high | medium | low
 
 
-class ChangeItem(BaseModel):
-    direction: str
-    text: str
-    meta: str
-
-
 class DashboardOverview(BaseModel):
     updated_at: str
     kpis: list[KpiItem]
     ai_summary: AiSummaryBlock
     previous_ai_summary: AiSummaryBlock | None = None
     calendar_events: list[CalendarEventItem]
-    changes: list[ChangeItem]
