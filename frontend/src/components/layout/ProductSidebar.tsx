@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import type { AppUser } from "@/lib/auth";
+import { usePathname, useRouter } from "next/navigation";
+import { logoutUser, type AppUser } from "@/lib/auth";
 
 const NAV = [
   { href: "/app", label: "Обзор", icon: "ti-layout-dashboard", exact: true },
@@ -32,6 +32,13 @@ function userInitials(email: string): string {
 
 export function ProductSidebar({ user, open = false, onNavigate, onClose }: ProductSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  function handleLogout() {
+    logoutUser();
+    onClose?.();
+    router.replace("/app/login");
+  }
 
   return (
     <aside className={`sidebar${open ? " is-open" : ""}`}>
@@ -64,7 +71,7 @@ export function ProductSidebar({ user, open = false, onNavigate, onClose }: Prod
       </nav>
 
       <div className="sidebar-footer">
-        <div className="user-row">
+        <button type="button" className="user-row" onClick={handleLogout} title="Выйти из аккаунта">
           <div className="avatar" aria-hidden="true">
             {userInitials(user.email)}
           </div>
@@ -72,7 +79,7 @@ export function ProductSidebar({ user, open = false, onNavigate, onClose }: Prod
             <div className="user-name">{user.email}</div>
             <div className="user-plan">{user.email_verified ? "Email подтверждён" : "Email не подтверждён"}</div>
           </div>
-        </div>
+        </button>
       </div>
     </aside>
   );

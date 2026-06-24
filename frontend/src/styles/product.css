@@ -166,10 +166,20 @@ button{ font-family: inherit; cursor: pointer; }
   align-items: center;
   gap: 10px;
   min-width: 0;
+  width: 100%;
   padding: 10px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--bg-muted);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background .12s, border-color .12s;
+}
+.user-row:hover{
+  background: var(--bg-surface);
+  border-color: var(--border-default);
 }
 .avatar{
   width: 32px;

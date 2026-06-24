@@ -99,6 +99,10 @@ export function clearUserToken(): void {
   clearCachedUser();
 }
 
+export function logoutUser(): void {
+  clearUserToken();
+}
+
 type UserAuthPayload = {
   access_token: string;
   user: AppUser;
