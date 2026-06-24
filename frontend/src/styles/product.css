@@ -539,18 +539,20 @@ button{ font-family: inherit; cursor: pointer; }
 
 /* ---------- DASHBOARD DIGEST GRID ---------- */
 .dashboard-digest-grid{
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 16px;
-  width: 100%;
-  max-width: 1240px;
-  margin-bottom: 22px;
+  display: flex;
+  flex-direction: row;
   align-items: stretch;
+  gap: 16px;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 22px;
 }
 .dashboard-digest-side{
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 0 0 340px;
+  width: 340px;
   min-width: 0;
 }
 .dashboard-card-head{
@@ -589,6 +591,9 @@ button{ font-family: inherit; cursor: pointer; }
 
 /* AI summary card (dashboard) */
 .dashboard-ai-card{
+  flex: 0 0 auto;
+  width: clamp(520px, 52vw, 860px);
+  max-width: 100%;
   min-height: 100%;
   min-width: 0;
 }
@@ -1399,10 +1404,8 @@ footer.app-footer{
 /* ---------- RESPONSIVE ---------- */
 @media (max-width: 1180px){
   .kpi-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .dashboard-digest-grid{
-    max-width: none;
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
-  }
+  .dashboard-ai-card{ width: clamp(480px, 58vw, 720px); }
+  .dashboard-digest-side{ flex-basis: 300px; width: 300px; }
   .fav-grid{ grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px){
@@ -1428,7 +1431,15 @@ footer.app-footer{
   .sidebar .nav-item{ justify-content:center; }
   .sidebar .brand{ justify-content:center; padding-right:0; }
   .row-2col{ grid-template-columns: 1fr; }
-  .dashboard-digest-grid{ grid-template-columns: 1fr; }
+  .dashboard-digest-grid{
+    flex-direction: column;
+    width: 100%;
+  }
+  .dashboard-ai-card{ width: 100%; }
+  .dashboard-digest-side{
+    flex: 1 1 auto;
+    width: 100%;
+  }
   .dashboard-overview-row{
     flex-direction: column;
     gap: 16px;
