@@ -60,6 +60,7 @@ async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryB
                 delta_direction=delta_direction(row.last_change),
                 source=row.source,
                 unit=row.unit,
+                frequency=row.frequency,
                 updated_at=row.updated_at.strftime("%d.%m.%Y"),
                 sparkline=sparkline_map.get(indicator_id, []),
             )

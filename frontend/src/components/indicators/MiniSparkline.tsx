@@ -11,6 +11,7 @@ type MiniSparklineProps = {
   endDot?: boolean;
   strokeWidth?: number;
   direction?: "up" | "down" | "flat";
+  tone?: "default" | "neutral";
 };
 
 export function MiniSparkline({
@@ -22,6 +23,7 @@ export function MiniSparkline({
   endDot = false,
   strokeWidth,
   direction,
+  tone = "default",
 }: MiniSparklineProps) {
   const gradientId = useId();
   const safeValues = Array.isArray(values) ? values : [];
@@ -62,17 +64,21 @@ export function MiniSparkline({
   const trendDir = trend > 0 ? "up" : trend < 0 ? "down" : "flat";
   const colorDir = direction ?? trendDir;
   const stroke =
-    colorDir === "up"
-      ? "var(--negative-text)"
-      : colorDir === "down"
-        ? "var(--positive-text)"
-        : "var(--neutral-text)";
+    tone === "neutral"
+      ? "var(--text-tertiary)"
+      : colorDir === "up"
+        ? "var(--negative-text)"
+        : colorDir === "down"
+          ? "var(--positive-text)"
+          : "var(--neutral-text)";
   const gradientTop =
-    colorDir === "up"
-      ? "rgba(192, 54, 44, 0.22)"
-      : colorDir === "down"
-        ? "rgba(21, 128, 61, 0.22)"
-        : "rgba(139, 146, 160, 0.18)";
+    tone === "neutral"
+      ? "rgba(139, 146, 160, 0.14)"
+      : colorDir === "up"
+        ? "rgba(192, 54, 44, 0.22)"
+        : colorDir === "down"
+          ? "rgba(21, 128, 61, 0.22)"
+          : "rgba(139, 146, 160, 0.18)";
 
   return (
     <svg

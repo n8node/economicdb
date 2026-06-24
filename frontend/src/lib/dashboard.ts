@@ -10,6 +10,7 @@ export type DashboardOverview = {
     delta_direction: DeltaDirection;
     source: string;
     unit: string | null;
+    frequency: string;
     updated_at: string;
     sparkline?: number[];
   }>;

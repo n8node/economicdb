@@ -8,11 +8,19 @@ import { FAVORITES_KEY, SOURCE_LABELS, toggleId, loadIds } from "@/lib/indicator
 
 type SparkPeriod = "day" | "week" | "month";
 
-const PERIOD_OPTIONS: { id: SparkPeriod; label: string; points: number }[] = [
-  { id: "day", label: "День", points: 5 },
-  { id: "week", label: "Неделя", points: 7 },
-  { id: "month", label: "Месяц", points: 12 },
+const PERIOD_OPTIONS: { id: SparkPeriod; label: string; caption: string; points: number }[] = [
+  { id: "day", label: "День", caption: "за день", points: 5 },
+  { id: "week", label: "Неделя", caption: "за неделю", points: 7 },
+  { id: "month", label: "Месяц", caption: "за месяц", points: 12 },
 ];
+
+const CHANGE_CAPTION: Record<string, string> = {
+  daily: "к пред. дню",
+  weekly: "к пред. неделе",
+  monthly: "к пред. месяцу",
+  quarterly: "к пред. кварталу",
+  yearly: "к пред. году",
+};
 
 function formatWeekLabel(date = new Date()): string {
   const day = date.getDay();
@@ -48,6 +56,53 @@ function sliceSparkline(values: number[], period: SparkPeriod): number[] {
   const count = PERIOD_OPTIONS.find((item) => item.id === period)?.points ?? values.length;
   if (!values.length) return values;
   return values.slice(-count);
+}
+
+function formatSignedNumber(value: number, decimals: number): string {
+  const fixed = value.toFixed(decimals).replace(".", ",");
+  return value > 0 ? `+${fixed}` : fixed;
+}
+
+function formatDeltaValue(raw: number, unit: string | null): string {
+  if (Math.abs(raw) < 0.005) {
+    if (unit === "п.п.") return "0 п.п.";
+    if (unit === "%") return "0%";
+    return "0";
+  }
+
+  if (unit === "п.п.") {
+    return `${formatSignedNumber(raw, 2)} п.п.`;
+  }
+  if (unit === "%") {
+    return `${formatSignedNumber(raw, 2)}%`;
+  }
+  if (unit === "RUB" || unit === "USD" || unit === "EUR" || unit === "index") {
+    return formatSignedNumber(raw, 2);
+  }
+
+  const pct = raw !== 0 && Math.abs(raw) < 1000 ? raw : raw;
+  return `${formatSignedNumber(pct, 2)}%`;
+}
+
+function deltaDirectionFromValue(raw: number): DeltaDirection {
+  if (Math.abs(raw) < 0.005) return "flat";
+  return raw > 0 ? "up" : "down";
+}
+
+function computePeriodChange(values: number[], unit: string | null): { direction: DeltaDirection; text: string } {
+  if (values.length < 2) {
+    return { direction: "flat", text: "—" };
+  }
+
+  const raw = values[values.length - 1] - values[0];
+  return {
+    direction: deltaDirectionFromValue(raw),
+    text: formatDeltaValue(raw, unit),
+  };
+}
+
+function changeCaptionForFrequency(frequency: string): string {
+  return CHANGE_CAPTION[frequency] || "к пред. значению";
 }
 
 function KpiDelta({
@@ -90,6 +145,7 @@ export function MarketKpiSection({ data }: { data: DashboardOverview }) {
 
   const weekLabel = useMemo(() => formatWeekLabel(), []);
   const updatedHighlight = useMemo(() => formatUpdatedHighlight(data.updated_at), [data.updated_at]);
+  const periodCaption = PERIOD_OPTIONS.find((item) => item.id === period)?.caption ?? "за период";
 
   return (
     <section className="market-overview">
@@ -120,6 +176,7 @@ export function MarketKpiSection({ data }: { data: DashboardOverview }) {
         {data.kpis.map((kpi) => {
           const isFavorite = favoriteIds.includes(kpi.id);
           const sparkValues = sliceSparkline(kpi.sparkline || [], period);
+          const periodChange = computePeriodChange(sparkValues, kpi.unit);
 
           return (
             <Link key={kpi.id} href={`/app/indicators/${kpi.id}`} target="_top" className="kpi-card">
@@ -145,18 +202,27 @@ export function MarketKpiSection({ data }: { data: DashboardOverview }) {
 
               <p className="kpi-label">{kpi.label}</p>
               <p className="kpi-value">{kpi.value}</p>
-              <KpiDelta direction={kpi.delta_direction} delta={kpi.delta} unit={kpi.unit} />
 
-              <div className={`kpi-spark kpi-spark-${kpi.delta_direction}`}>
+              <div className="kpi-change-row">
+                <KpiDelta direction={kpi.delta_direction} delta={kpi.delta} unit={kpi.unit} />
+                <span className="kpi-change-caption">{changeCaptionForFrequency(kpi.frequency)}</span>
+              </div>
+
+              <div className="kpi-spark">
                 <MiniSparkline
                   values={sparkValues}
                   width={320}
                   height={44}
                   filled
                   responsive
-                  direction={kpi.delta_direction}
+                  tone="neutral"
                 />
               </div>
+
+              <p className="kpi-period-change">
+                {periodCaption}:{" "}
+                <span className={`kpi-period-change-value ${periodChange.direction}`}>{periodChange.text}</span>
+              </p>
 
               <p className="kpi-foot">обн. {kpi.updated_at}</p>
             </Link>

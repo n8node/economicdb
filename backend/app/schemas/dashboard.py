@@ -9,6 +9,7 @@ class KpiItem(BaseModel):
     delta_direction: str  # up | down | flat
     source: str
     unit: str | None = None
+    frequency: str
     updated_at: str
     sparkline: list[float] = []
 
