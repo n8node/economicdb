@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { apiFetch } from "@/lib/api";
@@ -52,7 +51,6 @@ type ProductTopbarProps = {
 };
 
 export function ProductTopbar({ onMenuToggle }: ProductTopbarProps) {
-  const router = useRouter();
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -75,7 +73,7 @@ export function ProductTopbar({ onMenuToggle }: ProductTopbarProps) {
     setHits([]);
     setQuery(hit.name_ru);
     setSearchOpen(false);
-    router.push("/app/indicators");
+    window.location.assign("/app/indicators");
   };
 
   const goToSearch = () => {
@@ -83,7 +81,7 @@ export function ProductTopbar({ onMenuToggle }: ProductTopbarProps) {
       selectHit(hits[0]);
     } else if (query.trim()) {
       setSearchOpen(false);
-      router.push("/app/indicators");
+      window.location.assign("/app/indicators");
     }
   };
 
