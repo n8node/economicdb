@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { logoutUser, type AppUser } from "@/lib/auth";
 
 const NAV = [
@@ -33,9 +34,36 @@ function userInitials(email: string): string {
 export function ProductSidebar({ user, open = false, onNavigate, onClose }: ProductSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) setMenuOpen(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function onPointerDown(event: PointerEvent) {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      setMenuOpen(false);
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   function handleLogout() {
     logoutUser();
+    setMenuOpen(false);
     onClose?.();
     router.replace("/app/login");
   }
@@ -71,15 +99,32 @@ export function ProductSidebar({ user, open = false, onNavigate, onClose }: Prod
       </nav>
 
       <div className="sidebar-footer">
-        <button type="button" className="user-row" onClick={handleLogout} title="Выйти из аккаунта">
-          <div className="avatar" aria-hidden="true">
-            {userInitials(user.email)}
-          </div>
-          <div className="user-meta">
-            <div className="user-name">{user.email}</div>
-            <div className="user-plan">{user.email_verified ? "Email подтверждён" : "Email не подтверждён"}</div>
-          </div>
-        </button>
+        <div className="user-menu" ref={menuRef}>
+          <button
+            type="button"
+            className={`user-row${menuOpen ? " is-open" : ""}`}
+            onClick={() => setMenuOpen((value) => !value)}
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+          >
+            <div className="avatar" aria-hidden="true">
+              {userInitials(user.email)}
+            </div>
+            <div className="user-meta">
+              <div className="user-name">{user.email}</div>
+              <div className="user-plan">{user.email_verified ? "Email подтверждён" : "Email не подтверждён"}</div>
+            </div>
+            <i className="ti ti-chevron-up user-menu-chevron" aria-hidden="true" />
+          </button>
+          {menuOpen ? (
+            <div className="user-menu-dropdown" role="menu">
+              <button type="button" className="user-menu-item" role="menuitem" onClick={handleLogout}>
+                <i className="ti ti-logout" aria-hidden="true" />
+                Выйти
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </aside>
   );
