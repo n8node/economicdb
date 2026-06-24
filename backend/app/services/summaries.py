@@ -87,6 +87,25 @@ def _section_teaser(sections: dict, key: str, limit: int = 150) -> str | None:
     return teasers[0] if teasers else None
 
 
+def _row_to_summary_block(row: WeeklySummary, *, bullet_limit: int = 3) -> AiSummaryBlock:
+    from app.schemas.dashboard import AiSummaryBlock
+
+    sections = row.sections if isinstance(row.sections, dict) else {}
+    bullets: list[str] = []
+    for key in ("ru", "us", "next_week"):
+        bullets.extend(_section_teasers(sections, key))
+        if len(bullets) >= bullet_limit + 1:
+            break
+    if not bullets:
+        bullets = [row.headline]
+    return AiSummaryBlock(
+        period=row.period_label,
+        headline=row.headline,
+        bullets=bullets[:bullet_limit],
+        summary_id=row.id,
+    )
+
+
 async def latest_summary_teaser(session: AsyncSession):
     row = await session.scalar(
         select(WeeklySummary)
@@ -96,19 +115,20 @@ async def latest_summary_teaser(session: AsyncSession):
     )
     if row is None:
         return None
-    from app.schemas.dashboard import AiSummaryBlock
+    return _row_to_summary_block(row)
 
-    sections = row.sections if isinstance(row.sections, dict) else {}
-    bullets: list[str] = []
-    for key in ("ru", "us", "next_week"):
-        bullets.extend(_section_teasers(sections, key))
-        if len(bullets) >= 4:
-            break
-    if not bullets:
-        bullets = [row.headline]
-    return AiSummaryBlock(
-        period=row.period_label,
-        headline=row.headline,
-        bullets=bullets[:3],
-        summary_id=row.id,
+
+async def dashboard_summary_teasers(session: AsyncSession):
+    rows = list(
+        await session.scalars(
+            select(WeeklySummary)
+            .where(WeeklySummary.status == "published")
+            .order_by(WeeklySummary.period_start.desc())
+            .limit(2)
+        )
     )
+    if not rows:
+        return None, None
+    current = _row_to_summary_block(rows[0], bullet_limit=3)
+    previous = _row_to_summary_block(rows[1], bullet_limit=1) if len(rows) > 1 else None
+    return current, previous

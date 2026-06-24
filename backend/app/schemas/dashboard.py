@@ -24,8 +24,11 @@ class AiSummaryBlock(BaseModel):
 
 class CalendarEventItem(BaseModel):
     title: str
-    time: str
+    date_label: str
+    time_label: str
     country: str  # ru | eu | us
+    subtext: str | None = None
+    importance: str = "medium"  # high | medium | low
 
 
 class ChangeItem(BaseModel):
@@ -38,5 +41,6 @@ class DashboardOverview(BaseModel):
     updated_at: str
     kpis: list[KpiItem]
     ai_summary: AiSummaryBlock
+    previous_ai_summary: AiSummaryBlock | None = None
     calendar_events: list[CalendarEventItem]
     changes: list[ChangeItem]

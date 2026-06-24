@@ -101,11 +101,7 @@ function computePeriodChange(values: number[], unit: string | null): { direction
   };
 }
 
-const ADVERSE_DELTA_CATEGORIES = new Set(["inflation", "fx"]);
-
-function usesAdverseDeltaColors(category: string): boolean {
-  return ADVERSE_DELTA_CATEGORIES.has(category);
-}
+import { deltaClassName, usesAdverseDeltaColors } from "@/lib/deltaSemantics";
 
 function changeCaptionForFrequency(frequency: string): string {
   return CHANGE_CAPTION[frequency] || "к пред. значению";
@@ -130,7 +126,7 @@ function KpiDelta({
   const adverse = usesAdverseDeltaColors(category);
   const icon = direction === "up" ? "ti-arrow-up" : "ti-arrow-down";
   return (
-    <span className={`kpi-delta ${direction}${adverse ? " adverse" : ""}`}>
+    <span className={deltaClassName(direction, category)}>
       <i className={`ti ${icon}`} />
       {delta}
     </span>

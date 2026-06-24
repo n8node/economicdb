@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DashboardFavoritesSection } from "@/components/dashboard/DashboardFavoritesSection";
+import { DashboardDigestSection } from "@/components/dashboard/DashboardDigestSection";
 import { MarketKpiSection } from "@/components/dashboard/MarketKpiSection";
 import type { DashboardOverview } from "@/lib/dashboard";
 
 export function DashboardView({ data }: { data: DashboardOverview }) {
   const router = useRouter();
-  const aiBullets = normalizeAiBullets(data.ai_summary.bullets);
 
   return (
     <div className="content">
@@ -24,54 +23,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
       </div>
 
       <MarketKpiSection data={data} />
-
-      <div className="row-2col dashboard-overview-row">
-        <div className="card ai-card card-pad">
-          <div className="card-head">
-            <span className="ai-badge">
-              <i className="ti ti-sparkles" />
-              AI-сводка
-            </span>
-            <span className="period">{data.ai_summary.period}</span>
-          </div>
-          <p className="ai-headline">{data.ai_summary.headline}</p>
-          <ul className="ai-bullets">
-            {aiBullets.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-          <Link
-            href={data.ai_summary.summary_id ? `/app/summaries/${data.ai_summary.summary_id}` : "/app/summaries"}
-            target="_top"
-            className="btn primary"
-          >
-            {data.ai_summary.summary_id ? "Читать полностью" : "Архив сводок"}
-          </Link>
-          <p className="ai-disclaimer">
-            Сгенерировано AI на основе официальных данных. Не является инвестиционной рекомендацией.
-          </p>
-        </div>
-
-        <div className="card card-pad">
-          <div className="card-head">
-            <p className="card-title">События недели</p>
-          </div>
-          {data.calendar_events.map((event) => (
-            <div key={event.title} className="event-row">
-              <div>
-                <p className="event-title">{event.title}</p>
-                <p className="event-time">{event.time}</p>
-              </div>
-              <span className={`country-badge ${event.country}`}>{event.country.toUpperCase()}</span>
-            </div>
-          ))}
-          <Link href="/app/calendar" target="_top" className="btn" style={{ width: "100%", marginTop: 14, justifyContent: "center" }}>
-            Весь календарь
-          </Link>
-        </div>
-      </div>
-
-      <DashboardFavoritesSection />
+      <DashboardDigestSection data={data} />
 
       <div className="card card-pad">
         <p className="section-title">Что изменилось</p>
@@ -100,15 +52,3 @@ const CHANGE_ICON: Record<string, string> = {
   down: "ti-arrow-down-right",
   flat: "ti-minus",
 };
-
-function normalizeAiBullets(items: string[]): string[] {
-  return items
-    .flatMap((item) =>
-      item
-        .split(/\n+|\s+•\s+/)
-        .map((part) => part.replace(/^•\s*/, "").trim())
-        .filter(Boolean),
-    )
-    .filter((item, index, all) => all.indexOf(item) === index)
-    .slice(0, 5);
-}

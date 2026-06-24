@@ -18,8 +18,61 @@ from app.schemas.dashboard import (
 
 KPI_IDS = ["cbr_key_rate", "ru_cpi_yoy", "usd_rub", "us_cpi_yoy", "fed_funds"]
 
+RU_MONTH_ABBR = {
+    1: "ЯНВ",
+    2: "ФЕВ",
+    3: "МАР",
+    4: "АПР",
+    5: "МАЙ",
+    6: "ИЮН",
+    7: "ИЮЛ",
+    8: "АВГ",
+    9: "СЕН",
+    10: "ОКТ",
+    11: "НОЯ",
+    12: "ДЕК",
+}
 
-async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryBlock | None = None) -> DashboardOverview:
+SOURCE_LABELS = {
+    "cbr": "Банк России",
+    "rosstat": "Росстат",
+    "fred": "FRED",
+    "oecd": "OECD",
+    "ecb": "ECB",
+    "eurostat": "Eurostat",
+}
+
+
+def _event_date_label(scheduled_at_msk: datetime) -> str:
+    local = scheduled_at_msk
+    return f"{local.day} {RU_MONTH_ABBR.get(local.month, '???')}"
+
+
+def _event_subtext(event: EconomicEvent) -> str | None:
+    parts: list[str] = []
+    source_label = SOURCE_LABELS.get(event.source, event.source)
+    if event.category == "rates":
+        if event.forecast is not None:
+            parts.append(f"прогноз {format_value(event.forecast, event.unit) or '—'}")
+        elif event.previous is not None:
+            parts.append(f"пред. {format_value(event.previous, event.unit) or '—'}")
+    else:
+        if source_label:
+            parts.append(source_label)
+        if event.forecast is not None:
+            parts.append(f"прогноз {format_value(event.forecast, event.unit) or '—'}")
+        if event.previous is not None:
+            parts.append(f"пред. {format_value(event.previous, event.unit) or '—'}")
+    if not parts:
+        return None
+    return " · ".join(parts[:3])
+
+
+async def build_dashboard_overview(
+    session: AsyncSession,
+    ai_summary: AiSummaryBlock | None = None,
+    previous_ai_summary: AiSummaryBlock | None = None,
+) -> DashboardOverview:
     now = datetime.now(timezone.utc)
     updated_label = now.astimezone(timezone.utc).strftime("%d.%m.%Y, %H:%M МСК")
 
@@ -76,8 +129,11 @@ async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryB
     calendar_events = [
         CalendarEventItem(
             title=event.title_ru,
-            time=event.scheduled_at_msk.strftime("%d %B, %H:%M МСК"),
+            date_label=_event_date_label(event.scheduled_at_msk),
+            time_label=event.scheduled_at_msk.strftime("%H:%M"),
             country=event.country if event.country in {"ru", "eu", "us"} else "ru",
+            subtext=_event_subtext(event),
+            importance=event.importance if event.importance in {"high", "medium", "low"} else "medium",
         )
         for event in upcoming.all()
     ]
@@ -113,6 +169,7 @@ async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryB
         updated_at=updated_label,
         kpis=kpis,
         ai_summary=summary,
+        previous_ai_summary=previous_ai_summary,
         calendar_events=calendar_events,
         changes=changes,
     )

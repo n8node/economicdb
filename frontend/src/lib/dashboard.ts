@@ -1,5 +1,12 @@
 export type DeltaDirection = "up" | "down" | "flat";
 
+export type AiSummaryBlock = {
+  period: string;
+  headline: string;
+  bullets: string[];
+  summary_id: string | null;
+};
+
 export type DashboardOverview = {
   updated_at: string;
   kpis: Array<{
@@ -15,16 +22,15 @@ export type DashboardOverview = {
     updated_at: string;
     sparkline?: number[];
   }>;
-  ai_summary: {
-    period: string;
-    headline: string;
-    bullets: string[];
-    summary_id: string | null;
-  };
+  ai_summary: AiSummaryBlock;
+  previous_ai_summary: AiSummaryBlock | null;
   calendar_events: Array<{
     title: string;
-    time: string;
+    date_label: string;
+    time_label: string;
     country: string;
+    subtext: string | null;
+    importance: string;
   }>;
   changes: Array<{
     direction: DeltaDirection;
