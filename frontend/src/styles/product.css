@@ -291,7 +291,8 @@ button{ font-family: inherit; cursor: pointer; }
 .content{
   padding: 24px 28px 60px;
   width: 100%;
-  max-width: none;
+  max-width: 1360px;
+  margin: 0 auto;
   box-sizing: border-box;
 }
 
@@ -395,7 +396,7 @@ button{ font-family: inherit; cursor: pointer; }
 }
 .kpi-grid{
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 .kpi-card{
@@ -540,7 +541,7 @@ button{ font-family: inherit; cursor: pointer; }
 /* ---------- DASHBOARD DIGEST GRID ---------- */
 .dashboard-digest-grid{
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
   gap: 16px;
   margin-bottom: 22px;
   align-items: stretch;
@@ -1395,7 +1396,8 @@ footer.app-footer{
 
 /* ---------- RESPONSIVE ---------- */
 @media (max-width: 1180px){
-  .kpi-grid{ grid-template-columns: repeat(3, 1fr); }
+  .kpi-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dashboard-digest-grid{ grid-template-columns: minmax(0, 1fr) minmax(260px, 320px); }
   .fav-grid{ grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px){
