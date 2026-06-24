@@ -70,20 +70,6 @@ export function DashboardAiSummaryCard({
         ))}
       </ol>
 
-      {previous ? (
-        <div className="ai-previous-block">
-          <div className="ai-previous-head">
-            <span className="ai-previous-label">Предыдущий период</span>
-            <span className="ai-previous-period">{previous.period}</span>
-          </div>
-          <p className="ai-previous-headline">{previous.headline}</p>
-          {previous.bullets[0] ? <p className="ai-previous-teaser">{previous.bullets[0]}</p> : null}
-          <Link href={previousHref} target="_top" className="ai-previous-link">
-            Открыть сводку <i className="ti ti-chevron-right" />
-          </Link>
-        </div>
-      ) : null}
-
       <div className="ai-card-footer">
         <Link href={summaryHref} target="_top" className="btn primary ai-read-btn">
           Читать полностью <i className="ti ti-chevron-right" />
@@ -93,6 +79,22 @@ export function DashboardAiSummaryCard({
           Сгенерировано AI · не инвестиционная рекомендация
         </p>
       </div>
+
+      {previous ? (
+        <div className="ai-previous-section">
+          <div className="ai-previous-block">
+            <div className="ai-previous-head">
+              <span className="ai-previous-label">Предыдущий период</span>
+              <span className="ai-previous-period">{previous.period}</span>
+            </div>
+            <p className="ai-previous-headline">{previous.headline}</p>
+            {previous.bullets[0] ? <p className="ai-previous-teaser">{previous.bullets[0]}</p> : null}
+          </div>
+          <Link href={previousHref} target="_top" className="btn ai-read-btn ai-read-btn-ghost">
+            Читать полностью <i className="ti ti-chevron-right" />
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }
