@@ -291,8 +291,7 @@ button{ font-family: inherit; cursor: pointer; }
 .content{
   padding: 24px 28px 60px;
   width: 100%;
-  max-width: 1360px;
-  margin: 0 auto;
+  max-width: none;
   box-sizing: border-box;
 }
 
@@ -541,10 +540,14 @@ button{ font-family: inherit; cursor: pointer; }
 /* ---------- DASHBOARD DIGEST GRID ---------- */
 .dashboard-digest-grid{
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 16px;
   margin-bottom: 22px;
   align-items: stretch;
+}
+.dashboard-ai-card{
+  min-height: 100%;
+  min-width: 0;
 }
 .dashboard-digest-side{
   display: flex;
@@ -589,6 +592,7 @@ button{ font-family: inherit; cursor: pointer; }
 /* AI summary card (dashboard) */
 .dashboard-ai-card{
   min-height: 100%;
+  min-width: 0;
 }
 .ai-badge-solid{
   background: var(--primary-700);
@@ -1397,7 +1401,7 @@ footer.app-footer{
 /* ---------- RESPONSIVE ---------- */
 @media (max-width: 1180px){
   .kpi-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .dashboard-digest-grid{ grid-template-columns: minmax(0, 1fr) minmax(260px, 320px); }
+  .dashboard-digest-grid{ grid-template-columns: minmax(0, 1fr) minmax(260px, 300px); }
   .fav-grid{ grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px){
