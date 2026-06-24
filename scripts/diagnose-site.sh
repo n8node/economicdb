@@ -45,7 +45,7 @@ curl -sS --connect-timeout 10 -o /dev/null -w "https default /health -> %{http_c
 echo ""
 echo "=== Nginx listeners ==="
 ss -ltnp 2>/dev/null | grep -E ':(80|443)\s' || true
-$COMPOSE exec -T nginx sh -c "nginx -T 2>/dev/null | grep -n 'listen 443\\|http2\\|keepalive_timeout\\|Alt-Svc'" || true
+$COMPOSE exec -T nginx sh -c "nginx -T 2>/dev/null | grep -n 'listen 443\\|ssl_protocols\\|http2\\|keepalive_timeout\\|Alt-Svc'" || true
 
 echo ""
 echo "=== HTTP redirect (expect 301) ==="
