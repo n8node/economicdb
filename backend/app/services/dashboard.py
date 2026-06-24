@@ -51,17 +51,20 @@ def _event_date_label(scheduled_at_msk: datetime) -> str:
 def _event_subtext(event: EconomicEvent) -> str | None:
     parts: list[str] = []
     source_label = SOURCE_LABELS.get(event.source, event.source)
+    has_forecast = event.forecast is not None
+    has_previous = event.previous is not None
     if event.category == "rates":
-        if event.forecast is not None:
+        parts.append("Ставка")
+        if has_forecast:
             parts.append(f"прогноз {format_value(event.forecast, event.unit) or '—'}")
-        elif event.previous is not None:
+        elif has_previous:
             parts.append(f"пред. {format_value(event.previous, event.unit) or '—'}")
     else:
-        if source_label:
+        if source_label and has_previous and not has_forecast:
             parts.append(source_label)
-        if event.forecast is not None:
+        if has_forecast:
             parts.append(f"прогноз {format_value(event.forecast, event.unit) or '—'}")
-        if event.previous is not None:
+        if has_previous:
             parts.append(f"пред. {format_value(event.previous, event.unit) or '—'}")
     if not parts:
         return None
