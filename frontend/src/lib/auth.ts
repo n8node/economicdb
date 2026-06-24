@@ -1,5 +1,6 @@
 const TOKEN_KEY = "macro_admin_token";
 const USER_TOKEN_KEY = "macro_user_token";
+const USER_CACHE_KEY = "macro_user_profile";
 
 export type AdminUser = {
   id: number;
@@ -44,8 +45,9 @@ export async function fetchAdminMe(): Promise<AdminUser | null> {
   const token = getAdminToken();
   if (!token) return null;
 
+  const { fetchWithTimeout } = await import("./fetch-timeout");
   const { getApiBase } = await import("./api");
-  const response = await fetch(`${getApiBase()}/admin/auth/me`, {
+  const response = await fetchWithTimeout(`${getApiBase()}/admin/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
@@ -62,9 +64,10 @@ export async function adminAuthFetch<T>(path: string, init?: RequestInit): Promi
   const token = getAdminToken();
   if (!token) throw new Error("unauthorized");
 
+  const { fetchWithTimeout } = await import("./fetch-timeout");
   const { getApiBase } = await import("./api");
   const url = `${getApiBase().replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -93,12 +96,31 @@ export function setUserToken(token: string): void {
 
 export function clearUserToken(): void {
   localStorage.removeItem(USER_TOKEN_KEY);
+  clearCachedUser();
 }
 
 type UserAuthPayload = {
   access_token: string;
   user: AppUser;
 };
+
+export function readCachedUser(): AppUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(USER_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as AppUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeCachedUser(user: AppUser): void {
+  sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+}
+
+export function clearCachedUser(): void {
+  sessionStorage.removeItem(USER_CACHE_KEY);
+}
 
 export async function registerUser(email: string, password: string): Promise<AppUser> {
   const { apiFetch } = await import("./api");
@@ -111,6 +133,7 @@ export async function registerUser(email: string, password: string): Promise<App
     }),
   });
   setUserToken(data.access_token);
+  writeCachedUser(data.user);
   return data.user;
 }
 
@@ -121,6 +144,7 @@ export async function loginUser(email: string, password: string): Promise<AppUse
     body: JSON.stringify({ email, password }),
   });
   setUserToken(data.access_token);
+  writeCachedUser(data.user);
   return data.user;
 }
 
@@ -128,16 +152,31 @@ export async function fetchUserMe(): Promise<AppUser | null> {
   const token = getUserToken();
   if (!token) return null;
 
+  const { fetchWithTimeout, dispatchNetworkStale } = await import("./fetch-timeout");
   const { getApiBase } = await import("./api");
-  const response = await fetch(`${getApiBase()}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
 
-  if (!response.ok) {
-    clearUserToken();
-    return null;
+  try {
+    const response = await fetchWithTimeout(
+      `${getApiBase()}/auth/me`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      },
+      8_000,
+    );
+
+    if (!response.ok) {
+      clearUserToken();
+      return null;
+    }
+
+    const user = (await response.json()) as AppUser;
+    writeCachedUser(user);
+    return user;
+  } catch (error) {
+    if (error instanceof Error && error.name === "FetchTimeoutError") {
+      dispatchNetworkStale("auth_timeout");
+    }
+    throw error;
   }
-
-  return response.json() as Promise<AppUser>;
 }

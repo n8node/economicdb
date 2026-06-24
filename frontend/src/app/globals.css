@@ -68,6 +68,23 @@ a {
   line-height: 1.5;
 }
 
+.session-stale-banner--inline {
+  position: fixed;
+  inset: auto 16px 16px 16px;
+  top: auto;
+  z-index: 9998;
+  padding: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.session-stale-banner--inline .session-stale-banner__card {
+  pointer-events: auto;
+  margin-left: auto;
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgb(20 24 31 / 0.2);
+}
+
 .session-stale-banner__action {
   width: 100%;
 }

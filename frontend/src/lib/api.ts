@@ -10,9 +10,10 @@ export function getApiBase(): string {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const { fetchWithTimeout } = await import("./fetch-timeout");
   const base = getApiBase();
   const url = `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     ...init,
     headers: {
       "Content-Type": "application/json",

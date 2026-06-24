@@ -2,26 +2,44 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { fetchUserMe, type AppUser } from "@/lib/auth";
+import {
+  fetchUserMe,
+  getUserToken,
+  readCachedUser,
+  type AppUser,
+} from "@/lib/auth";
 import { ProductShell } from "@/components/layout/ProductShell";
+import { NetworkStaleBanner } from "@/components/NetworkStaleBanner";
 
 const AUTH_PATHS = new Set(["/app/login", "/app/register"]);
 
 export function ProductAuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [checking, setChecking] = useState(true);
   const isAuthPath = AUTH_PATHS.has(pathname);
+  const hasToken = Boolean(getUserToken());
+
+  const [user, setUser] = useState<AppUser | null>(() => (hasToken ? readCachedUser() : null));
+  const [checking, setChecking] = useState(() => hasToken && !isAuthPath && !readCachedUser());
+  const [networkStale, setNetworkStale] = useState(false);
 
   useEffect(() => {
-    if (isAuthPath) {
-      setChecking(false);
+    const onStale = () => setNetworkStale(true);
+    window.addEventListener("macro:network-stale", onStale);
+    return () => window.removeEventListener("macro:network-stale", onStale);
+  }, []);
+
+  useEffect(() => {
+    if (isAuthPath) return;
+
+    if (!hasToken) {
+      const next = `${pathname}${window.location.search}`;
+      router.replace(`/app/login?next=${encodeURIComponent(next)}`);
       return;
     }
 
     let active = true;
-    setChecking(true);
+
     fetchUserMe()
       .then((nextUser) => {
         if (!active) return;
@@ -31,6 +49,15 @@ export function ProductAuthGate({ children }: { children: React.ReactNode }) {
           return;
         }
         setUser(nextUser);
+        setNetworkStale(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        if (!readCachedUser()) {
+          router.replace("/app/login");
+          return;
+        }
+        setNetworkStale(true);
       })
       .finally(() => {
         if (active) setChecking(false);
@@ -39,11 +66,11 @@ export function ProductAuthGate({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, [isAuthPath, pathname, router]);
+  }, [hasToken, isAuthPath, pathname, router]);
 
   if (isAuthPath) return <>{children}</>;
 
-  if (checking || !user) {
+  if (checking && !user) {
     return (
       <main className="auth-page">
         <div className="auth-card auth-card--status">Проверяем сессию…</div>
@@ -51,5 +78,18 @@ export function ProductAuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <ProductShell user={user}>{children}</ProductShell>;
+  if (!user) {
+    return (
+      <main className="auth-page">
+        <div className="auth-card auth-card--status">Проверяем сессию…</div>
+      </main>
+    );
+  }
+
+  return (
+    <>
+      {networkStale ? <NetworkStaleBanner /> : null}
+      <ProductShell user={user}>{children}</ProductShell>
+    </>
+  );
 }
