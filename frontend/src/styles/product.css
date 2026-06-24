@@ -542,6 +542,8 @@ button{ font-family: inherit; cursor: pointer; }
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 16px;
+  width: 100%;
+  max-width: 1240px;
   margin-bottom: 22px;
   align-items: stretch;
 }
@@ -1397,7 +1399,10 @@ footer.app-footer{
 /* ---------- RESPONSIVE ---------- */
 @media (max-width: 1180px){
   .kpi-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .dashboard-digest-grid{ grid-template-columns: minmax(0, 1fr) minmax(260px, 300px); }
+  .dashboard-digest-grid{
+    max-width: none;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  }
   .fav-grid{ grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px){
