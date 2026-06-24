@@ -55,7 +55,7 @@ alwaysApply: true
 
 ### Email
 - **SMTP Яндекс** — host, port, login, password настраиваются **в админке**
-- Digest-подписка, уведомления об алертах, transactional mail
+- Digest-подписка, transactional mail
 
 ### Интеграции данных
 - Провайдеры: ЦБ, Росстат, FRED, IMF, OECD, ECB/Eurostat, EconDB и др.

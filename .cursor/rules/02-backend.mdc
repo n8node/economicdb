@@ -77,7 +77,6 @@ app_router.include_router(compare_router)       # до 6 серий
 app_router.include_router(calendar_router)      # events, ICS
 app_router.include_router(summaries_router)     # AI-сводки archive + detail
 app_router.include_router(favorites_router)
-app_router.include_router(alerts_router)
 app_router.include_router(billing_router)       # subscription, Robokassa redirect
 app_router.include_router(settings_router)      # user_settings, digest sub
 

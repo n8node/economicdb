@@ -34,7 +34,7 @@ alwaysApply: false
 
 ## Правила
 
-- Бизнес-правила (тарифы, лимиты compare, доступ к AI archive, alerts) — **только backend**.
+- Бизнес-правила (тарифы, лимиты compare, доступ к AI archive) — **только backend**.
 - Frontend не дублирует gating — UI может скрывать, но enforcement на API.
 - Desktop-first из макетов; responsive — secondary.
 - `NEXT_PUBLIC_*` — только безопасные значения (API URL, app name).

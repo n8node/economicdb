@@ -25,7 +25,6 @@ PLANS = {
         price_kopecks=0,
         compare_series_limit=2,
         ai_summaries_archive=False,
-        alerts_limit=0,
         export_enabled=False,
     ),
     "pro": Plan(
@@ -33,7 +32,6 @@ PLANS = {
         price_kopecks=99000,          # 990 ₽/мес
         compare_series_limit=6,
         ai_summaries_archive=True,
-        alerts_limit=20,
         export_enabled=True,
     ),
     "business": Plan(
@@ -41,7 +39,6 @@ PLANS = {
         price_kopecks=299000,         # 2 990 ₽/мес
         compare_series_limit=6,
         ai_summaries_archive=True,
-        alerts_limit=100,
         export_enabled=True,
         api_access=True,
         team_seats=5,
@@ -121,7 +118,6 @@ async def get_user_plan(user_id: str) -> str:
 | Каталог показателей | ✅ | ✅ | ✅ |
 | Compare (серий) | 2 | 6 | 6 |
 | AI archive | teaser only | ✅ | ✅ |
-| Алерты | ❌ | 20 | 100 |
 | Export CSV/PDF | ❌ | ✅ | ✅ |
 | API access | ❌ | ❌ | ✅ |
 

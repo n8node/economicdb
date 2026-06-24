@@ -72,11 +72,11 @@ NEXT_PUBLIC_APP_NAME=Макроаналитика
 
 ```
 Sidebar: фиксированный 248px
-Topbar: поиск, light/dark toggle, уведомления, аватар
+Topbar: поиск, light/dark toggle
 Контент: padding 24px, фон --bg-page
 ```
 
-**Навигация:** Обзор, Показатели, Сравнение, Календарь, AI-сводки, Избранное, Алерты, Настройки.
+**Навигация:** Обзор, Показатели, Сравнение, Календарь, AI-сводки, Избранное, Настройки.
 
 ## Экраны (baseline из mockups)
 
@@ -127,7 +127,6 @@ frontend/src/
 │       ├── calendar/
 │       ├── summaries/
 │       ├── favorites/
-│       ├── alerts/
 │       └── settings/
 │   └── adminus/                # URL /adminus (скрытый путь админки)
 │       ├── layout.tsx          # Admin sidebar + RBAC

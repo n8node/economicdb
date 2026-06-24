@@ -206,7 +206,7 @@ async def is_enabled(key: str, user_id: str | None = None) -> bool:
     # Deterministic rollout by hash(user_id + key) if rollout_pct < 100
 ```
 
-Примеры ключей: `ai_digest`, `compare_export`, `alerts_beta`.
+Примеры ключей: `ai_digest`, `compare_export`.
 
 ## WordPress
 

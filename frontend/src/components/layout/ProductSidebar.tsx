@@ -1,6 +1,5 @@
 "use client";
 
-import type { AppUser } from "@/lib/auth";
 import { usePathname } from "next/navigation";
 
 const NAV = [
@@ -10,22 +9,15 @@ const NAV = [
   { href: "/app/calendar", label: "Календарь", icon: "ti-calendar-event" },
   { href: "/app/summaries", label: "AI-сводки", icon: "ti-sparkles" },
   { href: "/app/favorites", label: "Избранное", icon: "ti-star" },
-  { href: "/app/alerts", label: "Алерты", icon: "ti-bell" },
-  { href: "/app/settings", label: "Настройки", icon: "ti-settings" },
 ];
 
 type ProductSidebarProps = {
   open?: boolean;
-  user: AppUser;
   onNavigate?: () => void;
   onClose?: () => void;
 };
 
-function userInitials(email: string): string {
-  return email.slice(0, 2).toUpperCase();
-}
-
-export function ProductSidebar({ open = false, user, onNavigate, onClose }: ProductSidebarProps) {
+export function ProductSidebar({ open = false, onNavigate, onClose }: ProductSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -57,16 +49,6 @@ export function ProductSidebar({ open = false, user, onNavigate, onClose }: Prod
           );
         })}
       </nav>
-
-      <div className="sidebar-footer">
-        <div className="user-row">
-          <div className="avatar">{userInitials(user.email)}</div>
-          <div className="user-meta">
-            <p className="user-name">{user.email}</p>
-            <p className="user-plan">Тариф Basic</p>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

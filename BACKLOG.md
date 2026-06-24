@@ -20,7 +20,7 @@
 ## Design gaps
 
 - [x] Карточка показателя MVP: `/app/indicators/[id]`, stats/related/events API, uPlot chart (tooltip, zoom, brush)
-- [ ] Алерты / Настройки
+- [ ] Настройки
 - [x] Избранное — localStorage + дашборд `/app` (без аккаунта/синхронизации)
 
 ## Mock/demo gaps (не баги)

@@ -184,10 +184,9 @@ UI / Email / PDF
 4. Календарь
 5. AI-сводки
 6. Избранное
-7. Алерты
-8. Настройки
+7. Настройки
 
-**Topbar:** глобальный поиск, light/dark toggle, уведомления, аватар.
+**Topbar:** глобальный поиск, light/dark toggle.
 
 **UX-принципы:**
 1. На каждом виджете — источник + дата обновления.
@@ -209,7 +208,7 @@ UI / Email / PDF
 | 4 | Календарь | `calendar.html` | ✅ baseline | ~93–95% |
 | 5 | AI-сводки | `ai-summaries.html` | ✅ baseline | ~94–96% |
 | 6 | Карточка показателя | — | 🔲 не макетирован | — |
-| 7 | Избранное / Алерты | — | 🔲 не макетирован | — |
+| 7 | Избранное | — | 🔲 не макетирован | — |
 | 8 | Настройки | — | 🔲 не макетирован | — |
 
 ### 6.1 Dashboard «Обзор»
@@ -296,8 +295,8 @@ UI / Email / PDF
 ### `weekly_summaries`
 AI-сводки: id, period_start, period_end, headline, sections (JSON), citations (JSON map key → indicator_id + value), generated_at, word_count, source_count, tags[].
 
-### `user_favorites`, `user_alerts`, `user_settings`
-Избранное, правила алертов, digest subscription, default markets.
+### `user_favorites`, `user_settings`
+Избранное, digest subscription, default markets.
 
 ### `system_settings`, `data_providers`, `admin_users`, `admin_audit_log`
 Секреты (OpenRouter, Robokassa, SMTP), провайдеры данных, админка.
@@ -352,7 +351,6 @@ AI-сводки: id, period_start, period_end, headline, sections (JSON), citati
 **Design:**
 - [ ] Промпт + макет «Карточка показателя»
 - [ ] Промпт + макет «Избранное»
-- [ ] Промпт + макет «Алерты»
 - [ ] Промпт + макет «Настройки»
 
 **Engineering:**
