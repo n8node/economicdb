@@ -35,7 +35,7 @@ export function ProductShell({ children, user }: { children: React.ReactNode; us
           aria-label="Закрыть меню"
         />
       )}
-      <ProductSidebar open={sidebarOpen} onNavigate={closeSidebar} onClose={closeSidebar} />
+      <ProductSidebar user={user} open={sidebarOpen} onNavigate={closeSidebar} onClose={closeSidebar} />
       <div className="main">
         <ProductTopbar onMenuToggle={() => setSidebarOpen((v) => !v)} />
         {children}

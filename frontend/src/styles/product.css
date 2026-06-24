@@ -157,6 +157,50 @@ button{ font-family: inherit; cursor: pointer; }
   color: var(--primary-700);
 }
 [data-theme="dark"] .nav-item.active{ color: var(--primary-600); }
+.sidebar-footer{
+  margin-top: auto;
+  padding-top: 14px;
+}
+.user-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-muted);
+}
+.avatar{
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--primary-600);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.user-meta{
+  min-width: 0;
+}
+.user-name{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.user-plan{
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+}
 
 /* ---------- MAIN ---------- */
 .main{ min-width: 0; }
@@ -1466,9 +1510,16 @@ footer.app-footer{
 @media (max-width: 1024px){
   .app{ grid-template-columns: 72px 1fr; }
   .sidebar .brand-name,
-  .sidebar .nav-item span{ display:none; }
+  .sidebar .nav-item span,
+  .sidebar .user-meta{ display:none; }
   .sidebar .nav-item{ justify-content:center; }
   .sidebar .brand{ justify-content:center; padding-right:0; }
+  .sidebar .user-row{
+    justify-content:center;
+    padding:8px 0;
+    border-color:transparent;
+    background:transparent;
+  }
   .row-2col{ grid-template-columns: 1fr; }
   .dashboard-digest-grid{
     flex-direction: column;
@@ -1509,9 +1560,16 @@ footer.app-footer{
   .sidebar.is-open{ transform:translateX(0); box-shadow:8px 0 32px rgba(20,24,31,.12); }
   .sidebar-close{ display:flex; }
   .sidebar .brand-name,
-  .sidebar .nav-item span{ display:block !important; }
+  .sidebar .nav-item span,
+  .sidebar .user-meta{ display:block !important; }
   .sidebar .nav-item{ justify-content:flex-start !important; }
   .sidebar .brand{ justify-content:flex-start !important; padding-right:10px; }
+  .sidebar .user-row{
+    justify-content:flex-start;
+    padding:10px;
+    border-color:var(--border-subtle);
+    background:var(--bg-muted);
+  }
 
   .menu-toggle, .search-mobile-btn{ display:flex; }
   .topbar-start .search-box{ display:none; }

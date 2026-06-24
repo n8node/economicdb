@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import type { AppUser } from "@/lib/auth";
 
 const NAV = [
   { href: "/app", label: "Обзор", icon: "ti-layout-dashboard", exact: true },
@@ -12,12 +13,24 @@ const NAV = [
 ];
 
 type ProductSidebarProps = {
+  user: AppUser;
   open?: boolean;
   onNavigate?: () => void;
   onClose?: () => void;
 };
 
-export function ProductSidebar({ open = false, onNavigate, onClose }: ProductSidebarProps) {
+function userInitials(email: string): string {
+  const name = email.split("@")[0]?.trim();
+  if (!name) return "П";
+  return name
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+export function ProductSidebar({ user, open = false, onNavigate, onClose }: ProductSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -49,6 +62,18 @@ export function ProductSidebar({ open = false, onNavigate, onClose }: ProductSid
           );
         })}
       </nav>
+
+      <div className="sidebar-footer">
+        <div className="user-row">
+          <div className="avatar" aria-hidden="true">
+            {userInitials(user.email)}
+          </div>
+          <div className="user-meta">
+            <div className="user-name">{user.email}</div>
+            <div className="user-plan">{user.email_verified ? "Email подтверждён" : "Email не подтверждён"}</div>
+          </div>
+        </div>
+      </div>
     </aside>
   );
 }
