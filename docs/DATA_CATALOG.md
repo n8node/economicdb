@@ -53,7 +53,7 @@
 
 ---
 
-## Уже в ETL (`done`) — 15 показателей
+## Уже в ETL (`done`) — 37 показателей
 
 | id | name_ru | country | cat | freq | source | external_id |
 |----|---------|---------|-----|------|--------|-------------|
@@ -72,6 +72,28 @@
 | ru_gdp_yoy_wb | ВВП России, рост | ru | gdp | A | world_bank | NY.GDP.MKTP.KD.ZG/RU |
 | imoex | Индекс MOEX | ru | equities | D | moex | stock/index/IMOEX/CLOSE |
 | oil_brent | Нефть Brent | world | commodities | D | fred | DCOILBRENTEU |
+| eur_rub | EUR / RUB | ru | fx | D | cbr | R01239 |
+| cny_rub | CNY / RUB | ru | fx | D | cbr | R01375 |
+| gbp_rub | GBP / RUB | ru | fx | D | cbr | R01035 |
+| ru_cpi_mom | ИПЦ России, м/м | ru | inflation | M | rosstat | fedstat:31074/mom |
+| ru_core_cpi_yoy | Базовый ИПЦ России, г/г | ru | inflation | M | rosstat | fedstat:31081 |
+| ru_retail_yoy | Розничная торговля, г/г | ru | consumption | M | rosstat | fedstat:31066 |
+| ru_unemployment | Безработица РФ | ru | labor | Q | rosstat | fedstat:43062 |
+| ru_gdp_q_yoy | ВВП РФ, г/г | ru | gdp | Q | rosstat | fedstat:31077 |
+| ru_wages_yoy | Зарплаты, г/г | ru | labor | M | rosstat | fedstat:57849 |
+| ru_gdp_yoy_imf | ВВП РФ, real growth (IMF) | ru | gdp | A | imf | NGDP_RPCH/RUS |
+| moex_rtsi | Индекс RTS | ru | equities | D | moex | stock/index/RTSI/CLOSE |
+| moex_rgbi | Индекс гособлигаций RGBI | ru | rates | D | moex | stock/index/RGBI/CLOSE |
+| moex_mcftr | MOEX Total Return | ru | equities | D | moex | stock/index/MCFTR/CLOSE |
+| moex_bluechip | MOEX Blue Chip | ru | equities | D | moex | stock/index/MOEXBC/CLOSE |
+| moex_usd_tom | USD/RUB TOM (MOEX) | ru | fx | D | moex | currency/selt/USD000UTSTOM/CLOSE |
+| moex_eur_tom | EUR/RUB TOM (MOEX) | ru | fx | D | moex | currency/selt/EUR_RUB__TOM/CLOSE |
+| ru_cpi_wb | Инфляция РФ (WB) | ru | inflation | A | world_bank | FP.CPI.TOTL.ZG/RU |
+| ru_unemp_wb | Безработица РФ (WB) | ru | labor | A | world_bank | SL.UEM.TOTL.ZS/RU |
+| ru_ca_wb | Current account % GDP (WB) | ru | external | A | world_bank | BN.CAB.XOKA.GD.ZS/RU |
+| ru_debt_wb | Govt debt % GDP (WB) | ru | fiscal | A | world_bank | GC.DOD.TOTL.GD.ZS/RU |
+| ru_fx_reserves | Международные резервы РФ | ru | external | M | cbr | SOAP:InternationalReserves |
+| ru_m2 | Денежная масса M2 | ru | rates | M | cbr | SOAP:MoneySupply/M2 |
 
 ---
 
@@ -81,32 +103,32 @@
 |----|---------|-----|------|--------|-------------|-----|-----|
 | cbr_key_rate | Ключевая ставка ЦБ | rates | M | cbr | KeyRate | done | ✅ |
 | usd_rub | USD / RUB | fx | D | cbr | R01235 | done | ✅ |
-| eur_rub | EUR / RUB | fx | D | cbr | R01239 | next | ✅ |
-| cny_rub | CNY / RUB | fx | D | cbr | R01375 | next | ✅ |
-| gbp_rub | GBP / RUB | fx | D | cbr | R01035 | backlog | ✅ |
+| eur_rub | EUR / RUB | fx | D | cbr | R01239 | done | ✅ |
+| cny_rub | CNY / RUB | fx | D | cbr | R01375 | done | ✅ |
+| gbp_rub | GBP / RUB | fx | D | cbr | R01035 | done | ✅ |
 | ru_cpi_yoy | ИПЦ, г/г | inflation | M | rosstat | fedstat:31074 | done | ✅ |
-| ru_cpi_mom | ИПЦ, м/м | inflation | M | rosstat | fedstat:31074/mom | backlog | ✅ |
-| ru_core_cpi_yoy | ИПЦ базовый, г/г | inflation | M | rosstat | fedstat:TBD | backlog | ✅ |
+| ru_cpi_mom | ИПЦ, м/м | inflation | M | rosstat | fedstat:31074/mom | done | ✅ |
+| ru_core_cpi_yoy | ИПЦ базовый, г/г | inflation | M | rosstat | fedstat:31081 | done | ✅ |
 | ru_industrial_yoy | Пром. производство, г/г | industrial | M | rosstat | fedstat:57806 | done | ✅* |
-| ru_retail_yoy | Розничная торговля, г/г | consumption | M | rosstat | fedstat:31066 | next | ✅ |
-| ru_unemployment | Безработица | labor | Q | rosstat | fedstat:43062 | next | ✅ |
-| ru_gdp_q_yoy | ВВП, г/г | gdp | Q | rosstat | fedstat:57746 | next | ✅ |
-| ru_wages_yoy | Реальные доходы / зарплаты | labor | M | rosstat | fedstat:58548 | backlog | ✅ |
+| ru_retail_yoy | Розничная торговля, г/г | consumption | M | rosstat | fedstat:31066 | done | ✅ |
+| ru_unemployment | Безработица | labor | Q | rosstat | fedstat:43062 | done | ✅ |
+| ru_gdp_q_yoy | ВВП, г/г | gdp | Q | rosstat | fedstat:31077 | done | ✅ |
+| ru_wages_yoy | Реальные доходы / зарплаты | labor | M | rosstat | fedstat:57849 | done | ✅ |
 | ru_gdp_yoy_wb | ВВП, рост (WB) | gdp | A | world_bank | NY.GDP.MKTP.KD.ZG/RU | done | ✅ |
-| ru_gdp_yoy_imf | ВВП, real growth (IMF) | gdp | A | imf | NGDP_RPCH/RUS | backlog | ✅ |
+| ru_gdp_yoy_imf | ВВП, real growth (IMF) | gdp | A | imf | NGDP_RPCH/RUS | done | ✅ |
 | imoex | Индекс MOEX | equities | D | moex | stock/index/IMOEX/CLOSE | done | ✅ |
-| moex_rtsi | Индекс RTS | equities | D | moex | stock/index/RTSI/CLOSE | next | ✅ |
-| moex_rgbi | Индекс гособлигаций RGBI | rates | D | moex | stock/index/RGBI/CLOSE | next | ✅ |
-| moex_mcftr | MOEX Total Return | equities | D | moex | stock/index/MCFTR/CLOSE | backlog | ✅ |
-| moex_bluechip | MOEX Blue Chip | equities | D | moex | stock/index/MOEXBC/CLOSE | backlog | ✅ |
-| moex_usd_tom | USD/RUB TOM (MOEX) | fx | D | moex | currency/selt/USD000UTSTOM | backlog | ✅ |
-| moex_eur_tom | EUR/RUB TOM (MOEX) | fx | D | moex | currency/selt/EUR_RUB__TOM | backlog | ✅ |
-| ru_cpi_wb | Инфляция (WB) | inflation | A | world_bank | FP.CPI.TOTL.ZG/RU | backlog | ✅ |
-| ru_unemp_wb | Безработица (WB) | labor | A | world_bank | SL.UEM.TOTL.ZS/RU | backlog | ✅ |
-| ru_ca_wb | Current account % GDP (WB) | external | A | world_bank | BN.CAB.XOKA.GD.ZS/RU | backlog | ✅ |
-| ru_debt_wb | Govt debt % GDP (WB) | fiscal | A | world_bank | GC.DOD.TOTL.GD.ZS/RU | backlog | ✅ |
-| ru_fx_reserves | Международные резервы | external | M | cbr | SOAP:InternationalReserves | backlog | ✅ |
-| ru_m2 | Денежная масса M2 | rates | M | cbr | SOAP:MoneySupply/M2 | backlog | ✅ |
+| moex_rtsi | Индекс RTS | equities | D | moex | stock/index/RTSI/CLOSE | done | ✅ |
+| moex_rgbi | Индекс гособлигаций RGBI | rates | D | moex | stock/index/RGBI/CLOSE | done | ✅ |
+| moex_mcftr | MOEX Total Return | equities | D | moex | stock/index/MCFTR/CLOSE | done | ✅ |
+| moex_bluechip | MOEX Blue Chip | equities | D | moex | stock/index/MOEXBC/CLOSE | done | ✅ |
+| moex_usd_tom | USD/RUB TOM (MOEX) | fx | D | moex | currency/selt/USD000UTSTOM/CLOSE | done | ✅ |
+| moex_eur_tom | EUR/RUB TOM (MOEX) | fx | D | moex | currency/selt/EUR_RUB__TOM/CLOSE | done | ✅ |
+| ru_cpi_wb | Инфляция (WB) | inflation | A | world_bank | FP.CPI.TOTL.ZG/RU | done | ✅ |
+| ru_unemp_wb | Безработица (WB) | labor | A | world_bank | SL.UEM.TOTL.ZS/RU | done | ✅ |
+| ru_ca_wb | Current account % GDP (WB) | external | A | world_bank | BN.CAB.XOKA.GD.ZS/RU | done | ✅ |
+| ru_debt_wb | Govt debt % GDP (WB) | fiscal | A | world_bank | GC.DOD.TOTL.GD.ZS/RU | done | ✅ |
+| ru_fx_reserves | Международные резервы | external | M | cbr | SOAP:InternationalReserves | done | ✅ |
+| ru_m2 | Денежная масса M2 | rates | M | cbr | SOAP:MoneySupply/M2 | done | ✅ |
 
 \*Пром. производство OKVED2: история API с **2015**, но 5 лет с 2021 — ✅.
 
@@ -282,8 +304,8 @@
 
 | Блок | Кол-во |
 |------|--------|
-| done | 15 |
-| RU backlog | 28 − 6 done = **22** |
+| done | 37 |
+| RU backlog | 28 − 28 done = **0** |
 | US backlog | 32 − 4 done = **28** |
 | EU backlog | 24 − 4 done = **20** |
 | CN backlog | 12 − 1 done = **11** |
@@ -291,7 +313,7 @@
 | World | 18 − 1 done = **17** |
 | IMF fiscal template | **12** (unique additions) |
 | multisource-пакет | **97** |
-| **Итого planned (backlog)** | **~231** |
+| **Итого planned (backlog)** | **~209** |
 | **Итого с done** | **~246** |
 
 ---

@@ -13,11 +13,11 @@ COMPARE_PRESETS: dict[str, dict] = {
     },
     "fx": {
         "label": "Валюты и сырьё",
-        "indicator_ids": ["usd_rub", "oil_brent"],
+        "indicator_ids": ["usd_rub", "eur_rub", "cny_rub", "oil_brent"],
     },
     "gdp": {
         "label": "ВВП YoY",
-        "indicator_ids": ["us_gdp_yoy", "cn_gdp_yoy"],
+        "indicator_ids": ["ru_gdp_q_yoy", "us_gdp_yoy", "cn_gdp_yoy"],
     },
 }
 
