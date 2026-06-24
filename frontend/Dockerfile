@@ -5,25 +5,23 @@ RUN npm install
 
 FROM node:22-alpine AS builder
 WORKDIR /app
-ARG BUILD_ID=dev
-ENV BUILD_ID=$BUILD_ID
-ENV NEXT_PUBLIC_BUILD_ID=$BUILD_ID
+ARG BUILD_ID
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+RUN EFFECTIVE_BUILD_ID="${BUILD_ID:-$(date -u +%Y%m%d%H%M%S)}" \
+    && echo "$EFFECTIVE_BUILD_ID" > /tmp/build-id \
+    && BUILD_ID="$EFFECTIVE_BUILD_ID" NEXT_PUBLIC_BUILD_ID="$EFFECTIVE_BUILD_ID" npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
-ARG BUILD_ID=dev
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
-ENV BUILD_ID=$BUILD_ID
-ENV NEXT_PUBLIC_BUILD_ID=$BUILD_ID
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
+COPY --from=builder /tmp/build-id /app/BUILD_ID
 COPY docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
     && STATIC_COUNT="$(find /app/.next/static -type f | wc -l | tr -d ' ')" \

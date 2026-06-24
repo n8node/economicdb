@@ -19,5 +19,18 @@ if [ ! -d /app/public ]; then
   exit 1
 fi
 
+if [ -f /app/BUILD_ID ]; then
+  image_build_id=$(cat /app/BUILD_ID | tr -d "\r\n")
+  if [ -n "$image_build_id" ]; then
+    if [ "${BUILD_ID:-}" = "" ] || [ "${BUILD_ID:-}" = "dev" ]; then
+      export BUILD_ID="$image_build_id"
+    fi
+    if [ "${NEXT_PUBLIC_BUILD_ID:-}" = "" ] || [ "${NEXT_PUBLIC_BUILD_ID:-}" = "dev" ]; then
+      export NEXT_PUBLIC_BUILD_ID="$image_build_id"
+    fi
+  fi
+fi
+
 echo "static ready: files=${static_count}"
+echo "frontend build id: ${NEXT_PUBLIC_BUILD_ID:-unknown}"
 exec "$@"

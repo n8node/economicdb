@@ -34,11 +34,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        BUILD_ID: ${BUILD_ID:-dev}
+        BUILD_ID: ${BUILD_ID:-}
     restart: unless-stopped
     environment:
-      BUILD_ID: ${BUILD_ID:-dev}
-      NEXT_PUBLIC_BUILD_ID: ${BUILD_ID:-dev}
+      BUILD_ID: ${BUILD_ID:-}
+      NEXT_PUBLIC_BUILD_ID: ${BUILD_ID:-}
       NODE_OPTIONS: --max-old-space-size=512
     deploy:
       resources:
