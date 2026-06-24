@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.summaries import WeeklySummary
+from app.schemas.dashboard import AiSummaryBlock
 from app.schemas.summaries import SummaryDetail, SummaryListItem, SummaryListResponse
 
 
@@ -88,8 +89,6 @@ def _section_teaser(sections: dict, key: str, limit: int = 150) -> str | None:
 
 
 def _row_to_summary_block(row: WeeklySummary, *, bullet_limit: int = 3) -> AiSummaryBlock:
-    from app.schemas.dashboard import AiSummaryBlock
-
     sections = row.sections if isinstance(row.sections, dict) else {}
     bullets: list[str] = []
     for key in ("ru", "us", "next_week"):
