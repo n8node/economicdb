@@ -10,6 +10,7 @@ class KpiItem(BaseModel):
     source: str
     unit: str | None = None
     frequency: str
+    category: str
     updated_at: str
     sparkline: list[float] = []
 

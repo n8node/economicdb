@@ -491,6 +491,14 @@ button{ font-family: inherit; cursor: pointer; }
   background: var(--negative-bg);
   color: var(--negative-text);
 }
+.kpi-delta.up.adverse{
+  background: var(--negative-bg);
+  color: var(--negative-text);
+}
+.kpi-delta.down.adverse{
+  background: var(--positive-bg);
+  color: var(--positive-text);
+}
 .kpi-delta.flat{
   background: var(--neutral-bg);
   color: var(--neutral-text);

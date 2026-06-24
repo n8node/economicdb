@@ -101,6 +101,12 @@ function computePeriodChange(values: number[], unit: string | null): { direction
   };
 }
 
+const ADVERSE_DELTA_CATEGORIES = new Set(["inflation", "fx"]);
+
+function usesAdverseDeltaColors(category: string): boolean {
+  return ADVERSE_DELTA_CATEGORIES.has(category);
+}
+
 function changeCaptionForFrequency(frequency: string): string {
   return CHANGE_CAPTION[frequency] || "к пред. значению";
 }
@@ -109,19 +115,22 @@ function KpiDelta({
   direction,
   delta,
   unit,
+  category,
 }: {
   direction: DeltaDirection;
   delta: string;
   unit: string | null;
+  category: string;
 }) {
   if (direction === "flat") {
     const suffix = unit === "п.п." ? " п.п." : unit === "%" ? "%" : "";
     return <span className="kpi-delta flat">- 0{suffix}</span>;
   }
 
+  const adverse = usesAdverseDeltaColors(category);
   const icon = direction === "up" ? "ti-arrow-up" : "ti-arrow-down";
   return (
-    <span className={`kpi-delta ${direction}`}>
+    <span className={`kpi-delta ${direction}${adverse ? " adverse" : ""}`}>
       <i className={`ti ${icon}`} />
       {delta}
     </span>
@@ -204,7 +213,12 @@ export function MarketKpiSection({ data }: { data: DashboardOverview }) {
               <p className="kpi-value">{kpi.value}</p>
 
               <div className="kpi-change-row">
-                <KpiDelta direction={kpi.delta_direction} delta={kpi.delta} unit={kpi.unit} />
+                <KpiDelta
+                  direction={kpi.delta_direction}
+                  delta={kpi.delta}
+                  unit={kpi.unit}
+                  category={kpi.category}
+                />
                 <span className="kpi-change-caption">{changeCaptionForFrequency(kpi.frequency)}</span>
               </div>
 

@@ -11,6 +11,7 @@ export type DashboardOverview = {
     source: string;
     unit: string | null;
     frequency: string;
+    category: string;
     updated_at: string;
     sparkline?: number[];
   }>;
