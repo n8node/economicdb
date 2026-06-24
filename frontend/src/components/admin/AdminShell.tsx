@@ -61,6 +61,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: "/adminus/data", label: "Данные и ETL" },
     { href: "/adminus/calendar", label: "Календарь" },
     { href: "/adminus/providers", label: "Провайдеры данных" },
+    { href: "/adminus/users", label: "Пользователи" },
     { href: "/adminus/settings", label: "Настройки" },
   ];
 
