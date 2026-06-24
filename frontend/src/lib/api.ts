@@ -10,17 +10,21 @@ export function getApiBase(): string {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const { fetchWithTimeout } = await import("./fetch-timeout");
   const base = getApiBase();
   const url = `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
-  const response = await fetchWithTimeout(url, {
+  const requestInit: RequestInit = {
     ...init,
     headers: {
       "Content-Type": "application/json",
       ...init?.headers,
     },
     cache: "no-store",
-  });
+  };
+
+  const response =
+    typeof window !== "undefined"
+      ? await (await import("./fetch-timeout")).fetchWithTimeout(url, requestInit)
+      : await fetch(url, requestInit);
 
   if (!response.ok) {
     let message = `API ${response.status}`;

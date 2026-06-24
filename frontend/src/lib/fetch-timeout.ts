@@ -12,6 +12,10 @@ export async function fetchWithTimeout(
   init?: RequestInit,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<Response> {
+  if (typeof window === "undefined") {
+    return fetch(input, init);
+  }
+
   if (init?.signal) {
     return fetch(input, init);
   }
@@ -32,5 +36,6 @@ export async function fetchWithTimeout(
 }
 
 export function dispatchNetworkStale(reason = "timeout") {
+  if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent("macro:network-stale", { detail: { reason } }));
 }
