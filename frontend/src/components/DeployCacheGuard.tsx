@@ -2,9 +2,8 @@
 
 import { useEffect } from "react";
 
-const CHECK_INTERVAL_MS = 30_000;
-const FETCH_TIMEOUT_MS = 8_000;
-const BACKGROUND_STALE_MS = 90_000;
+const CHECK_INTERVAL_MS = 15_000;
+const FETCH_TIMEOUT_MS = 5_000;
 
 function currentDeployId() {
   return document.querySelector<HTMLMetaElement>('meta[name="deploy-id"]')?.content || "";
@@ -32,34 +31,28 @@ async function pingDeployId(timeoutMs: number): Promise<{ ok: true; id?: string 
 }
 
 function hardReload() {
-  window.location.assign(window.location.href);
+  const url = new URL(window.location.href);
+  url.searchParams.set("_recover", String(Date.now()));
+  window.location.replace(url.toString());
 }
 
 export function DeployCacheGuard() {
   useEffect(() => {
     const initialDeployId = currentDeployId();
-    let lastSuccessfulCheck = Date.now();
     let timer: number | undefined;
     let inFlight = false;
 
-    async function checkDeployId({ reloadOnFailure = false, immediateOnFailure = false } = {}) {
+    async function checkDeployId() {
       if (!initialDeployId || initialDeployId === "dev" || inFlight) return;
+      if (document.visibilityState !== "visible") return;
       inFlight = true;
 
       try {
         const result = await pingDeployId(FETCH_TIMEOUT_MS);
         if (!result.ok) {
-          const staleFor = Date.now() - lastSuccessfulCheck;
-          if (
-            navigator.onLine &&
-            (immediateOnFailure || (reloadOnFailure && staleFor > BACKGROUND_STALE_MS))
-          ) {
-            hardReload();
-          }
+          if (navigator.onLine) hardReload();
           return;
         }
-
-        lastSuccessfulCheck = Date.now();
 
         if (result.id && result.id !== initialDeployId) {
           window.location.reload();
@@ -69,14 +62,12 @@ export function DeployCacheGuard() {
       }
     }
 
-    const checkAfterIdle = () => void checkDeployId({ reloadOnFailure: true, immediateOnFailure: true });
+    const checkAfterIdle = () => void checkDeployId();
     const checkOnVisibility = () => {
       if (document.visibilityState === "visible") checkAfterIdle();
     };
 
-    timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") void checkDeployId({ reloadOnFailure: true });
-    }, CHECK_INTERVAL_MS);
+    timer = window.setInterval(checkAfterIdle, CHECK_INTERVAL_MS);
 
     window.addEventListener("focus", checkAfterIdle);
     window.addEventListener("pageshow", checkAfterIdle);

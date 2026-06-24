@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AppLink as Link } from "@/components/AppLink";
 import { MiniSparkline } from "@/components/indicators/MiniSparkline";
 import { useFavoriteIndicators } from "@/hooks/useFavoriteIndicators";
 import { SOURCE_LABELS } from "@/lib/indicators";

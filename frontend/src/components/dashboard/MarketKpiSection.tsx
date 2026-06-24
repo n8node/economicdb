@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AppLink as Link } from "@/components/AppLink";
 import { useEffect, useMemo, useState } from "react";
 import { MiniSparkline } from "@/components/indicators/MiniSparkline";
 import type { DashboardOverview, DeltaDirection } from "@/lib/dashboard";

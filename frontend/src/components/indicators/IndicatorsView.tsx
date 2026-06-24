@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AppLink as Link } from "@/components/AppLink";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MetaTags } from "@/components/ui/MetaTags";
 import { MiniSparkline } from "./MiniSparkline";

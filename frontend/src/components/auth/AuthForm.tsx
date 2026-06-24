@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/AppLink";
 import { useRouter } from "next/navigation";
 import { loginUser, registerUser } from "@/lib/auth";
 

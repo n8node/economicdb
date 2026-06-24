@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AppLink as Link } from "@/components/AppLink";
 import { FavoriteCardsGrid } from "@/components/favorites/FavoriteCardsGrid";
 import { useFavoriteIndicators } from "@/hooks/useFavoriteIndicators";
 

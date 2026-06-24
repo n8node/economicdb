@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AppLink as Link } from "@/components/AppLink";
 import type { DashboardOverview } from "@/lib/dashboard";
 
 function normalizeBullets(items: string[]): string[] {

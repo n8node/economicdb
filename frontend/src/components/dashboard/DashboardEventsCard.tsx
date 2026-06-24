@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppLink as Link } from "@/components/AppLink";
 import type { DashboardOverview } from "@/lib/dashboard";
 
 const COUNTRY_LABELS: Record<string, string> = {
