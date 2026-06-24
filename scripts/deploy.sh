@@ -15,6 +15,9 @@ cd $PROJECT_DIR
 git fetch origin
 git checkout $BRANCH
 git pull origin $BRANCH
+BUILD_ID="\$(git rev-parse --short HEAD)-\$(date -u +%Y%m%d%H%M%S)"
+export BUILD_ID
+echo "Frontend BUILD_ID: \$BUILD_ID"
 if [ -f nginx/templates/https.conf.template ]; then
   bash scripts/generate-nginx-https-conf.sh
 fi

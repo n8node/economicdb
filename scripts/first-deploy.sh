@@ -75,6 +75,12 @@ fi
 source .env
 
 echo "=== Step 3: Docker Compose up ==="
+if [ -z "${BUILD_ID:-}" ]; then
+    GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo nogit)"
+    BUILD_ID="${GIT_SHA}-$(date -u +%Y%m%d%H%M%S)"
+fi
+export BUILD_ID
+echo "Frontend BUILD_ID: $BUILD_ID"
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
 echo "=== Waiting for backend health ==="
