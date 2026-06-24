@@ -2,10 +2,14 @@ from pydantic import BaseModel
 
 
 class KpiItem(BaseModel):
+    id: str
     label: str
     value: str
     delta: str
     delta_direction: str  # up | down | flat
+    source: str
+    unit: str | None = None
+    updated_at: str
     sparkline: list[float] = []
 
 

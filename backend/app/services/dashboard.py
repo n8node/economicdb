@@ -16,7 +16,7 @@ from app.schemas.dashboard import (
     KpiItem,
 )
 
-KPI_IDS = ["cbr_key_rate", "usd_rub", "us_cpi_yoy", "fed_funds", "oil_brent"]
+KPI_IDS = ["cbr_key_rate", "ru_cpi_yoy", "usd_rub", "us_cpi_yoy", "fed_funds"]
 
 
 async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryBlock | None = None) -> DashboardOverview:
@@ -50,12 +50,17 @@ async def build_dashboard_overview(session: AsyncSession, ai_summary: AiSummaryB
         row = indicator_map.get(indicator_id)
         if not row:
             continue
+        unit = row.unit if row.unit in {"%", "п.п."} else "%"
         kpis.append(
             KpiItem(
+                id=row.id,
                 label=row.name_ru,
                 value=format_value(row.last_value, row.unit) or "—",
-                delta=format_change(row.last_change, row.unit if row.unit in {"%", "п.п."} else "%") or "—",
+                delta=format_change(row.last_change, unit) or "—",
                 delta_direction=delta_direction(row.last_change),
+                source=row.source,
+                unit=row.unit,
+                updated_at=row.updated_at.strftime("%d.%m.%Y"),
                 sparkline=sparkline_map.get(indicator_id, []),
             )
         )

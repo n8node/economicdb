@@ -3,14 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DashboardFavoritesSection } from "@/components/dashboard/DashboardFavoritesSection";
-import { MiniSparkline } from "@/components/indicators/MiniSparkline";
+import { MarketKpiSection } from "@/components/dashboard/MarketKpiSection";
 import type { DashboardOverview } from "@/lib/dashboard";
-
-const DELTA_ICON: Record<string, string> = {
-  up: "ti-arrow-up-right",
-  down: "ti-arrow-down-right",
-  flat: "ti-minus",
-};
 
 export function DashboardView({ data }: { data: DashboardOverview }) {
   const router = useRouter();
@@ -29,32 +23,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
         </button>
       </div>
 
-      <div className="kpi-grid">
-        {data.kpis.map((kpi) => (
-          <div key={kpi.label} className="kpi-card">
-            <div className="kpi-card-body">
-              <div className="kpi-main">
-                <p className="kpi-label">{kpi.label}</p>
-                <p className="kpi-value">{kpi.value}</p>
-                <span className={`delta ${kpi.delta_direction}`}>
-                  <i className={`ti ${DELTA_ICON[kpi.delta_direction]}`} />
-                  {kpi.delta}
-                </span>
-              </div>
-              <div className={`kpi-spark kpi-spark-${kpi.delta_direction}`}>
-                <MiniSparkline
-                  values={kpi.sparkline || []}
-                  width={92}
-                  height={58}
-                  filled
-                  responsive
-                  endDot
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <MarketKpiSection data={data} />
 
       <div className="row-2col dashboard-overview-row">
         <div className="card ai-card card-pad">
@@ -109,7 +78,7 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
         {data.changes.map((change) => (
           <div key={change.text} className="change-row">
             <div className={`change-icon ${change.direction}`}>
-              <i className={`ti ${DELTA_ICON[change.direction]}`} />
+              <i className={`ti ${CHANGE_ICON[change.direction]}`} />
             </div>
             <div>
               <p className="change-text">{change.text}</p>
@@ -125,6 +94,12 @@ export function DashboardView({ data }: { data: DashboardOverview }) {
     </div>
   );
 }
+
+const CHANGE_ICON: Record<string, string> = {
+  up: "ti-arrow-up-right",
+  down: "ti-arrow-down-right",
+  flat: "ti-minus",
+};
 
 function normalizeAiBullets(items: string[]): string[] {
   return items

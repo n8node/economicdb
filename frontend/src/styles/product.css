@@ -337,79 +337,170 @@ button{ font-family: inherit; cursor: pointer; }
 }
 .btn.ghost:hover{ background: transparent; color: var(--text-primary); }
 
-/* ---------- KPI ROW ---------- */
+/* ---------- MARKET OVERVIEW / KPI ROW ---------- */
+.market-overview{
+  margin-bottom: 22px;
+}
+.market-overview-head{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.market-overview-title{
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.market-overview-meta{
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+.market-overview-updated{
+  color: var(--primary-600);
+  font-weight: 500;
+}
+.seg{
+  display: inline-flex;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  background: var(--bg-muted);
+  flex-shrink: 0;
+}
+.seg button{
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-radius: 7px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.seg button.active{
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(20, 24, 31, 0.08);
+}
+[data-theme="dark"] .seg button.active{
+  background: var(--bg-muted);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
 .kpi-grid{
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 12px;
-  margin-bottom: 22px;
 }
 .kpi-card{
+  position: relative;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 14px 16px;
+  padding: 14px 16px 12px;
   box-shadow: var(--shadow-card);
-}
-.kpi-card-body{
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 12px;
-}
-.kpi-main{
-  flex: 1;
-  min-width: 0;
+  color: inherit;
+  text-decoration: none;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  min-height: 100%;
+}
+.kpi-card-top{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.kpi-source{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  min-width: 0;
+}
+.kpi-source-dot{
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--primary-600);
+  flex-shrink: 0;
+}
+.kpi-star{
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.kpi-star.active{
+  color: var(--primary-600);
 }
 .kpi-label{
-  margin:0 0 6px; font-size: 12.5px; color: var(--text-secondary);
-  display:flex; align-items:center; justify-content:space-between;
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
   line-height: 1.35;
 }
 .kpi-value{
-  margin: 0 0 8px; font-size: 22px; font-weight: 600;
-  font-family: var(--font-mono); letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
   line-height: 1.1;
 }
-.delta{
-  display:inline-flex; align-items:center; gap:4px;
-  font-size: 12px; font-weight: 500;
-  padding: 2px 7px; border-radius: var(--radius-sm);
+.kpi-delta{
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
   align-self: flex-start;
+  margin-bottom: 10px;
+  font-family: var(--font-mono);
 }
-.delta.up{ background: var(--positive-bg); color: var(--positive-text); }
-.delta.down{ background: var(--negative-bg); color: var(--negative-text); }
-.delta.flat{ background: var(--neutral-bg); color: var(--neutral-text); }
+.kpi-delta.up{
+  background: var(--negative-bg);
+  color: var(--negative-text);
+}
+.kpi-delta.down{
+  background: var(--positive-bg);
+  color: var(--positive-text);
+}
+.kpi-delta.flat{
+  background: var(--neutral-bg);
+  color: var(--neutral-text);
+}
 .kpi-spark{
-  flex-shrink: 0;
-  width: 92px;
-  height: 58px;
-  padding: 6px 8px 4px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
+  width: 100%;
+  height: 44px;
+  margin: 0 -4px 8px;
   overflow: hidden;
   display: flex;
-  align-items: center;
-  background: linear-gradient(180deg, rgba(139, 146, 160, 0.08), rgba(139, 146, 160, 0));
+  align-items: flex-end;
 }
 .kpi-spark .mini-spark-responsive{
   display: block;
   width: 100%;
   max-width: 100%;
+  height: 100%;
 }
-.kpi-spark-up{
-  background: linear-gradient(180deg, rgba(27, 117, 97, 0.12), rgba(27, 117, 97, 0));
-  border-color: rgba(27, 117, 97, 0.18);
-}
-.kpi-spark-down{
-  background: linear-gradient(180deg, rgba(163, 60, 83, 0.12), rgba(163, 60, 83, 0));
-  border-color: rgba(163, 60, 83, 0.18);
-}
-.kpi-spark-flat{
-  background: linear-gradient(180deg, rgba(139, 146, 160, 0.10), rgba(139, 146, 160, 0));
+.kpi-foot{
+  margin: auto 0 0;
+  font-size: 11px;
+  color: var(--text-tertiary);
 }
 
 /* ---------- TWO-COLUMN ROW ---------- */
@@ -588,6 +679,14 @@ button{ font-family: inherit; cursor: pointer; }
   white-space: nowrap;
 }
 .fav-metrics .delta{ align-self: flex-start; }
+.delta{
+  display:inline-flex; align-items:center; gap:4px;
+  font-size: 12px; font-weight: 500;
+  padding: 2px 7px; border-radius: var(--radius-sm);
+}
+.delta.up{ background: var(--positive-bg); color: var(--positive-text); }
+.delta.down{ background: var(--negative-bg); color: var(--negative-text); }
+.delta.flat{ background: var(--neutral-bg); color: var(--neutral-text); }
 .fav-metrics .source-tag{ align-self: flex-start; }
 .fav-spark{
   flex: 1 1 auto;
@@ -934,6 +1033,21 @@ footer.app-footer{
 @media (max-width: 1180px){
   .kpi-grid{ grid-template-columns: repeat(3, 1fr); }
   .fav-grid{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px){
+  .market-overview-head{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .market-period-seg{
+    width: 100%;
+    justify-content: stretch;
+  }
+  .market-period-seg button{
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
 }
 @media (max-width: 1024px){
   .app{ grid-template-columns: 72px 1fr; }

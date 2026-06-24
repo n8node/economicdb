@@ -3,10 +3,14 @@ export type DeltaDirection = "up" | "down" | "flat";
 export type DashboardOverview = {
   updated_at: string;
   kpis: Array<{
+    id: string;
     label: string;
     value: string;
     delta: string;
     delta_direction: DeltaDirection;
+    source: string;
+    unit: string | null;
+    updated_at: string;
     sparkline?: number[];
   }>;
   ai_summary: {
