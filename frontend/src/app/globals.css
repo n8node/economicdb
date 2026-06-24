@@ -35,3 +35,39 @@ a {
 .muted {
   color: var(--text-secondary);
 }
+
+.session-stale-banner {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(20 24 31 / 0.55);
+}
+
+.session-stale-banner__card {
+  width: min(420px, 100%);
+  padding: 24px;
+  border-radius: 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 16px 48px rgb(20 24 31 / 0.18);
+}
+
+.session-stale-banner__title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.session-stale-banner__hint {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.session-stale-banner__action {
+  width: 100%;
+}
